@@ -1,0 +1,14 @@
+BasedOnStyle: Chromium
+ColumnLimit: 100
+IndentWidth: 4
+AccessModifierOffset: -4
+PackConstructorInitializers: Never
+BreakConstructorInitializers: BeforeComma
+AllowShortFunctionsOnASingleLine: Empty
+AlignArrayOfStructures: Right
+FixNamespaceComments: false
+AllowShortEnumsOnASingleLine: false
+NamespaceIndentation: All
+AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: true
+BinPackArguments: false

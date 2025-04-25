@@ -1,0 +1,18 @@
+#include "core/cpu.h"
+#include "unity.h"
+
+void test_cpu_new(void) {
+    Cpu cpu = Cpu_new();
+    TEST_ASSERT_EQUAL(cpu.b, 0);
+    TEST_ASSERT_EQUAL(cpu.c, 0);
+    TEST_ASSERT_EQUAL(cpu.d, 0);
+    TEST_ASSERT_EQUAL(cpu.e, 0);
+    TEST_ASSERT_EQUAL(cpu.h, 0);
+    TEST_ASSERT_EQUAL(cpu.l, 0);
+    TEST_ASSERT_EQUAL(cpu.a, 0);
+    TEST_ASSERT_EQUAL(cpu.f, 0);
+    TEST_ASSERT_EQUAL(cpu.sp, 0);
+    TEST_ASSERT_EQUAL(cpu.pc, 0);
+    TEST_ASSERT_EQUAL(cpu.halted, false);
+    TEST_ASSERT_EQUAL(cpu.ime, true);
+}

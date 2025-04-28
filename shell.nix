@@ -1,7 +1,15 @@
 {
   pkgs ? import <nixpkgs> { },
+  mkShell,
+  xxd,
+  clang-tools,
   ...
 }:
-pkgs.mkShell {
+mkShell {
   inputsFrom = [ (pkgs.callPackage ./default.nix { }) ];
+
+  nativeBuildInputs = [
+    clang-tools
+    xxd
+  ];
 }

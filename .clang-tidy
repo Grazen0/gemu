@@ -5,6 +5,7 @@ Checks: >
   -bugprone-narrowing-conversions,
   clang-analyzer-*,
   concurrency-*,
+  -concurrency-mt-unsafe,
   cppcoreguidelines-*,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-avoid-magic-numbers,

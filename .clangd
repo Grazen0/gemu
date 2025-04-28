@@ -1,2 +1,2 @@
 CompileFlags:
-    Add: [-Wall, -Wextra, -xc]
+    Add: [-Wall, -Wextra, -Wpedantic, -xc]

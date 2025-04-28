@@ -6,6 +6,7 @@
       "type": "codelldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/gemu",
+      "args": ["tetris.gb"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Compile (debug)",
       "postLaunchTask": "Clean"

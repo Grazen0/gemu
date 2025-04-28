@@ -1,82 +1,91 @@
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
-#include "SDL3/SDL_events.h"
+#include <stdlib.h>
+#include "SDL3/SDL_error.h"
 #include "SDL3/SDL_init.h"
-#include "SDL3/SDL_keycode.h"
+#include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_log.h"
+#include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_render.h"
+#include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
+#include "core/data.h"
+#include "core/game_boy.h"
+#include "frontend.h"
+#include "lib/log.h"
 
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 640
+#define WINDOW_WIDTH_INITIAL (GB_LCD_WIDTH * 4)
+#define WINDOW_HEIGHT_INITIAL (GB_LCD_HEIGHT * 4)
 
-static void render(SDL_Renderer* const renderer) {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-    SDL_RenderClear(renderer);
+#define FPS 60
 
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-
-    for (float i = 0; i < WINDOW_WIDTH; ++i) {
-        SDL_RenderPoint(renderer, i, i);
+#define SDL_CHECK(result, message)                                               \
+    if (!(result)) {                                                             \
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s: %s", message, SDL_GetError()); \
+        exit(1);                                                                 \
     }
 
-    SDL_RenderPresent(renderer);
-}
-
-int main(void) {
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not initialize SDL: %s\n", SDL_GetError());
+int main(const int argc, const char* const argv[]) {
+    if (argc < 2) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "No ROM filename specified.");
         return 1;
     }
+
+    size_t rom_len = 0;
+    uint8_t* const rom = SDL_LoadFile(argv[1], &rom_len);
+
+    BAIL_IF(rom == NULL, "Could not read ROM file.");
+    BAIL_IF(
+        rom_len != 0x8000 * ((size_t)1 << (size_t)rom[ROM_ROM_SIZE]),
+        "ROM length does not match header info."
+    );
+
+    SDL_Log("Cartridge type: 0x%02X", rom[ROM_CARTRIDGE_TYPE]);
+
+    SDL_CHECK(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video");
 
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
-    SDL_CreateWindowAndRenderer("gemu", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
 
-    if (window == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not create window: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
+    SDL_CHECK(
+        SDL_CreateWindowAndRenderer(
+            "gemu", WINDOW_WIDTH_INITIAL, WINDOW_HEIGHT_INITIAL, 0, &window, &renderer
+        ),
+        "Could not create window or renderer"
+    );
 
-    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_Texture* const restrict texture = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GB_BG_WIDTH, GB_BG_HEIGHT
+    );
+    SDL_CHECK(texture != NULL, "Could not create texture");
 
-    bool exit = false;
+    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
-    while (!exit) {
-        SDL_Event event;
+    State state = {
+        .gb = GameBoy_new(rom, rom_len),
+        .window_width = WINDOW_WIDTH_INITIAL,
+        .window_height = WINDOW_HEIGHT_INITIAL,
+        .current_time = SDL_GetTicks() / 1000.0,
+        .time_accumulator = 0,
+        .quit = false,
+        .texture = texture,
+    };
 
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_EVENT_QUIT: {
-                    exit = true;
-                    break;
-                }
-                case SDL_EVENT_KEY_DOWN: {
-                    switch (event.key.key) {
-                        case SDLK_UP: {
-                            SDL_Log("up");
-                            break;
-                        }
-                        default: {
-                            SDL_Log("some other key");
-                        }
-                    }
-                    break;
-                }
-                default: {
-                }
-            }
+    SDL_RenderPresent(renderer);
+    SDL_SetWindowResizable(window, true);
 
-            SDL_DelayNS(1e9 / 60);
-        }
-
-        render(renderer);
+    while (!state.quit) {
+        frame(&state, renderer);
     }
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    SDL_DestroyTexture(state.texture);
     SDL_Quit();
+
+    GameBoy_destroy(&state.gb);
 
     return 0;
 }

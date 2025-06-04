@@ -2,55 +2,54 @@
 #define CORE_DATA_H
 
 #include <stddef.h>
-#include <stdint.h>
 
-extern const size_t ROM_ENTRY_POINT;
-extern const size_t ROM_NINTENDO_LOGO;
-extern const size_t ROM_TITLE;
-extern const size_t ROM_MANUFACTURER_CODE;
-extern const size_t ROM_CGB_FLAG;
-extern const size_t ROM_NEW_LICENSEE_CODE;
-extern const size_t ROM_SGB_FLAG;
-extern const size_t ROM_CARTRIDGE_TYPE;
-extern const size_t ROM_ROM_SIZE;
-extern const size_t ROM_RAM_SIZE;
-extern const size_t ROM_DESTINATION_CODE;
-extern const size_t ROM_OLD_LICENSEE_CODE;
-extern const size_t ROM_MASK_ROM_VERSION_NUMBER;
-extern const size_t ROM_HEADER_CHECKSUM;
-extern const size_t ROM_GLOBAL_CHECKSUM;
+typedef enum RomData {
+    RomData_ENTRY_POINT = 0x100,
+    RomData_NINTENDO_LOGO = 0x104,
+    RomData_TITLE = 0x134,
+    RomData_MANUFACTURER_CODE = 0x13F,
+    RomData_CGB_FLAG = 0x143,
+    RomData_NEW_LICENSEE_CODE = 0x144,
+    RomData_SGB_FLAG = 0x146,
+    RomData_CARTRIDGE_TYPE = 0x147,
+    RomData_ROM_SIZE = 0x148,
+    RomData_RAM_SIZE = 0x149,
+    RomData_DESTINATION_CODE = 0x14A,
+    RomData_OLD_LICENSEE_CODE = 0x14B,
+    RomData_MASK_ROM_VERSION_NUMBER = 0x14C,
+    RomData_HEADER_CHECKSUM = 0x14D,
+    RomData_GLOBAL_CHECKSUM = 0x14E,
+} RomData;
 
 enum CartridgeType {
-    CTYPE_ROM_ONLY = 0x00,
-    CTYPE_MCB1 = 0x01,
-    CTYPE_MCB1_RAM = 0x02,
-    CTYPE_MCB1_RAM_BATTERY = 0x03,
-    CTYPE_MBC2 = 0x05,
-    CTYPE_MBC2_BATTERY = 0x06,
-    CTYPE_ROM_RAM = 0x08,
-    CTYPE_ROM_RAM_BATTERY = 0x09,
-    CTYPE_MMM01 = 0x0B,
-    CTYPE_MMM01_RAM = 0x0C,
-    CTYPE_MMM01_RAM_BATTERY = 0x0D,
-    CTYPE_MBC3_TIMER_BATTERY = 0x0F,
-    CTYPE_MBC3_TIMER_RAM_BATTERY = 0x10,
-    CTYPE_MBC3 = 0x11,
-    CTYPE_MBC3_RAM = 0x12,
-    CTYPE_MBC3_RAM_BATTERY = 0x13,
-    CTYPE_MBC5 = 0x19,
-    CTYPE_MBC5_RAM = 0x1A,
-    CTYPE_MBC5_RAM_BATTERY = 0x1B,
-    CTYPE_MBC5_RUMBLE = 0x1C,
-    CTYPE_MBC5_RUMBLE_RAM = 0x1D,
-    CTYPE_MBC5_RUMBLE_RAM_BATTERY = 0x1E,
-    CTYPE_MBC6 = 0x20,
-    CTYPE_MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22,
-    CTYPE_POCKET_CAMERA = 0xFC,
-    CTYPE_BANDAI_TAMA5 = 0xFD,
-    CTYPE_HUC3 = 0xFE,
-    CTYPE_HUC1_RAM_BATTERY = 0xFF,
+    CartridgeType_ROM_ONLY = 0x00,
+    CartridgeType_MCB1 = 0x01,
+    CartridgeType_MCB1_RAM = 0x02,
+    CartridgeType_MCB1_RAM_BATTERY = 0x03,
+    CartridgeType_MBC2 = 0x05,
+    CartridgeType_MBC2_BATTERY = 0x06,
+    CartridgeType_ROM_RAM = 0x08,
+    CartridgeType_ROM_RAM_BATTERY = 0x09,
+    CartridgeType_MMM01 = 0x0B,
+    CartridgeType_MMM01_RAM = 0x0C,
+    CartridgeType_MMM01_RAM_BATTERY = 0x0D,
+    CartridgeType_MBC3_TIMER_BATTERY = 0x0F,
+    CartridgeType_MBC3_TIMER_RAM_BATTERY = 0x10,
+    CartridgeType_MBC3 = 0x11,
+    CartridgeType_MBC3_RAM = 0x12,
+    CartridgeType_MBC3_RAM_BATTERY = 0x13,
+    CartridgeType_MBC5 = 0x19,
+    CartridgeType_MBC5_RAM = 0x1A,
+    CartridgeType_MBC5_RAM_BATTERY = 0x1B,
+    CartridgeType_MBC5_RUMBLE = 0x1C,
+    CartridgeType_MBC5_RUMBLE_RAM = 0x1D,
+    CartridgeType_MBC5_RUMBLE_RAM_BATTERY = 0x1E,
+    CartridgeType_MBC6 = 0x20,
+    CartridgeType_MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22,
+    CartridgeType_POCKET_CAMERA = 0xFC,
+    CartridgeType_BANDAI_TAMA5 = 0xFD,
+    CartridgeType_HUC3 = 0xFE,
+    CartridgeType_HUC1_RAM_BATTERY = 0xFF,
 };
-
-char* get_rom_title(uint8_t* rom);
 
 #endif

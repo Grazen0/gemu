@@ -7,6 +7,7 @@
 #include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_render.h"
+#include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_video.h"
 #include "common/control.h"
@@ -16,13 +17,15 @@
 #include "frontend.h"
 #include "frontend/boot_rom.h"
 #include "frontend/log.h"
+#include "string.h"
 
-void sdl_check(const bool result, const char* const restrict message) {
-    if (!result) {
-        log_error(LogCategory_KEEP, "%s: %s", message, SDL_GetError());
-        exit(1);
-    }
-}
+#define sdl_check(result, message)                                          \
+    do {                                                                    \
+        if (!(result)) {                                                    \
+            log_error(LogCategory_KEEP, "%s: %s", message, SDL_GetError()); \
+            exit(1);                                                        \
+        }                                                                   \
+    } while (0);
 
 int main(const int argc, const char* const argv[]) {
     logger_set_category_mask(LogCategory_ALL & ~LogCategory_INSTRUCTION);
@@ -45,11 +48,15 @@ int main(const int argc, const char* const argv[]) {
 
     BAIL_IF(rom == NULL, "Could not read ROM file.");
     BAIL_IF(
-        rom_len != 0x8000 * ((size_t)1 << (size_t)rom[ROM_ROM_SIZE]),
+        rom_len != 0x8000 * ((size_t)1 << (size_t)rom[RomData_ROM_SIZE]),
         "ROM length does not match header info."
     );
 
-    log_info(LogCategory_KEEP, "Cartridge type: 0x%02X", rom[ROM_CARTRIDGE_TYPE]);
+    log_info(LogCategory_KEEP, "Cartridge type: $%02X", rom[RomData_CARTRIDGE_TYPE]);
+
+    char game_title[0x11];
+    SDL_strlcpy(game_title, (char*)&rom[RomData_TITLE], sizeof(game_title));
+    log_info(LogCategory_KEEP, "Game title: %s", game_title);
 
     sdl_check(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
 

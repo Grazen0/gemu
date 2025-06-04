@@ -43,8 +43,8 @@ int main(const int argc, const char* const argv[]) {
     size_t rom_len = 0;
     uint8_t* const rom = SDL_LoadFile(argv[1], &rom_len);
 
-    bail_if(rom == NULL, "Could not read ROM file.");
-    bail_if(
+    BAIL_IF(rom == NULL, "Could not read ROM file.");
+    BAIL_IF(
         rom_len != 0x8000 * ((size_t)1 << (size_t)rom[ROM_ROM_SIZE]),
         "ROM length does not match header info."
     );

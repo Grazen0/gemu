@@ -92,7 +92,7 @@ static void grow_log_queue(void) {
 
     LogMessage* const restrict new_messages = calloc(new_capacity, sizeof(log_queue.messages[0]));
     if (new_messages == NULL) {
-        bail("Could not reallocate space for log queue. errno %i", errno);
+        BAIL("Could not reallocate space for log queue. errno %i", errno);
     }
 
     const size_t old_size =

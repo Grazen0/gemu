@@ -85,7 +85,7 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
                 return gb->tac;
                 break;
             default:
-                bail("Unexpected I/O timer and divider read ($%04X)", addr);
+                BAIL("Unexpected I/O timer and divider read ($%04X)", addr);
         }
     }
 
@@ -96,12 +96,12 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr >= 0xFF10 && addr <= 0xFF26) {
         // FF10-FF26 (audio)
-        bail("I/O audio read ($%04X)", addr);
+        BAIL("I/O audio read ($%04X)", addr);
     }
 
     if (addr >= 0xFF30 && addr <= 0xFF3F) {
         // FF30-FF3F (wave pattern)
-        bail("I/O wave pattern read ($%04X)", addr);
+        BAIL("I/O wave pattern read ($%04X)", addr);
     }
 
     if (addr >= 0xFF40 && addr <= 0xFF4B) {
@@ -138,13 +138,13 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
                 return gb->obp1;
 
             default:
-                bail("Unexpected I/O LCD read (addr = $%04X)", addr);
+                BAIL("Unexpected I/O LCD read (addr = $%04X)", addr);
         }
     }
 
     if (addr == 0xFF4F) {
         // FF4F
-        bail("I/O VRAM bank select read ($%04X)", addr);
+        BAIL("I/O VRAM bank select read ($%04X)", addr);
     }
 
     if (addr == 0xFF50) {
@@ -154,20 +154,20 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA)
-        bail("I/O VRAM DMA read ($%04X)", addr);
+        BAIL("I/O VRAM DMA read ($%04X)", addr);
     }
 
     if (addr >= 0xFF68 && addr <= 0xFF6B) {
         // FF68-FF6B (palettes)
-        bail("I/O palettes read ($%04X)", addr);
+        BAIL("I/O palettes read ($%04X)", addr);
     }
 
     if (addr == 0xFF70) {
         // FF70 (WRAM bank select)
-        bail("I/O WRAM bank select read ($%04X)", addr);
+        BAIL("I/O WRAM bank select read ($%04X)", addr);
     }
 
-    bail("Unexpected I/O read (addr = $%04X)", addr);
+    BAIL("Unexpected I/O read (addr = $%04X)", addr);
     return 0xFF;
 }
 
@@ -191,7 +191,7 @@ uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
 
     if (addr <= 0xBFFF) {
         // A000-BFFF (External RAM)
-        bail("TODO: GameBoy_read_mem (addr = $%04X)", addr);
+        BAIL("TODO: GameBoy_read_mem (addr = $%04X)", addr);
     }
 
     if (addr <= 0xDFFF) {
@@ -206,12 +206,12 @@ uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
 
     if (addr <= 0xFE9F) {
         // FE00-FE9F (OAM)
-        bail("TODO: GameBoy_read_mem (addr = $%04X)", addr);
+        BAIL("TODO: GameBoy_read_mem (addr = $%04X)", addr);
     }
 
     if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
-        bail("Tried to read unusable memory (addr = $%04X)", addr);
+        BAIL("Tried to read unusable memory (addr = $%04X)", addr);
     }
 
     if (addr <= 0xFF7F) {
@@ -272,7 +272,7 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
                 gb->tac = value;
                 break;
             default:
-                bail("Unexpected I/O timer and divider write (0x%04X, 0x%02X)", addr, value);
+                BAIL("Unexpected I/O timer and divider write (0x%04X, 0x%02X)", addr, value);
         }
     } else if (addr == 0xFF0F) {
         // FF0F (interrupts)
@@ -328,11 +328,11 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
                 break;
 
             default:
-                bail("Unexpected I/O LCD write (addr = 0x%04X, value = 0x%02X)", addr, value);
+                BAIL("Unexpected I/O LCD write (addr = 0x%04X, value = 0x%02X)", addr, value);
         }
     } else if (addr == 0xFF4F) {
         // FF4F
-        bail("I/O VRAM bank select write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O VRAM bank select write (0x%04X, 0x%02X)", addr, value);
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
         if (value != 0) {
@@ -340,20 +340,20 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         }
     } else if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA)
-        bail("I/O VRAM DMA write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O VRAM DMA write (0x%04X, 0x%02X)", addr, value);
     } else if (addr >= 0xFF68 && addr <= 0xFF6B) {
         // FF68-FF6B (palettes)
-        bail("I/O palettes write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O palettes write (0x%04X, 0x%02X)", addr, value);
     } else if (addr == 0xFF70) {
         // FF70 (WRAM bank select)
-        bail("I/O WRAM bank select write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O WRAM bank select write (0x%04X, 0x%02X)", addr, value);
     } else if (addr == 0xFF7F) {
         // Not sure what to do here
         log_info(
             LogCategory_IO, "Unexpected I/O LCD write (addr = 0x%04X, value = 0x%02X)", addr, value
         );
     } else {
-        bail("Unexpected I/O write (addr = 0x%04X, value = 0x%02X)", addr, value);
+        BAIL("Unexpected I/O write (addr = 0x%04X, value = 0x%02X)", addr, value);
     }
 }
 
@@ -372,7 +372,7 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
         gb->vram[addr - 0x8000] = value;
     } else if (addr <= 0xBFFF) {
         // A000-BFFF (External RAM)
-        bail("TODO: GameBoy_write_mem ERAM (addr = 0x%04X, 0x%02X)", addr, value);
+        BAIL("TODO: GameBoy_write_mem ERAM (addr = 0x%04X, 0x%02X)", addr, value);
     } else if (addr <= 0xDFFF) {
         // C000-DFFF (WRAM)
         gb->ram[addr - 0xC000] = value;

@@ -1,11 +1,21 @@
 #ifndef COMMON_CONTROL_H
 #define COMMON_CONTROL_H
 
-#include <stdbool.h>
-#include "sys/cdefs.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-void bail(const char* restrict format, ...) __THROW __attribute__((__noreturn__));
+#define BAIL(...)                     \
+    do {                              \
+        fprintf(stderr, __VA_ARGS__); \
+        exit(1);                      \
+    } while (0);
 
-void bail_if(bool cond, const char* restrict format, ...);
+#define BAIL_IF(cond, ...)                \
+    do {                                  \
+        if (cond) {                       \
+            fprintf(stderr, __VA_ARGS__); \
+            exit(1);                      \
+        }                                 \
+    } while (0);
 
 #endif

@@ -12,7 +12,7 @@ static const char* level_label(const LogLevel level) {
         case LogLevel_ERROR:
             return "\033[31mERROR";
         default:
-            bail("unreachable");
+            BAIL("unreachable");
     }
 }
 

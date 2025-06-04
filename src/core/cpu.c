@@ -34,7 +34,7 @@ bool Cpu_read_cc(const Cpu* const restrict cpu, const CpuTableCc cc) {
         case CpuTableCc_C:
             return (cpu->f & CpuFlag_C) != 0;
         default:
-            bail("invalid cc: %i", cc);
+            BAIL("invalid cc: %i", cc);
     }
 }
 
@@ -49,7 +49,7 @@ uint16_t Cpu_read_rp(const Cpu* const restrict cpu, const CpuTableRp rp) {
         case CpuTableRp_SP:
             return cpu->sp;
         default:
-            bail("invalid rp: %i", rp);
+            BAIL("invalid rp: %i", rp);
     }
 }
 
@@ -71,7 +71,7 @@ void Cpu_write_rp(Cpu* const restrict cpu, const CpuTableRp rp, const uint16_t v
             cpu->sp = value;
             break;
         default:
-            bail("invalid rp: %i", rp);
+            BAIL("invalid rp: %i", rp);
     }
 }
 
@@ -86,7 +86,7 @@ uint16_t Cpu_read_rp2(const Cpu* const restrict cpu, const CpuTableRp rp) {
         case CpuTableRp2_AF:
             return concat_u16(cpu->a, cpu->f);
         default:
-            bail("invalid rp2: %i", rp);
+            BAIL("invalid rp2: %i", rp);
     }
 }
 
@@ -109,7 +109,7 @@ void Cpu_write_rp2(Cpu* const restrict cpu, const CpuTableRp rp, const uint16_t 
             cpu->f = value & 0xF0;
             break;
         default:
-            bail("invalid rp2: %i", rp);
+            BAIL("invalid rp2: %i", rp);
     }
 }
 
@@ -191,7 +191,7 @@ uint8_t Cpu_read_r(Cpu* const restrict cpu, const Memory* const restrict mem, co
         case CpuTableR_A:
             return cpu->a;
         default:
-            bail("invalid cpu r: %i", r);
+            BAIL("invalid cpu r: %i", r);
     }
 }
 
@@ -229,7 +229,7 @@ void Cpu_write_r(
             cpu->a = value;
             break;
         default:
-            bail("[GameBoy_write_r] invalid CpuTableR r: %i", r);
+            BAIL("[GameBoy_write_r] invalid CpuTableR r: %i", r);
     }
 }
 
@@ -311,7 +311,7 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
             break;
         }
         default: {
-            bail("invalid alu: %i", alu);
+            BAIL("invalid alu: %i", alu);
         }
     }
 }
@@ -359,7 +359,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             log_info(LogCategory_INSTRUCTION, "stop");
 
                             Cpu_write_mem(cpu, mem, 0xFF04, 0);  // Reset DIV
-                            bail("TODO: implement STOP instruction");
+                            BAIL("TODO: implement STOP instruction");
                             break;
                         }
                         case 3: {  // JR e8
@@ -438,7 +438,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                                 break;
                             }
                             default: {
-                                bail("unreachable");
+                                BAIL("unreachable");
                             }
                         }
                     } else {
@@ -473,7 +473,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                                 break;
                             }
                             default: {
-                                bail("unreachable");
+                                BAIL("unreachable");
                             }
                         }
                     }
@@ -616,13 +616,13 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             break;
                         }
                         default: {
-                            bail("unreachable");
+                            BAIL("unreachable");
                         }
                     }
                     break;
                 }
                 default: {
-                    bail("unreachable");
+                    BAIL("unreachable");
                 }
             }
             break;
@@ -738,7 +738,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                                 break;
                             }
                             default: {
-                                bail("unreachable");
+                                BAIL("unreachable");
                             }
                         }
                     }
@@ -814,7 +814,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             break;
                         }
                         default: {
-                            bail("removed instruction");
+                            BAIL("removed instruction");
                         }
                     }
                     break;
@@ -829,7 +829,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             cpu->pc = addr;
                         }
                     } else {
-                        bail("removed instruction");
+                        BAIL("removed instruction");
                     }
                     break;
                 }
@@ -844,7 +844,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                         Cpu_stack_push_u16(cpu, mem, cpu->pc);
                         cpu->pc = addr;
                     } else {
-                        bail("removed instruction");
+                        BAIL("removed instruction");
                     }
                     break;
                 }
@@ -861,13 +861,13 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                     break;
                 }
                 default: {
-                    bail("unreachable");
+                    BAIL("unreachable");
                 }
             }
             break;
         }
         default: {
-            bail("unreachable");
+            BAIL("unreachable");
         }
     }
 }
@@ -984,7 +984,7 @@ void Cpu_execute_prefixed(
                     break;
                 }
                 default: {
-                    bail("unreachable");
+                    BAIL("unreachable");
                 }
             }
             break;
@@ -1007,7 +1007,7 @@ void Cpu_execute_prefixed(
             break;
         }
         default: {
-            bail("unreachable");
+            BAIL("unreachable");
         }
     }
 }

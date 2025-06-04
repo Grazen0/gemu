@@ -3,12 +3,14 @@ project(gemu C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_compile_options(-Wall -Wextra -Wpedantic)
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -Og -ggdb3")
+if(MSVC)
+  add_compile_options(/W4)
+else()
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
-find_package(unity REQUIRED CONFIG REQUIRED)
 
 # Set default build type to Debug
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -17,33 +19,34 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
       CACHE STRING "Build type" FORCE)
 endif()
 
-file(GLOB_RECURSE COMMON_FILES CONFIGURE_DEPENDS src/common/*.c)
-file(GLOB_RECURSE CORE_FILES CONFIGURE_DEPENDS src/core/*.c)
-file(GLOB_RECURSE FRONTEND_FILES CONFIGURE_DEPENDS src/frontend/*.c)
-
-add_library(gemu_common STATIC ${COMMON_FILES})
+file(GLOB_RECURSE sources_common CONFIGURE_DEPENDS src/common/*.c)
+add_library(gemu_common STATIC ${sources_common})
 target_include_directories(gemu_common PUBLIC src)
 
-add_library(gemu_core STATIC ${CORE_FILES})
+file(GLOB_RECURSE sources_core CONFIGURE_DEPENDS src/core/*.c)
+add_library(gemu_core STATIC ${sources_core})
 target_include_directories(gemu_core PUBLIC src)
 target_link_libraries(gemu_core PRIVATE gemu_common)
 
-# if(NOT boot_rom) set(boot_rom ${CMAKE_SOURCE_DIR}/res/bootix_dmg.bin) endif()
 set(boot_rom
-    ""
-    CACHE FILEPATH "res/bootix_dmg.bin")
+    "${PROJECT_SOURCE_DIR}/res/bootix_dmg.bin"
+    CACHE FILEPATH "Path to boot ROM file")
 add_custom_command(
   OUTPUT boot_rom.c
   COMMAND ${CMAKE_COMMAND} -E env xxd -i -n BOOT_ROM ${boot_rom} > boot_rom.c
   DEPENDS ${boot_rom}
   COMMENT "Dumping ${boot_rom}")
-
 add_library(boot_rom STATIC boot_rom.c)
 
-add_executable(gemu ${FRONTEND_FILES})
+file(GLOB_RECURSE sources_frontend CONFIGURE_DEPENDS src/frontend/*.c)
+add_executable(gemu ${sources_frontend})
 target_link_libraries(gemu PRIVATE SDL3::SDL3)
 target_link_libraries(gemu PRIVATE gemu_common)
 target_link_libraries(gemu PRIVATE gemu_core)
 target_link_libraries(gemu PRIVATE boot_rom)
 
-add_subdirectory(tests)
+option(BUILD_TESTING "Build unit tests" OFF)
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()

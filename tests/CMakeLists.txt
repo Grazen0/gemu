@@ -1,9 +1,9 @@
-set(CMAKE_UNITY_BUILD ON)
+find_package(unity REQUIRED CONFIG REQUIRED)
 
-file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS *.c)
+file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS *.c)
 
 # Generate test runners for each test file
-foreach(test_file ${TEST_SOURCES})
+foreach(test_file ${test_sources})
   get_filename_component(test_name ${test_file} NAME_WE)
   set(runner_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}_runner.c")
   set(test_exec "gemu_${test_name}")
@@ -25,5 +25,3 @@ foreach(test_file ${TEST_SOURCES})
 
   add_test(NAME ${test_name} COMMAND ${test_exec})
 endforeach()
-
-enable_testing()

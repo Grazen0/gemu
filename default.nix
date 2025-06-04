@@ -28,13 +28,12 @@ pkgs.stdenv.mkDerivation {
 
   cmakeFlags = [
     "-DCMAKE_BUILD_TYPE=Release"
+    "-DBUILD_TESTING=on"
   ];
 
   enableParallelBuilding = true;
 
-  checkPhase = ''
-    ctest --test-dir tests --output-on-failure
-  '';
+  doCheck = true;
 
   installPhase = ''
     runHook preInstall

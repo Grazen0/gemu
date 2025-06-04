@@ -19,7 +19,7 @@
 #include "frontend/log.h"
 #include "string.h"
 
-#define sdl_check(result, message)                                          \
+#define SDL_CHECK(result, message)                                          \
     do {                                                                    \
         if (!(result)) {                                                    \
             log_error(LogCategory_KEEP, "%s: %s", message, SDL_GetError()); \
@@ -58,12 +58,12 @@ int main(const int argc, const char* const argv[]) {
     SDL_strlcpy(game_title, (char*)&rom[RomData_TITLE], sizeof(game_title));
     log_info(LogCategory_KEEP, "Game title: %s", game_title);
 
-    sdl_check(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
+    SDL_CHECK(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
 
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
 
-    sdl_check(
+    SDL_CHECK(
         SDL_CreateWindowAndRenderer(
             "gemu", WINDOW_WIDTH_INITIAL, WINDOW_HEIGHT_INITIAL, 0, &window, &renderer
         ),
@@ -73,7 +73,7 @@ int main(const int argc, const char* const argv[]) {
     SDL_Texture* const restrict texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GB_BG_WIDTH, GB_BG_HEIGHT
     );
-    sdl_check(texture != NULL, "Could not create texture");
+    SDL_CHECK(texture != NULL, "Could not create texture");
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 

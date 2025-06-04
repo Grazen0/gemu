@@ -237,15 +237,15 @@ uint16_t GameBoy_read_mem_u16(GameBoy* const restrict gb, uint16_t addr) {
 void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uint8_t value) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        log_warn(LogCategory_IO, "TODO: I/O joypad input write (0x%04X, 0x%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: I/O joypad input write ($%04X, $%02X)", addr, value);
         gb->joyp = value & 0xF0;
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
-        log_warn(LogCategory_IO, "TODO: I/O serial transfer write (0x%04X, 0x%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: I/O serial transfer write ($%04X, $%02X)", addr, value);
         gb->sb = value;
     } else if (addr == 0xFF02) {
         // FF02 (serial transfer control)
-        log_warn(LogCategory_IO, "TODO: I/O serial transfer write (0x%04X, 0x%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: I/O serial transfer write ($%04X, $%02X)", addr, value);
         gb->sc = value;
         if (value == 0x81) {
             putchar(gb->sb);
@@ -272,20 +272,20 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
                 gb->tac = value;
                 break;
             default:
-                BAIL("Unexpected I/O timer and divider write (0x%04X, 0x%02X)", addr, value);
+                BAIL("Unexpected I/O timer and divider write ($%04X, $%02X)", addr, value);
         }
     } else if (addr == 0xFF0F) {
         // FF0F (interrupts)
         gb->if_ = value;
     } else if (addr >= 0xFF10 && addr <= 0xFF26) {
         // FF10-FF26 (audio)
-        log_warn(LogCategory_IO, "TODO: I/O audio write (0x%04X, 0x%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: I/O audio write ($%04X, $%02X)", addr, value);
     } else if (addr >= 0xFF30 && addr <= 0xFF3F) {
         // FF30-FF3F (wave pattern)
-        log_warn(LogCategory_IO, "TODO: I/O wave pattern write (0x%04X, 0x%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: I/O wave pattern write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        log_warn(LogCategory_IO, "TODO: OAM DMA source/start write (0x%04X, 0x%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: OAM DMA source/start write ($%04X, $%02X)", addr, value);
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
         switch (addr) {
@@ -328,11 +328,11 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
                 break;
 
             default:
-                BAIL("Unexpected I/O LCD write (addr = 0x%04X, value = 0x%02X)", addr, value);
+                BAIL("Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value);
         }
     } else if (addr == 0xFF4F) {
         // FF4F
-        BAIL("I/O VRAM bank select write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
         if (value != 0) {
@@ -340,39 +340,39 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         }
     } else if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA)
-        BAIL("I/O VRAM DMA write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O VRAM DMA write ($%04X, $%02X)", addr, value);
     } else if (addr >= 0xFF68 && addr <= 0xFF6B) {
         // FF68-FF6B (palettes)
-        BAIL("I/O palettes write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O palettes write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF70) {
         // FF70 (WRAM bank select)
-        BAIL("I/O WRAM bank select write (0x%04X, 0x%02X)", addr, value);
+        BAIL("I/O WRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF7F) {
         // Not sure what to do here
         log_info(
-            LogCategory_IO, "Unexpected I/O LCD write (addr = 0x%04X, value = 0x%02X)", addr, value
+            LogCategory_IO, "Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value
         );
     } else {
-        BAIL("Unexpected I/O write (addr = 0x%04X, value = 0x%02X)", addr, value);
+        BAIL("Unexpected I/O write (addr = $%04X, value = $%02X)", addr, value);
     }
 }
 
 void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint8_t value) {
     GameBoy* const restrict gb = ctx;
 
-    // log_info("write mem (addr = 0x%04X, value = 0x%02X)", addr, value);
+    // log_info("write mem (addr = $%04X, value = $%02X)", addr, value);
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
         log_info(
-            LogCategory_MEMORY, "TODO: GameBoy_write_mem ROM (addr = 0x%04X, 0x%02X)", addr, value
+            LogCategory_MEMORY, "TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr, value
         );
     } else if (addr <= 0x9FFF) {
         // 8000-9FFF (VRAM)
         gb->vram[addr - 0x8000] = value;
     } else if (addr <= 0xBFFF) {
         // A000-BFFF (External RAM)
-        BAIL("TODO: GameBoy_write_mem ERAM (addr = 0x%04X, 0x%02X)", addr, value);
+        BAIL("TODO: GameBoy_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
     } else if (addr <= 0xDFFF) {
         // C000-DFFF (WRAM)
         gb->ram[addr - 0xC000] = value;
@@ -382,14 +382,14 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
     } else if (addr <= 0xFE9F) {
         // FE00-FE9F (OAM)
         log_info(
-            LogCategory_MEMORY, "TODO: GameBoy_write_mem OAM (addr = 0x%04X, 0x%02X)", addr, value
+            LogCategory_MEMORY, "TODO: GameBoy_write_mem OAM (addr = $%04X, $%02X)", addr, value
         );
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
 
         log_info(
             LogCategory_MEMORY,
-            "Tried to write into unusable memory (addr = 0x%04X, 0x%02X)",
+            "Tried to write into unusable memory (addr = $%04X, $%02X)",
             addr,
             value
         );

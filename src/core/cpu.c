@@ -877,7 +877,7 @@ void Cpu_execute_prefixed(
     Memory* const restrict mem,
     const uint8_t opcode
 ) {
-    // log_info("  prefixed (opcode = 0x%02X)", opcode);
+    // log_info("  prefixed (opcode = $%02X)", opcode);
     const uint8_t x = opcode >> 6;
     const uint8_t y = (opcode >> 3) & 0x7;
     const uint8_t z = opcode & 0x7;

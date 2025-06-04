@@ -64,12 +64,11 @@ void update(State* const restrict state, const double delta) {
         }
 
         const uint8_t prev_ly = state->gb.ly;
-        // Doesn't matter if progress > 1.0, this should get wrapped around nicely
         state->gb.ly = (uint8_t)(progress * GB_LCD_MAX_LY);
 
         // Trigger VBLANK when ly changes to 144
         if (state->gb.ly == 144 && prev_ly != state->gb.ly) {
-            state->gb.if_ |= 1;
+            state->gb.if_ |= InterruptFlag_VBLANK;
         }
 
         GameBoy_service_interrupts(&state->gb, &memory);
@@ -94,9 +93,10 @@ void update(State* const restrict state, const double delta) {
                 state->tima_cycle_counter -= tac_delay_cycles;
                 ++state->gb.tima;
 
+                // Trigger timer interrupt when tima overflows
                 if (state->gb.tima == 0) {
                     state->gb.tima = state->gb.tma;
-                    state->gb.if_ |= 4;  // Trigger timer interrupt
+                    state->gb.if_ |= InterruptFlag_TIMER;
                 }
             }
         }
@@ -128,17 +128,17 @@ bool update_texture(const State* const restrict state) {
 
     SDL_FillSurfaceRect(surface, NULL, SDL_MapRGB(pixel_format, NULL, 0, 0, 0));
 
-    if (state->gb.lcdc & LCDC_ENABLE) {
+    if (state->gb.lcdc & LcdControl_ENABLE) {
         uint32_t* const restrict pixels = surface->pixels;
 
-        const size_t tile_data = state->gb.lcdc & LCDC_BGW_TILE_AREA ? 0 : 0x1000;
-        const size_t tile_map = state->gb.lcdc & LCDC_BG_TILE_MAP ? 0x1C00 : 0x1800;
+        const size_t tile_data = state->gb.lcdc & LcdControl_BGW_TILE_AREA ? 0 : 0x1000;
+        const size_t tile_map = state->gb.lcdc & LcdControl_BG_TILE_MAP ? 0x1C00 : 0x1800;
 
         for (size_t tile_y = 0; tile_y < 32; ++tile_y) {
             for (size_t tile_x = 0; tile_x < 32; ++tile_x) {
                 const uint8_t tile_index = state->gb.vram[tile_map + (tile_y * 32) + tile_x];
                 const long tile_index_signed =
-                    state->gb.lcdc & LCDC_BGW_TILE_AREA ? tile_index : (int8_t)tile_index;
+                    state->gb.lcdc & LcdControl_BGW_TILE_AREA ? tile_index : (int8_t)tile_index;
 
                 for (size_t py = 0; py < 8; ++py) {
                     const uint8_t byte_1 =

@@ -15,15 +15,6 @@ const int GB_LCD_MAX_LY = 154;
 const int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
 const double GB_VBLANK_FREQ = 59.7;
 
-const uint8_t LCDC_ENABLE = 1 << 7;
-const uint8_t LCDC_WIN_TILE_MAP = 1 << 6;
-const uint8_t LCDC_WIN_ENABLE = 1 << 5;
-const uint8_t LCDC_BGW_TILE_AREA = 1 << 4;
-const uint8_t LCDC_BG_TILE_MAP = 1 << 3;
-const uint8_t LCDC_OBJ_SIZE = 1 << 2;
-const uint8_t LCDC_OBJ_ENABLE = 1 << 1;
-const uint8_t LCDC_OBJ_BGW_ENABLE = 1 << 0;
-
 GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),

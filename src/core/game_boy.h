@@ -13,14 +13,24 @@ extern const int GB_LCD_MAX_LY;
 extern const int GB_CPU_FREQUENCY_HZ;
 extern const double GB_VBLANK_FREQ;
 
-extern const uint8_t LCDC_ENABLE;
-extern const uint8_t LCDC_WIN_TILE_MAP;
-extern const uint8_t LCDC_WIN_ENABLE;
-extern const uint8_t LCDC_BGW_TILE_AREA;
-extern const uint8_t LCDC_BG_TILE_MAP;
-extern const uint8_t LCDC_OBJ_SIZE;
-extern const uint8_t LCDC_OBJ_ENABLE;
-extern const uint8_t LCDC_OBJ_BGW_ENABLE;
+typedef enum LcdControl {
+    LcdControl_ENABLE = 1 << 7,
+    LcdControl_WIN_TILE_MAP = 1 << 6,
+    LcdControl_WIN_ENABLE = 1 << 5,
+    LcdControl_BGW_TILE_AREA = 1 << 4,
+    LcdControl_BG_TILE_MAP = 1 << 3,
+    LcdControl_OBJ_SIZE = 1 << 2,
+    LcdControl_OBJ_ENABLE = 1 << 1,
+    LcdControl_OBJ_BGW_ENABLE = 1 << 0,
+} LcdControl;
+
+typedef enum InterruptFlag {
+    InterruptFlag_VBLANK = 1 << 0,
+    InterruptFlag_LCD = 1 << 1,
+    InterruptFlag_TIMER = 1 << 2,
+    InterruptFlag_SERIAL = 1 << 3,
+    InterruptFlag_JOYPAD = 1 << 4,
+} InterruptFlag;
 
 typedef struct GameBoy {
     Cpu cpu;

@@ -1,27 +1,59 @@
 #ifndef LIB_LOG_H
 #define LIB_LOG_H
 
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 
-typedef struct Logger {
-    void (*info)(const char* format, va_list args);
-    void (*warn)(const char* format, va_list args);
-    void (*error)(const char* format, va_list args);
-} Logger;
+typedef enum LogLevel {
+    LogLevel_INFO,
+    LogLevel_WARN,
+    LogLevel_ERROR,
+} LogLevel;
 
-void set_logger(const Logger* restrict new_logger);
+typedef enum LogCategory {
+    LogCategory_ALL = ~0,
+    LogCategory_NONE = 0,
+    LogCategory_INSTRUCTION = 1 << 0,
+    LogCategory_ERROR = 1 << 1,
+    LogCategory_IO = 1 << 2,
+    LogCategory_MEMORY = 1 << 3,
+    LogCategory_INTERRUPT = 1 << 4,
+    LogCategory_KEEP = 1 << 5
+} LogCategory;
 
-void log_info(const char* restrict format, ...);
+typedef void (*LogFn)(LogLevel level, LogCategory category, const char* restrict text);
 
-void log_warn(const char* restrict format, ...);
+typedef struct LogMessage {
+    LogCategory category;
+    LogLevel level;
+    char text[256];
+} LogMessage;
 
-void log_error(const char* restrict format, ...);
+typedef struct LogQueue {
+    size_t capacity;
+    LogMessage* messages;
+    size_t head;
+    size_t tail;
+    pthread_mutex_t mtx;
+    pthread_cond_t cond;
+    bool quit;
+} LogQueue;
 
-void vlog_info(const char* restrict format, va_list args);
+void logger_set_category_mask(int category_mask);
 
-void vlog_warn(const char* restrict format, va_list args);
+int logger_init(LogFn log_fn);
 
-void vlog_error(const char* restrict format, va_list args);
+void logger_cleanup(void);
+
+void vlog(LogLevel level, LogCategory category, const char* restrict format, va_list args);
+
+void log_info(LogCategory category, const char* restrict format, ...);
+
+void log_warn(LogCategory category, const char* restrict format, ...);
+
+void log_error(LogCategory category, const char* restrict format, ...);
 
 #endif

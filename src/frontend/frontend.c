@@ -1,6 +1,8 @@
-#include "frontend.h"
+#include "frontend/frontend.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_rect.h"
@@ -9,9 +11,12 @@
 #include "common/log.h"
 #include "core/cpu.h"
 #include "core/game_boy.h"
+#include "frontend/sdl.h"
 
 static const int FPS = 60;
 static const double DELTA = 1.0 / FPS;
+static const double MAX_TIME_ACCUMULATOR = 4 * DELTA;
+static const int DIV_FREQUENCY_HZ = 16384;  // 16779 Hz on SGB
 
 static const uint8_t PALETTE_RGB[][3] = {
     {186, 218, 85},
@@ -36,53 +41,82 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
     }
 }
 
-void trigger_interrupts(GameBoy* const restrict gb, Memory* const restrict mem) {
-    if (!gb->cpu.ime) {
-        return;
-    }
-
-    const uint8_t int_mask = gb->iff & gb->ie;
-
-    for (uint8_t i = 0; i <= 4; i++) {
-        if (int_mask & (1 << i)) {
-            log_info("Interrupt #%i", i);
-            gb->iff &= ~(1 << i);
-            Cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
-            break;
-        }
-    }
-}
-
 void update(State* const restrict state, const double delta) {
-    Memory mem = (Memory){
+    Memory memory = (Memory){
         .ctx = &state->gb,
         .read = GameBoy_read_mem,
         .write = GameBoy_write_mem,
     };
 
-    const double frame_cycles = GB_CPU_FREQ_M * delta;
     state->gb.cpu.cycle_count = 0;
 
-    bool is_vblank_pending = true;
+    const double total_frame_cycles = GB_CPU_FREQUENCY_HZ * delta;
 
-    while (state->gb.cpu.cycle_count < frame_cycles) {
-        const double progress = (double)state->gb.cpu.cycle_count / frame_cycles;
-        state->gb.ly = (uint8_t)(progress * GB_LCD_MAX_LY);
+    const double VFRAME_DURATION = 1.0 / GB_VBLANK_FREQ;
+    const int DIV_FREQUENCY_CYCLES = GB_CPU_FREQUENCY_HZ / DIV_FREQUENCY_HZ;
 
-        if (is_vblank_pending && state->gb.ly == 144) {
-            state->gb.iff |= 1;
-            is_vblank_pending = false;
+    while (state->cycle_accumulator < total_frame_cycles) {
+        const double actual_vframe_time =
+            state->vframe_time + (state->cycle_accumulator / GB_CPU_FREQUENCY_HZ);
+        double progress = actual_vframe_time / VFRAME_DURATION;
+        while (progress >= 1.0) {
+            progress -= 1.0;
         }
 
-        trigger_interrupts(&state->gb, &mem);
-        Cpu_tick(&state->gb.cpu, &mem);
+        const uint8_t prev_ly = state->gb.ly;
+        // Doesn't matter if progress > 1.0, this should get wrapped around nicely
+        state->gb.ly = (uint8_t)(progress * GB_LCD_MAX_LY);
+
+        // Trigger VBLANK when ly changes to 144
+        if (state->gb.ly == 144 && prev_ly != state->gb.ly) {
+            state->gb.if_ |= 1;
+        }
+
+        GameBoy_service_interrupts(&state->gb, &memory);
+        Cpu_tick(&state->gb.cpu, &memory);
+
+        // DIV counter
+        // TODO: should not increment when in STOP mode
+        state->div_cycle_counter += state->gb.cpu.cycle_count;
+        while (state->div_cycle_counter >= DIV_FREQUENCY_CYCLES) {
+            ++state->gb.div;
+            state->div_cycle_counter -= DIV_FREQUENCY_CYCLES;
+        }
+
+        // TIMA is only incremented if TAC's bit 2 is set
+        if (state->gb.tac & 0x04) {
+            const uint8_t clock_select = state->gb.tac & 0x03;
+            const int tac_delay_cycles = clock_select == 0 ? 256 : 4 * clock_select;
+
+            // TIMA counter
+            state->tima_cycle_counter += state->gb.cpu.cycle_count;
+            if (state->tima_cycle_counter > tac_delay_cycles) {
+                state->tima_cycle_counter -= tac_delay_cycles;
+                ++state->gb.tima;
+
+                if (state->gb.tima == 0) {
+                    state->gb.tima = state->gb.tma;
+                    state->gb.if_ |= 4;  // Trigger timer interrupt
+                }
+            }
+        }
+
+        state->cycle_accumulator += state->gb.cpu.cycle_count;
+        state->gb.cpu.cycle_count = 0;
+    }
+
+    state->cycle_accumulator -= total_frame_cycles;
+
+    state->vframe_time += delta;
+    while (state->vframe_time >= VFRAME_DURATION) {
+        state->vframe_time -= VFRAME_DURATION;
     }
 }
 
 bool update_texture(const State* const restrict state) {
     SDL_Surface* surface = NULL;
 
-    if (!SDL_LockTextureToSurface(state->texture, NULL, &surface)) {
+    if (!SDL_LockTextureToSurface(state->screen_texture, NULL, &surface)) {
         return false;
     }
 
@@ -100,19 +134,19 @@ bool update_texture(const State* const restrict state) {
         const size_t tile_data = state->gb.lcdc & LCDC_BGW_TILE_AREA ? 0 : 0x1000;
         const size_t tile_map = state->gb.lcdc & LCDC_BG_TILE_MAP ? 0x1C00 : 0x1800;
 
-        for (size_t tile_y = 0; tile_y < 32; tile_y++) {
-            for (size_t tile_x = 0; tile_x < 32; tile_x++) {
+        for (size_t tile_y = 0; tile_y < 32; ++tile_y) {
+            for (size_t tile_x = 0; tile_x < 32; ++tile_x) {
                 const uint8_t tile_index = state->gb.vram[tile_map + (tile_y * 32) + tile_x];
                 const long tile_index_signed =
                     state->gb.lcdc & LCDC_BGW_TILE_AREA ? tile_index : (int8_t)tile_index;
 
-                for (size_t py = 0; py < 8; py++) {
+                for (size_t py = 0; py < 8; ++py) {
                     const uint8_t byte_1 =
                         state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * py)];
                     const uint8_t byte_2 =
                         state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * py) + 1];
 
-                    for (size_t px = 0; px < 8; px++) {
+                    for (size_t px = 0; px < 8; ++px) {
                         const uint8_t bit_lo = (byte_1 >> px) & 1;
                         const uint8_t bit_hi = (byte_2 >> px) & 1;
                         const uint8_t palette_index = bit_lo | (bit_hi << 1);
@@ -135,7 +169,7 @@ bool update_texture(const State* const restrict state) {
         }
     }
 
-    SDL_UnlockTexture(state->texture);
+    SDL_UnlockTexture(state->screen_texture);
     return true;
 }
 
@@ -143,7 +177,7 @@ void render(const State* const restrict state, SDL_Renderer* const restrict rend
     const double ASPECT_RATIO = (double)GB_LCD_WIDTH / GB_LCD_HEIGHT;
 
     if (!update_texture(state)) {
-        log_warn("Could not update texture: %s", SDL_GetError());
+        log_warn(LogCategory_KEEP, "Could not update texture: %s", SDL_GetError());
     }
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -174,26 +208,42 @@ void render(const State* const restrict state, SDL_Renderer* const restrict rend
         dest_rect.y = ((float)state->window_height / 2.0F) - (dest_rect.h / 2.0F);
     }
 
-    SDL_RenderTexture(renderer, state->texture, &src_rect, &dest_rect);
+    SDL_RenderTexture(renderer, state->screen_texture, &src_rect, &dest_rect);
     SDL_RenderPresent(renderer);
 }
 
-void frame(State* const restrict state, SDL_Renderer* const restrict renderer) {
-    SDL_Event event;
+void run_until_quit(State* const restrict state, SDL_Renderer* const restrict renderer) {
+    double last_time = sdl_get_performance_time();
+    double time_accumulator = 0.0;
 
-    while (SDL_PollEvent(&event)) {
-        handle_event(state, &event);
+    while (!state->quit) {
+        const double frame_start = sdl_get_performance_time();
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            handle_event(state, &event);
+        }
+
+        const double new_time = sdl_get_performance_time();
+
+        time_accumulator += new_time - last_time;
+        if (time_accumulator > MAX_TIME_ACCUMULATOR) {
+            time_accumulator = MAX_TIME_ACCUMULATOR;
+        }
+        last_time = new_time;
+
+        while (time_accumulator >= DELTA) {
+            update(state, DELTA);
+            time_accumulator -= DELTA;
+        }
+
+        render(state, renderer);
+
+        const double offset = sdl_get_performance_time() - frame_start;
+        const double delay = DELTA - offset;
+
+        if (delay > 0) {
+            SDL_DelayNS((size_t)(delay * 1e9));
+        }
     }
-
-    const long double new_time = (long double)SDL_GetTicks() / 1000;
-    state->time_accumulator += new_time - state->current_time;
-    state->current_time = new_time;
-
-    while (state->time_accumulator >= DELTA) {
-        update(state, DELTA);
-        state->time_accumulator -= DELTA;
-    }
-
-    render(state, renderer);
-    SDL_DelayNS((size_t)(DELTA * 1e9));
 }

@@ -10,8 +10,8 @@ extern const int GB_LCD_HEIGHT;
 extern const int GB_BG_WIDTH;
 extern const int GB_BG_HEIGHT;
 extern const int GB_LCD_MAX_LY;
-extern const int GB_CPU_FREQ;
-extern const double GB_CPU_FREQ_M;
+extern const int GB_CPU_FREQUENCY_HZ;
+extern const double GB_VBLANK_FREQ;
 
 extern const uint8_t LCDC_ENABLE;
 extern const uint8_t LCDC_WIN_TILE_MAP;
@@ -27,6 +27,7 @@ typedef struct GameBoy {
     uint8_t ram[0x2000];
     uint8_t vram[0x2000];
     uint8_t hram[0x7F];
+    uint8_t* boot_rom;
     uint8_t* rom;
     size_t rom_len;
     bool rom_enable;
@@ -42,7 +43,7 @@ typedef struct GameBoy {
     uint8_t obp0;
     uint8_t obp1;
     uint8_t ie;
-    uint8_t iff;
+    uint8_t if_;
     uint8_t sb;
     uint8_t sc;
     uint8_t div;
@@ -53,12 +54,14 @@ typedef struct GameBoy {
 
 } GameBoy;
 
-GameBoy GameBoy_new(uint8_t* restrict rom, size_t rom_len);
+GameBoy GameBoy_new(uint8_t* boot_rom, uint8_t* rom, size_t rom_len);
 
 void GameBoy_destroy(GameBoy* restrict gb);
 
 uint8_t GameBoy_read_mem(const void* restrict ctx, uint16_t addr);
 
 void GameBoy_write_mem(void* restrict ctx, uint16_t addr, uint8_t value);
+
+void GameBoy_service_interrupts(GameBoy* restrict gb, Memory* restrict mem);
 
 #endif

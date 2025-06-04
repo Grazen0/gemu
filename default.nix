@@ -5,8 +5,10 @@
 let
   inherit (pkgs)
     lib
-    sdl3
     cmake
+    sdl3
+    xxd
+    unity-test
     ruby
     ;
 in
@@ -19,6 +21,8 @@ pkgs.stdenv.mkDerivation {
   nativeBuildInputs = [
     cmake
     sdl3.dev
+    xxd
+    unity-test
     ruby
   ];
 
@@ -39,7 +43,7 @@ pkgs.stdenv.mkDerivation {
   '';
 
   env = {
-    CMAKE_PREFIX_PATH = "${sdl3.dev}/lib/cmake";
+    CMAKE_PREFIX_PATH = "${sdl3.dev}/lib/cmake:${unity-test}/lib/cmake";
   };
 
   meta = with lib; {

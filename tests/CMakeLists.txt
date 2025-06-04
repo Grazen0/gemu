@@ -1,7 +1,6 @@
 set(CMAKE_UNITY_BUILD ON)
 
 file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS *.c)
-list(REMOVE_ITEM TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/unity/unity.c")
 
 # Generate test runners for each test file
 foreach(test_file ${TEST_SOURCES})
@@ -18,8 +17,9 @@ foreach(test_file ${TEST_SOURCES})
     DEPENDS ${test_file}
     COMMENT "Generating Unity test runner for ${test_file}")
 
-  add_executable(${test_exec} ${test_file} ${runner_file} unity/unity.c)
+  add_executable(${test_exec} ${test_file} ${runner_file})
   target_link_libraries(${test_exec} PRIVATE gemu_core)
+  target_link_libraries(${test_exec} PRIVATE unity::framework)
   target_include_directories(${test_exec} PRIVATE ${PROJECT_SOURCE_DIR}/src
                                                   unity)
 

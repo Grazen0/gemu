@@ -1,16 +1,14 @@
 {
   pkgs ? import <nixpkgs> { },
   mkShell,
-  xxd,
   sdl3,
+  unity-test,
   ...
 }:
 mkShell {
   inputsFrom = [ (pkgs.callPackage ./default.nix { }) ];
 
   env = {
-    CMAKE_PREFIX_PATH = "${sdl3.dev}/lib/cmake";
+    CMAKE_PREFIX_PATH = "${sdl3.dev}/lib/cmake:${unity-test}/lib/cmake";
   };
-
-  nativeBuildInputs = [ xxd ];
 }

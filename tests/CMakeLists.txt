@@ -1,6 +1,11 @@
 find_package(unity REQUIRED CONFIG REQUIRED)
+find_package(cJSON REQUIRED CONFIG REQUIRED)
 
-file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS *.c)
+file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS */test_*.c)
+# file(GLOB_RECURSE core_data_files CONFIGURE_DEPENDS core/data/*)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/core/data
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/core)
 
 # Generate test runners for each test file
 foreach(test_file ${test_sources})
@@ -20,8 +25,11 @@ foreach(test_file ${test_sources})
   add_executable(${test_exec} ${test_file} ${runner_file})
   target_link_libraries(${test_exec} PRIVATE gemu_core)
   target_link_libraries(${test_exec} PRIVATE unity::framework)
-  target_include_directories(${test_exec} PRIVATE ${PROJECT_SOURCE_DIR}/src
-                                                  unity)
+  target_link_libraries(${test_exec} PRIVATE cjson)
+  target_link_libraries(${test_exec} PRIVATE)
+  target_include_directories(
+    ${test_exec} PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests
+                         unity)
 
   add_test(NAME ${test_name} COMMAND ${test_exec})
 endforeach()

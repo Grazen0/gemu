@@ -28,7 +28,7 @@
     } while (0);
 
 int main(const int argc, const char* const argv[]) {
-    logger_set_category_mask(LogCategory_ALL & ~LogCategory_INSTRUCTION);
+    logger_set_category_mask(LogCategory_NONE);
 
     const int log_init_result = logger_init(pretty_log);
     if (log_init_result != 0) {

@@ -1,6 +1,6 @@
 #include <stdint.h>
+#include <unity.h>
 #include "common/num.h"
-#include "unity.h"
 
 void test_concat_u16(void) {
     TEST_ASSERT_EQUAL_HEX(0x1234, concat_u16(0x12, 0x34));

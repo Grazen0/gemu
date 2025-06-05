@@ -61,7 +61,9 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr == 0xFF01) {
         // FF01 (serial transfer data)
-        return gb->sb;
+        // TODO: implement properly
+        return 0xFF;
+        // return gb->sb;
     }
 
     if (addr == 0xFF02) {
@@ -241,8 +243,7 @@ uint16_t GameBoy_read_mem_u16(GameBoy* const restrict gb, uint16_t addr) {
 void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uint8_t value) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        gb->joyp &= 0x0F;
-        gb->joyp |= value & 0xF0;
+        gb->joyp = (gb->joyp & 0x0F) | (value & 0xF0);
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
         gb->sb = value;
@@ -251,9 +252,11 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         log_warn(LogCategory_IO, "TODO: I/O serial transfer control write ($%02X)", value);
         gb->sc = value;
         // TODO: implement properly
-        gb->sc &= ~0x80;
-        // gb->if_ |= InterruptFlag_SERIAL;
-        // gb->sc &= ~0x80;
+
+        if (gb->sc == 0x81) {
+            putchar(gb->sb);
+            fflush(stdout);
+        }
     } else if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
         switch (addr) {

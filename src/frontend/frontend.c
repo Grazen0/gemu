@@ -72,6 +72,11 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
             break;
         }
         case SDL_EVENT_KEY_UP: {
+            if (event->key.mod == SDL_KMOD_CTRL && event->key.key == SDLK_O) {
+                // TODO: open new ROM
+                break;
+            }
+
             if (event->key.mod != 0) {
                 break;
             }
@@ -159,12 +164,14 @@ void update(State* const restrict state, const double delta) {
 
         state->gb.stat |= (state->gb.ly == state->gb.lcy) << 2;
 
-        // Trigger VBLANK when ly changes to 144
+        // Trigger some stuff then ly changes
         if (prev_ly != state->gb.ly) {
+            // VBlank interrupt
             if (state->gb.ly == 144) {
                 state->gb.if_ |= InterruptFlag_VBLANK;
             }
 
+            // STAT lcy == ly interrupt
             if ((state->gb.stat & StatSelect_LYC) != 0 && state->gb.ly == state->gb.lcy) {
                 state->gb.if_ |= InterruptFlag_LCD;
             }

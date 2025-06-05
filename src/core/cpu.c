@@ -1,6 +1,5 @@
 #include "cpu.h"
 #include <stdint.h>
-#include <stdlib.h>
 #include "common/control.h"
 #include "common/log.h"
 #include "common/num.h"
@@ -240,7 +239,7 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
             cpu->a += rhs;
 
             set_bits(&cpu->f, CpuFlag_C, rhs > (0xFF - prev_a));
-            set_bits(&cpu->f, CpuFlag_H, (((prev_a & 0xF) + (rhs & 0xF)) & 0x10) != 0);
+            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) + (rhs & 0xF) > 0xF);
             set_bits(&cpu->f, CpuFlag_N, false);
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             break;
@@ -263,15 +262,14 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
 
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             set_bits(&cpu->f, CpuFlag_N, true);
-            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) - (rhs & 0xF) > 0xF);
+            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) < (rhs & 0xF));
             set_bits(&cpu->f, CpuFlag_C, rhs > prev_a);
             break;
         }
         case CpuTableAlu_SBC: {
             const uint8_t prev_a = cpu->a;
             const uint8_t borrow = (cpu->f & CpuFlag_C) != 0;
-            const uint16_t result = prev_a - rhs - borrow;
-            cpu->a = (uint8_t)result;
+            cpu->a = prev_a - rhs - borrow;
 
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             set_bits(&cpu->f, CpuFlag_N, true);
@@ -306,7 +304,7 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
         case CpuTableAlu_CP: {
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == rhs);
             set_bits(&cpu->f, CpuFlag_N, true);
-            set_bits(&cpu->f, CpuFlag_H, (((cpu->a & 0xF) - (rhs & 0xF)) & 0x10) != 0);
+            set_bits(&cpu->f, CpuFlag_H, (cpu->a & 0xF) < (rhs & 0xF));
             set_bits(&cpu->f, CpuFlag_C, cpu->a < rhs);
             break;
         }
@@ -370,7 +368,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             cpu->cycle_count++;
                             break;
                         }
-                        default: {  // JR cc, n16
+                        default: {  // JR cc, e8
                             const int8_t offset = (int8_t)Cpu_read_pc(cpu, mem);
                             log_info(LogCategory_INSTRUCTION, "jr cc(%i), %i", y - 4, offset);
 
@@ -485,26 +483,26 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
 
                         const uint16_t value = Cpu_read_rp(cpu, p);
                         Cpu_write_rp(cpu, p, value + 1);
+                        cpu->cycle_count++;
                     } else {  // DEC r16
                         log_info(LogCategory_INSTRUCTION, "dec rp(%d)", p);
 
                         const uint16_t value = Cpu_read_rp(cpu, p);
                         Cpu_write_rp(cpu, p, value - 1);
+                        cpu->cycle_count++;
                     }
-
-                    cpu->cycle_count++;
                     break;
                 }
                 case 4: {  // INC r8
                     log_info(LogCategory_INSTRUCTION, "inc r(%d)", y);
 
-                    const uint8_t prev_value = Cpu_read_r(cpu, mem, y);
-                    const uint8_t new_value = prev_value + 1;
+                    const uint8_t value = Cpu_read_r(cpu, mem, y);
+                    const uint8_t new_value = value + 1;
                     Cpu_write_r(cpu, mem, y, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
-                    set_bits(&cpu->f, CpuFlag_H, (prev_value & 0xF) == 0xF);
+                    set_bits(&cpu->f, CpuFlag_H, (new_value & 0xF) == 0);
                     break;
                 }
                 case 5: {  // DEC r8
@@ -516,7 +514,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, true);
-                    set_bits(&cpu->f, CpuFlag_H, (value & 0xF) == 0);
+                    set_bits(&cpu->f, CpuFlag_H, (new_value & 0xF) == 0xF);
                     break;
                 }
                 case 6: {  // LD r8, n
@@ -531,33 +529,51 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                         case 0: {  // RLCA
                             log_info(LogCategory_INSTRUCTION, "rlca");
 
-                            bool bit_7 = (cpu->a & (1 << 7)) != 0;
-                            set_bits(&cpu->f, CpuFlag_C, bit_7);
+                            const bool bit_7 = (cpu->a & 0x80) != 0;
                             cpu->a = (cpu->a << 1) | bit_7;
+
+                            set_bits(&cpu->f, CpuFlag_Z, false);
+                            set_bits(&cpu->f, CpuFlag_N, false);
+                            set_bits(&cpu->f, CpuFlag_H, false);
+                            set_bits(&cpu->f, CpuFlag_C, bit_7);
                             break;
                         }
                         case 1: {  // RRCA
                             log_info(LogCategory_INSTRUCTION, "rrca");
 
-                            bool bit_7 = cpu->a & 1;
-                            set_bits(&cpu->f, CpuFlag_C, bit_7);
-                            cpu->a = (cpu->a >> 1) | (bit_7 << 7);
+                            const bool bit_0 = cpu->a & 1;
+                            cpu->a = (cpu->a >> 1) | (bit_0 << 7);
+
+                            set_bits(&cpu->f, CpuFlag_Z, false);
+                            set_bits(&cpu->f, CpuFlag_N, false);
+                            set_bits(&cpu->f, CpuFlag_H, false);
+                            set_bits(&cpu->f, CpuFlag_C, bit_0);
                             break;
                         }
                         case 2: {  // RLA
                             log_info(LogCategory_INSTRUCTION, "rla");
 
-                            bool prev_carry = (cpu->f & CpuFlag_C) != 0;
-                            set_bits(&cpu->f, CpuFlag_C, (cpu->a & (1 << 7)) != 0);
+                            const bool prev_carry = (cpu->f & CpuFlag_C) != 0;
+                            const bool new_carry = (cpu->a & 0x80) != 0;
                             cpu->a = (cpu->a << 1) | prev_carry;
+
+                            set_bits(&cpu->f, CpuFlag_Z, false);
+                            set_bits(&cpu->f, CpuFlag_N, false);
+                            set_bits(&cpu->f, CpuFlag_H, false);
+                            set_bits(&cpu->f, CpuFlag_C, new_carry);
                             break;
                         }
                         case 3: {  // RRA
                             log_info(LogCategory_INSTRUCTION, "rra");
 
-                            bool prev_carry = (cpu->f & CpuFlag_C) != 0;
-                            set_bits(&cpu->f, CpuFlag_C, cpu->a & 1);
+                            const bool prev_carry = (cpu->f & CpuFlag_C) != 0;
+                            const bool new_carry = cpu->a & 1;
                             cpu->a = (cpu->a >> 1) | (prev_carry << 7);
+
+                            set_bits(&cpu->f, CpuFlag_Z, false);
+                            set_bits(&cpu->f, CpuFlag_N, false);
+                            set_bits(&cpu->f, CpuFlag_H, false);
+                            set_bits(&cpu->f, CpuFlag_C, new_carry);
                             break;
                         }
                         case 4: {  // DAA
@@ -593,10 +609,11 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             break;
                         }
                         case 5: {  // CPL
-                            log_info(LogCategory_INSTRUCTION, "daa");
+                            log_info(LogCategory_INSTRUCTION, "cpl");
 
                             cpu->a = ~cpu->a;
-                            set_bits(&cpu->f, CpuFlag_N | CpuFlag_H, false);
+                            set_bits(&cpu->f, CpuFlag_N, true);
+                            set_bits(&cpu->f, CpuFlag_H, true);
                             break;
                         }
                         case 6: {  // SCF
@@ -640,7 +657,8 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
             break;
         }
         case 2: {  // {alu} A, r8
-            log_info(LogCategory_INSTRUCTION, "{alu} A, r(%d)", z);
+            log_info(LogCategory_INSTRUCTION, "{alu} a, r(%d)", z);
+
             const uint8_t rhs = Cpu_read_r(cpu, mem, z);
             Cpu_alu(cpu, y, rhs);
             break;
@@ -713,6 +731,7 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                         switch (p) {
                             case 0: {  // RET
                                 log_info(LogCategory_INSTRUCTION, "ret");
+
                                 cpu->pc = Cpu_stack_pop_u16(cpu, mem);
                                 cpu->cycle_count++;
                                 break;
@@ -839,8 +858,10 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
 
                         const uint16_t value = Cpu_read_rp2(cpu, p);
                         Cpu_stack_push_u16(cpu, mem, value);
-                    } else if (p == 0) {  // CALL a16
+                    } else if (p == 0) {  // CALL n16
                         const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+                        log_info(LogCategory_INSTRUCTION, "call $%04X", addr);
+
                         Cpu_stack_push_u16(cpu, mem, cpu->pc);
                         cpu->pc = addr;
                     } else {
@@ -851,11 +872,13 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                 case 6: {  // {alu} A, a8
                     const uint8_t rhs = Cpu_read_pc(cpu, mem);
                     log_info(LogCategory_INSTRUCTION, "{alu} a, $%02X", rhs);
+
                     Cpu_alu(cpu, y, rhs);
                     break;
                 }
                 case 7: {  // RST vec
                     log_info(LogCategory_INSTRUCTION, "rst $%02X", y * 8);
+
                     Cpu_stack_push_u16(cpu, mem, cpu->pc);
                     cpu->pc = y * 8;
                     break;
@@ -882,37 +905,38 @@ void Cpu_execute_prefixed(
     const uint8_t y = (opcode >> 3) & 0x7;
     const uint8_t z = opcode & 0x7;
 
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+
     switch (x) {
         case 0: {
             switch (y) {
                 case 0: {  // RLC r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
-                    const bool carry = (value & 0x80) != 0;
-                    const uint8_t new_value = (value << 1) | carry;
+                    const bool bit_7 = (value & 0x80) != 0;
+                    const uint8_t new_value = (value << 1) | bit_7;
                     Cpu_write_r(cpu, mem, z, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, carry);
+                    set_bits(&cpu->f, CpuFlag_C, bit_7);
                     break;
                 }
                 case 1: {  // RRC r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
-                    const bool carry = value & 1;
-                    const uint8_t new_value = (value >> 1) | (carry << 7);
+                    const bool bit_0 = value & 1;
+                    const uint8_t new_value = (value >> 1) | (bit_0 << 7);
                     Cpu_write_r(cpu, mem, z, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, carry);
+                    set_bits(&cpu->f, CpuFlag_C, bit_0);
                     break;
                 }
                 case 2: {  // RL r8
                     const uint8_t value = Cpu_read_r(cpu, mem, z);
                     const bool prev_carry = (cpu->f & CpuFlag_C) != 0;
                     const bool new_carry = (value & 0x80) != 0;
+
                     const uint8_t new_value = (value << 1) | prev_carry;
                     Cpu_write_r(cpu, mem, z, new_value);
 
@@ -923,9 +947,9 @@ void Cpu_execute_prefixed(
                     break;
                 }
                 case 3: {  // RR r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
                     const bool prev_carry = (cpu->f & CpuFlag_C) != 0;
                     const bool new_carry = value & 1;
+
                     const uint8_t new_value = (value >> 1) | (prev_carry << 7);
                     Cpu_write_r(cpu, mem, z, new_value);
 
@@ -936,33 +960,32 @@ void Cpu_execute_prefixed(
                     break;
                 }
                 case 4: {  // SLA r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
-                    const bool carry = (value & 0x80) != 0;
+                    const bool bit_7 = (value & 0x80) != 0;
                     const uint8_t new_value = value << 1;
                     Cpu_write_r(cpu, mem, z, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, carry);
+                    set_bits(&cpu->f, CpuFlag_C, bit_7);
                     break;
                 }
                 case 5: {  // SRA r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
-                    const bool carry = value & 1;
-                    const uint8_t b7 = value & 0x80;
-                    const uint8_t new_value = (value >> 1) | b7;
+                    const bool bit_0 = value & 1;
+                    const uint8_t bit_7 = (value & 0x80) != 0;
+                    const uint8_t new_value = (value >> 1) | (bit_7 << 7);
                     Cpu_write_r(cpu, mem, z, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, carry);
+                    set_bits(&cpu->f, CpuFlag_C, bit_0);
                     break;
                 }
                 case 6: {  // SWAP r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
-                    const uint8_t new_value = concat_u16(value & 0xFF, value >> 8);
+                    const uint8_t prev_hi = value >> 4;
+                    const uint8_t prev_lo = value & 0xF;
+                    const uint8_t new_value = (prev_lo << 4) | prev_hi;
                     Cpu_write_r(cpu, mem, z, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
@@ -972,15 +995,14 @@ void Cpu_execute_prefixed(
                     break;
                 }
                 case 7: {  // SRL r8
-                    const uint8_t value = Cpu_read_r(cpu, mem, z);
-                    const bool carry = value & 1;
+                    const bool bit_0 = value & 1;
                     const uint8_t new_value = value >> 1;
                     Cpu_write_r(cpu, mem, z, new_value);
 
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, carry);
+                    set_bits(&cpu->f, CpuFlag_C, bit_0);
                     break;
                 }
                 default: {
@@ -990,19 +1012,16 @@ void Cpu_execute_prefixed(
             break;
         }
         case 1: {  // BIT u3, r8
-            const uint8_t value = Cpu_read_r(cpu, mem, z);
             set_bits(&cpu->f, CpuFlag_Z, (value & (1 << y)) == 0);
-            set_bits(&cpu->f, CpuFlag_N, true);
-            set_bits(&cpu->f, CpuFlag_H, false);
+            set_bits(&cpu->f, CpuFlag_N, false);
+            set_bits(&cpu->f, CpuFlag_H, true);
             break;
         }
         case 2: {  // RES u3, r8
-            const uint8_t value = Cpu_read_r(cpu, mem, z);
             Cpu_write_r(cpu, mem, z, value & ~(1 << y));
             break;
         }
         case 3: {  // SET u3, r8
-            const uint8_t value = Cpu_read_r(cpu, mem, z);
             Cpu_write_r(cpu, mem, z, value | (1 << y));
             break;
         }

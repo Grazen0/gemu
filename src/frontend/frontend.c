@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_rect.h"
 #include "SDL3/SDL_render.h"
@@ -25,6 +26,29 @@ static const uint8_t PALETTE_RGB[][3] = {
     { 19,  22,  8}
 };
 
+bool* get_joypad_key(State* const restrict state, const SDL_Keycode key) {
+    switch (key) {
+        case SDLK_RETURN:
+            return &state->joypad.start;
+        case SDLK_SPACE:
+            return &state->joypad.select;
+        case SDLK_UP:
+            return &state->joypad.up;
+        case SDLK_DOWN:
+            return &state->joypad.down;
+        case SDLK_RIGHT:
+            return &state->joypad.right;
+        case SDLK_LEFT:
+            return &state->joypad.left;
+        case SDLK_Z:
+            return &state->joypad.a;
+        case SDLK_X:
+            return &state->joypad.b;
+        default:
+            return NULL;
+    }
+}
+
 void handle_event(State* const restrict state, const SDL_Event* const restrict event) {
     switch (event->type) {
         case SDL_EVENT_QUIT: {
@@ -34,6 +58,28 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
         case SDL_EVENT_WINDOW_RESIZED: {
             state->window_width = event->window.data1;
             state->window_height = event->window.data2;
+            break;
+        }
+        case SDL_EVENT_KEY_DOWN: {
+            if (event->key.mod != 0) {
+                break;
+            }
+
+            bool* const state_key = get_joypad_key(state, event->key.key);
+            if (state_key != NULL) {
+                *state_key = true;
+            }
+            break;
+        }
+        case SDL_EVENT_KEY_UP: {
+            if (event->key.mod != 0) {
+                break;
+            }
+
+            bool* const state_key = get_joypad_key(state, event->key.key);
+            if (state_key != NULL) {
+                *state_key = false;
+            }
             break;
         }
         default: {
@@ -48,6 +94,51 @@ void update(State* const restrict state, const double delta) {
         .write = GameBoy_write_mem,
     };
 
+    // Update JOYP
+    // TODO: only update when necessary
+    const uint8_t prev_joyp = state->gb.joyp;
+    state->gb.joyp |= 0x0F;
+
+    if ((state->gb.joyp & Joypad_D_PAD_SELECT) == 0) {
+        if (state->joypad.right) {
+            state->gb.joyp &= ~Joypad_A_RIGHT;
+        }
+        if (state->joypad.left) {
+            state->gb.joyp &= ~Joypad_B_LEFT;
+        }
+        if (state->joypad.up) {
+            state->gb.joyp &= ~Joypad_SELECT_UP;
+        }
+        if (state->joypad.down) {
+            state->gb.joyp &= ~Joypad_START_DOWN;
+        }
+    }
+    if ((state->gb.joyp & Joypad_BUTTONS_SELECT) == 0) {
+        if (state->joypad.a) {
+            state->gb.joyp &= ~Joypad_A_RIGHT;
+        }
+        if (state->joypad.b) {
+            state->gb.joyp &= ~Joypad_B_LEFT;
+        }
+        if (state->joypad.select) {
+            state->gb.joyp &= ~Joypad_SELECT_UP;
+        }
+        if (state->joypad.start) {
+            state->gb.joyp &= ~Joypad_START_DOWN;
+        }
+    }
+
+    // Trigger joypad interrupt if necessary
+    if ((prev_joyp & ~state->gb.joyp & 0xF) != 0) {
+        state->gb.if_ |= InterruptFlag_JOYPAD;
+    }
+
+    log_info(LogCategory_ALL, "========================");
+    log_info(LogCategory_ALL, "if:   %%%08B", state->gb.if_);
+    log_info(LogCategory_ALL, "ie:   %%%08B", state->gb.ie);
+    log_info(LogCategory_ALL, "joyp: %%%08B", state->gb.joyp);
+    log_info(LogCategory_ALL, "stat: %%%08B", state->gb.stat);
+    log_info(LogCategory_ALL, "sc:   %%%08B", state->gb.sc);
     state->gb.cpu.cycle_count = 0;
 
     const double total_frame_cycles = GB_CPU_FREQUENCY_HZ * delta;
@@ -66,9 +157,17 @@ void update(State* const restrict state, const double delta) {
         const uint8_t prev_ly = state->gb.ly;
         state->gb.ly = (uint8_t)(progress * GB_LCD_MAX_LY);
 
+        state->gb.stat |= (state->gb.ly == state->gb.lcy) << 2;
+
         // Trigger VBLANK when ly changes to 144
-        if (state->gb.ly == 144 && prev_ly != state->gb.ly) {
-            state->gb.if_ |= InterruptFlag_VBLANK;
+        if (prev_ly != state->gb.ly) {
+            if (state->gb.ly == 144) {
+                state->gb.if_ |= InterruptFlag_VBLANK;
+            }
+
+            if ((state->gb.stat & StatSelect_LYC) != 0 && state->gb.ly == state->gb.lcy) {
+                state->gb.if_ |= InterruptFlag_LCD;
+            }
         }
 
         GameBoy_service_interrupts(&state->gb, &memory);

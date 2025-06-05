@@ -7,6 +7,7 @@
 #define BAIL(...)                     \
     do {                              \
         fprintf(stderr, __VA_ARGS__); \
+        fputc('\n', stderr);          \
         exit(1);                      \
     } while (0);
 
@@ -14,6 +15,7 @@
     do {                                  \
         if (cond) {                       \
             fprintf(stderr, __VA_ARGS__); \
+            fputc('\n', stderr);          \
             exit(1);                      \
         }                                 \
     } while (0);

@@ -23,7 +23,7 @@ GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t ro
         .rom_len = rom_len,
         .rom_enable = true,
         .lcdc = 0,
-        .lcds = 0,
+        .stat = 0,
         .ly = 0,
         .lcy = 0,
         .scx = 0,
@@ -41,6 +41,7 @@ GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t ro
         .tima = 0,
         .tma = 0,
         .tac = 0,
+        .joyp = 0x0F,
     };
 
     return gb;
@@ -55,8 +56,7 @@ void GameBoy_destroy(GameBoy* const restrict gb) {
 uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        log_warn(LogCategory_IO, "TODO: I/O joypad input read ($%04X)", addr);
-        return 0xF;
+        return gb->joyp;
     }
 
     if (addr == 0xFF01) {
@@ -117,7 +117,7 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
             case 0xFF45:
                 return gb->lcy;
             case 0xFF41:
-                return gb->lcds;
+                return gb->stat;
 
             // Scrolling
             case 0xFF42:
@@ -142,9 +142,14 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
         }
     }
 
+    if (addr == 0xFF4D) {
+        // FF4D (CGB registers, unimplemented as of now)
+        return 0xFF;
+    }
+
     if (addr == 0xFF4F) {
         // FF4F
-        BAIL("I/O VRAM bank select read ($%04X)", addr);
+        BAIL("TODO: I/O VRAM bank select read ($%04X)", addr);
     }
 
     if (addr == 0xFF50) {
@@ -154,21 +159,20 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA)
-        BAIL("I/O VRAM DMA read ($%04X)", addr);
+        BAIL("TODO: I/O VRAM DMA read ($%04X)", addr);
     }
 
     if (addr >= 0xFF68 && addr <= 0xFF6B) {
         // FF68-FF6B (palettes)
-        BAIL("I/O palettes read ($%04X)", addr);
+        BAIL("TODO: I/O palettes read ($%04X)", addr);
     }
 
     if (addr == 0xFF70) {
         // FF70 (WRAM bank select)
-        BAIL("I/O WRAM bank select read ($%04X)", addr);
+        BAIL("TODO: I/O WRAM bank select read ($%04X)", addr);
     }
 
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
-    return 0xFF;
 }
 
 uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
@@ -237,25 +241,19 @@ uint16_t GameBoy_read_mem_u16(GameBoy* const restrict gb, uint16_t addr) {
 void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uint8_t value) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        log_warn(LogCategory_IO, "TODO: I/O joypad input write ($%04X, $%02X)", addr, value);
-        gb->joyp = value & 0xF0;
+        gb->joyp &= 0x0F;
+        gb->joyp |= value & 0xF0;
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
-        log_warn(LogCategory_IO, "TODO: I/O serial transfer write ($%04X, $%02X)", addr, value);
         gb->sb = value;
     } else if (addr == 0xFF02) {
         // FF02 (serial transfer control)
-        log_warn(LogCategory_IO, "TODO: I/O serial transfer write ($%04X, $%02X)", addr, value);
+        log_warn(LogCategory_IO, "TODO: I/O serial transfer control write ($%02X)", value);
         gb->sc = value;
-        if (value == 0x81) {
-            putchar(gb->sb);
-            fflush(stdout);
-
-            // if (gb->sb == 'F') {
-            //     log_error(LogCategory_ERROR, "FAILED!!!!\n");
-            //     exit(1);
-            // }
-        }
+        // TODO: implement properly
+        gb->sc &= ~0x80;
+        // gb->if_ |= InterruptFlag_SERIAL;
+        // gb->sc &= ~0x80;
     } else if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
         switch (addr) {
@@ -279,10 +277,10 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         gb->if_ = value;
     } else if (addr >= 0xFF10 && addr <= 0xFF26) {
         // FF10-FF26 (audio)
-        log_warn(LogCategory_IO, "TODO: I/O audio write ($%04X, $%02X)", addr, value);
+        // log_warn(LogCategory_IO, "TODO: I/O audio write ($%04X, $%02X)", addr, value);
     } else if (addr >= 0xFF30 && addr <= 0xFF3F) {
         // FF30-FF3F (wave pattern)
-        log_warn(LogCategory_IO, "TODO: I/O wave pattern write ($%04X, $%02X)", addr, value);
+        // log_warn(LogCategory_IO, "TODO: I/O wave pattern write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
         log_warn(LogCategory_IO, "TODO: OAM DMA source/start write ($%04X, $%02X)", addr, value);
@@ -299,7 +297,10 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
                 gb->lcy = value;
                 break;
             case 0xFF41:
-                gb->lcds = value;
+                log_warn(LogCategory_ALL, "STAT WRITE");
+                // Modifies only bits 3-7
+                gb->stat = value;
+                gb->stat |= value & 0xF8;
                 break;
 
             // Scrolling
@@ -387,7 +388,7 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
 
-        log_info(
+        log_warn(
             LogCategory_MEMORY,
             "Tried to write into unusable memory (addr = $%04X, $%02X)",
             addr,

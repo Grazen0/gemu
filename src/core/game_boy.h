@@ -32,6 +32,22 @@ typedef enum InterruptFlag {
     InterruptFlag_JOYPAD = 1 << 4,
 } InterruptFlag;
 
+typedef enum Joypad {
+    Joypad_A_RIGHT = 1 << 0,
+    Joypad_B_LEFT = 1 << 1,
+    Joypad_SELECT_UP = 1 << 2,
+    Joypad_START_DOWN = 1 << 3,
+    Joypad_D_PAD_SELECT = 1 << 4,
+    Joypad_BUTTONS_SELECT = 1 << 5,
+} Joypad;
+
+typedef enum StatSelect {
+    StatSelect_MODE_0 = 1 << 3,
+    StatSelect_MODE_1 = 1 << 4,
+    StatSelect_MODE_2 = 1 << 5,
+    StatSelect_LYC = 1 << 6,
+} StatSelect;
+
 typedef struct GameBoy {
     Cpu cpu;
     uint8_t ram[0x2000];
@@ -42,7 +58,7 @@ typedef struct GameBoy {
     size_t rom_len;
     bool rom_enable;
     uint8_t lcdc;
-    uint8_t lcds;
+    uint8_t stat;
     uint8_t ly;
     uint8_t lcy;
     uint8_t scx;
@@ -61,7 +77,6 @@ typedef struct GameBoy {
     uint8_t tma;
     uint8_t tac;
     uint8_t joyp;
-
 } GameBoy;
 
 GameBoy GameBoy_new(uint8_t* boot_rom, uint8_t* rom, size_t rom_len);

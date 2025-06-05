@@ -4,6 +4,17 @@
 #include "SDL3/SDL_render.h"
 #include "core/game_boy.h"
 
+typedef struct JoypadState {
+    bool up;
+    bool down;
+    bool right;
+    bool left;
+    bool a;
+    bool b;
+    bool start;
+    bool select;
+} JoypadState;
+
 typedef struct State {
     GameBoy gb;
     int window_width;
@@ -12,6 +23,7 @@ typedef struct State {
     double vframe_time;
     int div_cycle_counter;
     int tima_cycle_counter;
+    JoypadState joypad;
     bool quit;
     SDL_Texture* restrict screen_texture;
 } State;

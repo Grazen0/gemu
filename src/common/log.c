@@ -10,6 +10,7 @@
 #include <string.h>
 #include "common/control.h"
 
+static bool logger_ready = false;
 static LogFn current_log_fn = NULL;
 static int current_category_mask = LogCategory_ALL;
 static pthread_t logger_thread = 0;
@@ -76,10 +77,12 @@ int logger_init(const LogFn log_fn) {
     }
 
     atexit(logger_cleanup);
+    logger_ready = true;
     return 0;
 }
 
 void logger_cleanup(void) {
+    logger_ready = false;
     pthread_mutex_lock(&log_queue.mtx);
     log_queue.quit = true;
     pthread_cond_signal(&log_queue.cond);
@@ -117,6 +120,10 @@ void vlog(
     const char* const restrict format,
     va_list args
 ) {
+    if (!logger_ready) {
+        return;
+    }
+
     pthread_mutex_lock(&log_queue.mtx);
     if ((log_queue.head + 1) % log_queue.capacity == log_queue.tail) {
         grow_log_queue();

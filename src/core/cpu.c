@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include <stdint.h>
+#include <string.h>
 #include "common/control.h"
 #include "common/log.h"
 #include "common/num.h"
@@ -320,12 +321,8 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
         return;
     }
 
-    // if (cpu->pc == 0xC1B9) {
-    //     log_error(LogCategory_KEEP, "TEST FAILED! ===================");
-    //     exit(1);
-    // }
     const uint8_t opcode = Cpu_read_pc(cpu, mem);
-    // log_info(LogCategory_KEEP, "tick (pc = $%04X opcode = $%02X)", cpu->pc - 1, opcode);
+    // printf("tick (pc = $%04X opcode = $%02X)\n", cpu->pc - 1, opcode);
     Cpu_execute(cpu, mem, opcode);
 }
 
@@ -676,13 +673,14 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             break;
                         }
                         case 5: {  // ADD SP, e8
-                            const int8_t offset = (int8_t)Cpu_read_pc(cpu, mem);
+                            const uint8_t offset_u8 = (int8_t)Cpu_read_pc(cpu, mem);
+                            const int8_t offset = (int8_t)offset_u8;
                             log_info(LogCategory_INSTRUCTION, "add sp, %d", offset);
 
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
-                            set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + offset > 0xF);
-                            set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset > 0xFF);
+                            set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF);
+                            set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset_u8 > 0xFF);
 
                             cpu->sp += offset;
                             cpu->cycle_count += 2;
@@ -697,13 +695,14 @@ void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint
                             break;
                         }
                         case 7: {  // LD HL, SP+e8
-                            const int8_t offset = (int8_t)Cpu_read_pc(cpu, mem);
+                            const uint8_t offset_u8 = (int8_t)Cpu_read_pc(cpu, mem);
+                            const int8_t offset = (int8_t)offset_u8;
                             log_info(LogCategory_INSTRUCTION, "ld hl, sp%+d", offset);
 
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
-                            set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + offset > 0xF);
-                            set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset > 0xFF);
+                            set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF);
+                            set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset_u8 > 0xFF);
 
                             Cpu_write_rp(cpu, CpuTableRp_HL, cpu->sp + offset);
                             cpu->cycle_count++;

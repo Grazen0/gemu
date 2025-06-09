@@ -19,3 +19,8 @@ build/gemu path/to/rom.gb
 ```
 
 By default, the emulator will compile with [Bootix](https://github.com/Hacktix/Bootix/), a custom copyright-free boot ROM. If you wish to compile Gemu with another boot ROM, you can tell CMake to do so by adding `-Dboot_rom=<path-to-boot-rom>` when configuring the build.
+
+## Credits
+
+- **[Raddad772's sm83 instruction tests](https://github.com/raddad772/jsmoo/tree/b3807b55f03cdad2191810b2a770781d73c41870/misc/tests/GeneratedTests/sm83)**, which are used in this project.
+- **[gbdev.io](https://gbdev.io/)** and the **[Pan Docs](https://gbdev.io/pandocs/)** for their incredible help.

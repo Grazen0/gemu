@@ -9,6 +9,7 @@ let
     sdl3
     xxd
     unity-test
+    cjson
     ruby
     ;
 in
@@ -23,6 +24,7 @@ pkgs.stdenv.mkDerivation {
     sdl3.dev
     xxd
     unity-test
+    cjson
     ruby
   ];
 
@@ -40,10 +42,6 @@ pkgs.stdenv.mkDerivation {
     install -Dm755 gemu -t "$out/bin"
     runHook postInstall
   '';
-
-  env = {
-    CMAKE_PREFIX_PATH = "${sdl3.dev}/lib/cmake:${unity-test}/lib/cmake";
-  };
 
   meta = with lib; {
     description = "A Game Boy emulator written in C.";

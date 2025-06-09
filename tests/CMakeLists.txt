@@ -1,6 +1,10 @@
 find_package(unity REQUIRED CONFIG REQUIRED)
+find_package(cJSON REQUIRED CONFIG REQUIRED)
 
-file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS *.c)
+file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS */test_*.c)
+file(GLOB_RECURSE test_helpers_sources CONFIGURE_DEPENDS helpers/*.c)
+
+file(COPY data DESTINATION .)
 
 # Generate test runners for each test file
 foreach(test_file ${test_sources})
@@ -17,11 +21,11 @@ foreach(test_file ${test_sources})
     DEPENDS ${test_file}
     COMMENT "Generating Unity test runner for ${test_file}")
 
-  add_executable(${test_exec} ${test_file} ${runner_file})
+  add_executable(${test_exec} ${test_file} ${runner_file}
+                              ${test_helpers_sources})
   target_link_libraries(${test_exec} PRIVATE gemu_core)
   target_link_libraries(${test_exec} PRIVATE unity::framework)
-  target_include_directories(${test_exec} PRIVATE ${PROJECT_SOURCE_DIR}/src
-                                                  unity)
+  target_link_libraries(${test_exec} PRIVATE cjson)
 
   add_test(NAME ${test_name} COMMAND ${test_exec})
 endforeach()

@@ -1,4 +1,5 @@
 #include "frontend/frontend.h"
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,10 +15,10 @@
 #include "core/game_boy.h"
 #include "frontend/sdl.h"
 
-static const int FPS = 60;
-static const double DELTA = 1.0 / FPS;
-static const double MAX_TIME_ACCUMULATOR = 4 * DELTA;
-static const int DIV_FREQUENCY_HZ = 16384;  // 16779 Hz on SGB
+static constexpr int FPS = 60;
+static constexpr double DELTA = 1.0 / FPS;
+static constexpr double MAX_TIME_ACCUMULATOR = 4 * DELTA;
+static constexpr int DIV_FREQUENCY_HZ = 16384;  // 16779 Hz on SGB
 
 static const uint8_t PALETTE_RGB[][3] = {
     {186, 218, 85},
@@ -45,7 +46,7 @@ bool* get_joypad_key(State* const restrict state, const SDL_Keycode key) {
         case SDLK_X:
             return &state->joypad.b;
         default:
-            return NULL;
+            return nullptr;
     }
 }
 
@@ -66,18 +67,23 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
             }
 
             bool* const state_key = get_joypad_key(state, event->key.key);
-            if (state_key != NULL) {
+            if (state_key != nullptr) {
                 *state_key = true;
             }
             break;
         }
         case SDL_EVENT_KEY_UP: {
+            if (event->key.mod == SDL_KMOD_CTRL && event->key.key == SDLK_O) {
+                // TODO: open new ROM
+                break;
+            }
+
             if (event->key.mod != 0) {
                 break;
             }
 
             bool* const state_key = get_joypad_key(state, event->key.key);
-            if (state_key != NULL) {
+            if (state_key != nullptr) {
                 *state_key = false;
             }
             break;
@@ -133,12 +139,13 @@ void update(State* const restrict state, const double delta) {
         state->gb.if_ |= InterruptFlag_JOYPAD;
     }
 
-    log_info(LogCategory_ALL, "========================");
-    log_info(LogCategory_ALL, "if:   %%%08B", state->gb.if_);
-    log_info(LogCategory_ALL, "ie:   %%%08B", state->gb.ie);
-    log_info(LogCategory_ALL, "joyp: %%%08B", state->gb.joyp);
-    log_info(LogCategory_ALL, "stat: %%%08B", state->gb.stat);
-    log_info(LogCategory_ALL, "sc:   %%%08B", state->gb.sc);
+    // log_info(LogCategory_ALL, "========================");
+    // log_info(LogCategory_ALL, "if:   %%%08B", state->gb.if_);
+    // log_info(LogCategory_ALL, "ie:   %%%08B", state->gb.ie);
+    // log_info(LogCategory_ALL, "joyp: %%%08B", state->gb.joyp);
+    // log_info(LogCategory_ALL, "stat: %%%08B", state->gb.stat);
+    // log_info(LogCategory_ALL, "sc:   %%%08B", state->gb.sc);
+
     state->gb.cpu.cycle_count = 0;
 
     const double total_frame_cycles = GB_CPU_FREQUENCY_HZ * delta;
@@ -159,12 +166,14 @@ void update(State* const restrict state, const double delta) {
 
         state->gb.stat |= (state->gb.ly == state->gb.lcy) << 2;
 
-        // Trigger VBLANK when ly changes to 144
+        // Trigger some stuff then ly changes
         if (prev_ly != state->gb.ly) {
+            // VBlank interrupt
             if (state->gb.ly == 144) {
                 state->gb.if_ |= InterruptFlag_VBLANK;
             }
 
+            // STAT lcy == ly interrupt
             if ((state->gb.stat & StatSelect_LYC) != 0 && state->gb.ly == state->gb.lcy) {
                 state->gb.if_ |= InterruptFlag_LCD;
             }
@@ -174,16 +183,18 @@ void update(State* const restrict state, const double delta) {
         Cpu_tick(&state->gb.cpu, &memory);
 
         // DIV counter
-        // TODO: should not increment when in STOP mode
-        state->div_cycle_counter += state->gb.cpu.cycle_count;
-        while (state->div_cycle_counter >= DIV_FREQUENCY_CYCLES) {
-            ++state->gb.div;
-            state->div_cycle_counter -= DIV_FREQUENCY_CYCLES;
+        if (state->gb.cpu.mode != CpuMode_STOPPED) {
+            state->div_cycle_counter += state->gb.cpu.cycle_count;
+
+            while (state->div_cycle_counter >= DIV_FREQUENCY_CYCLES) {
+                ++state->gb.div;
+                state->div_cycle_counter -= DIV_FREQUENCY_CYCLES;
+            }
         }
 
         // TIMA is only incremented if TAC's bit 2 is set
         if (state->gb.tac & 0x04) {
-            const uint8_t clock_select = state->gb.tac & 0x03;
+            const uint8_t clock_select = state->gb.tac & 0b11;
             const int tac_delay_cycles = clock_select == 0 ? 256 : 4 * clock_select;
 
             // TIMA counter
@@ -213,19 +224,18 @@ void update(State* const restrict state, const double delta) {
 }
 
 bool update_texture(const State* const restrict state) {
-    SDL_Surface* surface = NULL;
+    SDL_Surface* surface = nullptr;
 
-    if (!SDL_LockTextureToSurface(state->screen_texture, NULL, &surface)) {
+    if (!SDL_LockTextureToSurface(state->screen_texture, nullptr, &surface)) {
         return false;
     }
 
     const SDL_PixelFormatDetails* const pixel_format = SDL_GetPixelFormatDetails(surface->format);
-
-    if (pixel_format == NULL) {
+    if (pixel_format == nullptr) {
         return false;
     }
 
-    SDL_FillSurfaceRect(surface, NULL, SDL_MapRGB(pixel_format, NULL, 0, 0, 0));
+    SDL_FillSurfaceRect(surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));
 
     if (state->gb.lcdc & LcdControl_ENABLE) {
         uint32_t* const restrict pixels = surface->pixels;
@@ -239,29 +249,61 @@ bool update_texture(const State* const restrict state) {
                 const long tile_index_signed =
                     state->gb.lcdc & LcdControl_BGW_TILE_AREA ? tile_index : (int8_t)tile_index;
 
-                for (size_t py = 0; py < 8; ++py) {
+                for (size_t tile_row = 0; tile_row < 8; ++tile_row) {
                     const uint8_t byte_1 =
-                        state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * py)];
+                        state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * tile_row)];
                     const uint8_t byte_2 =
-                        state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * py) + 1];
+                        state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * tile_row) + 1];
 
-                    for (size_t px = 0; px < 8; ++px) {
-                        const uint8_t bit_lo = (byte_1 >> px) & 1;
-                        const uint8_t bit_hi = (byte_2 >> px) & 1;
+                    for (size_t tile_col = 0; tile_col < 8; ++tile_col) {
+                        const uint8_t bit_lo = (byte_1 >> tile_col) & 1;
+                        const uint8_t bit_hi = (byte_2 >> tile_col) & 1;
                         const uint8_t palette_index = bit_lo | (bit_hi << 1);
 
-                        const uint8_t color = (state->gb.bgp >> (palette_index * 2)) & 0x3;
+                        const uint8_t color = (state->gb.bgp >> (palette_index * 2)) & 0b11;
 
-                        const size_t pixel_y = (tile_y * 8) + py;
-                        const size_t pixel_x = (tile_x * 8) + 7 - px;
+                        const size_t pixel_y = (tile_y * 8) + tile_row;
+                        const size_t pixel_x = (tile_x * 8) + 7 - tile_col;
 
                         pixels[(pixel_y * surface->w) + pixel_x] = SDL_MapRGB(
                             pixel_format,
-                            NULL,
+                            nullptr,
                             PALETTE_RGB[color][0],
                             PALETTE_RGB[color][1],
                             PALETTE_RGB[color][2]
                         );
+                    }
+                }
+            }
+        }
+
+        for (uint16_t i = 0; i < 0xA0; i += 4) {
+            const uint8_t y_pos = state->gb.oam[i] - 16;
+            const uint8_t x_pos = state->gb.oam[i + 1] - 8;
+            const uint8_t tile_index = state->gb.oam[i + 2];
+            const uint8_t attrs = state->gb.oam[i + 2];
+
+            pixels[(y_pos * surface->w) + x_pos] = SDL_MapRGB(pixel_format, nullptr, 255, 0, 0);
+
+            for (size_t sprite_row = 0; sprite_row < 8; ++sprite_row) {
+                // const uint8_t byte_1 =
+                //     state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * tile_row)];
+                // const uint8_t byte_2 =
+                //     state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * tile_row) + 1];
+
+                for (size_t sprite_col = 0; sprite_col < 8; ++sprite_col) {
+                    // const uint8_t bit_lo = (byte_1 >> sprite_col) & 1;
+                    // const uint8_t bit_hi = (byte_2 >> sprite_col) & 1;
+                    // const uint8_t palette_index = bit_lo | (bit_hi << 1);
+
+                    // const uint8_t color = (state->gb.bgp >> (palette_index * 2)) & 0x11;
+
+                    const size_t pixel_y = (size_t)y_pos + sprite_row;
+                    const size_t pixel_x = (size_t)x_pos + sprite_col;
+
+                    if (pixel_x < (size_t)surface->w && pixel_y < (size_t)surface->h) {
+                        pixels[(pixel_y * surface->w) + pixel_x] =
+                            SDL_MapRGB(pixel_format, nullptr, 255, 0, 0);
                     }
                 }
             }
@@ -325,10 +367,7 @@ void run_until_quit(State* const restrict state, SDL_Renderer* const restrict re
 
         const double new_time = sdl_get_performance_time();
 
-        time_accumulator += new_time - last_time;
-        if (time_accumulator > MAX_TIME_ACCUMULATOR) {
-            time_accumulator = MAX_TIME_ACCUMULATOR;
-        }
+        time_accumulator = fmin(time_accumulator + new_time - last_time, MAX_TIME_ACCUMULATOR);
         last_time = new_time;
 
         while (time_accumulator >= DELTA) {

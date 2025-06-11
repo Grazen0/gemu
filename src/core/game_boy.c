@@ -1,4 +1,5 @@
 #include "game_boy.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,14 +7,6 @@
 #include "common/log.h"
 #include "common/num.h"
 #include "cpu.h"
-
-const int GB_LCD_WIDTH = 160;
-const int GB_LCD_HEIGHT = 144;
-const int GB_BG_WIDTH = 256;
-const int GB_BG_HEIGHT = 256;
-const int GB_LCD_MAX_LY = 154;
-const int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
-const double GB_VBLANK_FREQ = 59.7;
 
 GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
@@ -49,7 +42,7 @@ GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t ro
 
 void GameBoy_destroy(GameBoy* const restrict gb) {
     free(gb->rom);
-    gb->rom = NULL;
+    gb->rom = nullptr;
     gb->rom_len = 0;
 }
 
@@ -61,7 +54,9 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr == 0xFF01) {
         // FF01 (serial transfer data)
-        return gb->sb;
+        // TODO: implement properly
+        return 0xFF;
+        // return gb->sb;
     }
 
     if (addr == 0xFF02) {
@@ -176,10 +171,10 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 }
 
 uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
-    const GameBoy* const restrict gb = ctx;
+    const GameBoy* const gb = ctx;
 
     if (addr <= 0x7FFF) {
-        if (gb->rom_enable && addr <= 0xFF) {
+        if ((int)gb->rom_enable && addr <= 0xFF) {
             // 0000-0100 (Boot ROM)
             return gb->boot_rom[addr];
         }
@@ -210,7 +205,7 @@ uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
 
     if (addr <= 0xFE9F) {
         // FE00-FE9F (OAM)
-        BAIL("TODO: GameBoy_read_mem (addr = $%04X)", addr);
+        return gb->oam[addr - 0xFE00];
     }
 
     if (addr <= 0xFEFF) {
@@ -241,19 +236,20 @@ uint16_t GameBoy_read_mem_u16(GameBoy* const restrict gb, uint16_t addr) {
 void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uint8_t value) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        gb->joyp &= 0x0F;
-        gb->joyp |= value & 0xF0;
+        gb->joyp = (gb->joyp & 0x0F) | (value & 0xF0);
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
         gb->sb = value;
     } else if (addr == 0xFF02) {
         // FF02 (serial transfer control)
-        log_warn(LogCategory_IO, "TODO: I/O serial transfer control write ($%02X)", value);
-        gb->sc = value;
+        log_info(LogCategory_IO, "I/O serial transfer control write ($%02X)", value);
         // TODO: implement properly
-        gb->sc &= ~0x80;
-        // gb->if_ |= InterruptFlag_SERIAL;
-        // gb->sc &= ~0x80;
+        gb->sc = value;
+
+        // if (gb->sc == 0x81) {
+        //     putchar(gb->sb);
+        //     fflush(stdout);
+        // }
     } else if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
         switch (addr) {
@@ -277,13 +273,20 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         gb->if_ = value;
     } else if (addr >= 0xFF10 && addr <= 0xFF26) {
         // FF10-FF26 (audio)
-        // log_warn(LogCategory_IO, "TODO: I/O audio write ($%04X, $%02X)", addr, value);
+        log_warn(LogCategory_TODO, "TODO: I/O audio write ($%04X, $%02X)", addr, value);
     } else if (addr >= 0xFF30 && addr <= 0xFF3F) {
         // FF30-FF3F (wave pattern)
-        // log_warn(LogCategory_IO, "TODO: I/O wave pattern write ($%04X, $%02X)", addr, value);
+        log_warn(LogCategory_TODO, "TODO: I/O wave pattern write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        log_warn(LogCategory_IO, "TODO: OAM DMA source/start write ($%04X, $%02X)", addr, value);
+        log_info(LogCategory_IO, "OAM DMA source/start write ($%04X, $%02X)", addr, value);
+
+        const uint16_t src = (uint16_t)value << 8;
+
+        // TODO: implement proper timing
+        for (size_t i = 0; i < 0xA0; ++i) {
+            gb->oam[i] = GameBoy_read_mem(gb, src + i);
+        }
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
         switch (addr) {
@@ -350,7 +353,7 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         BAIL("I/O WRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF7F) {
         // Not sure what to do here
-        log_info(
+        log_warn(
             LogCategory_IO, "Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value
         );
     } else {
@@ -361,7 +364,7 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
 void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint8_t value) {
     GameBoy* const restrict gb = ctx;
 
-    // log_info("write mem (addr = $%04X, value = $%02X)", addr, value);
+    log_info(LogCategory_MEMORY, "write mem (addr = $%04X, value = $%02X)", addr, value);
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
@@ -382,12 +385,10 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
         gb->ram[addr - 0xE000] = value;
     } else if (addr <= 0xFE9F) {
         // FE00-FE9F (OAM)
-        log_info(
-            LogCategory_MEMORY, "TODO: GameBoy_write_mem OAM (addr = $%04X, $%02X)", addr, value
-        );
+        // TODO: should only be writable during HBlank or VBlank
+        gb->oam[addr - 0xFE00] = value;
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
-
         log_warn(
             LogCategory_MEMORY,
             "Tried to write into unusable memory (addr = $%04X, $%02X)",
@@ -409,8 +410,9 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
 void GameBoy_service_interrupts(GameBoy* const restrict gb, Memory* const restrict mem) {
     const uint8_t int_mask = gb->if_ & gb->ie;
 
-    if (int_mask != 0) {
-        gb->cpu.halted = false;
+    // Disable HALT on an interrupt
+    if (int_mask != 0 && gb->cpu.mode == CpuMode_HALTED) {
+        gb->cpu.mode = CpuMode_RUNNING;
     }
 
     if (!gb->cpu.ime) {

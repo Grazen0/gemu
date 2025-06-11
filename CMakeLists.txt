@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(gemu C)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(MSVC)
@@ -44,6 +44,7 @@ target_link_libraries(gemu PRIVATE SDL3::SDL3)
 target_link_libraries(gemu PRIVATE gemu_common)
 target_link_libraries(gemu PRIVATE gemu_core)
 target_link_libraries(gemu PRIVATE boot_rom)
+target_link_libraries(gemu PRIVATE m)
 
 option(BUILD_TESTING "Build unit tests" OFF)
 include(CTest)

@@ -1,17 +1,16 @@
 #ifndef CORE_CPU_H
 #define CORE_CPU_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
-typedef enum CpuFlag {
+typedef enum CpuFlag : uint8_t {
     CpuFlag_C = 1 << 4,
     CpuFlag_H = 1 << 5,
     CpuFlag_N = 1 << 6,
     CpuFlag_Z = 1 << 7,
 } CpuFlag;
 
-typedef enum CpuTableR {
+typedef enum CpuTableR : uint8_t {
     CpuTableR_B = 0,
     CpuTableR_C = 1,
     CpuTableR_D = 2,
@@ -22,28 +21,28 @@ typedef enum CpuTableR {
     CpuTableR_A = 7,
 } CpuTableR;
 
-typedef enum CpuTableRp {
+typedef enum CpuTableRp : uint8_t {
     CpuTableRp_BC = 0,
     CpuTableRp_DE = 1,
     CpuTableRp_HL = 2,
     CpuTableRp_SP = 3,
 } CpuTableRp;
 
-typedef enum CpuTableRp2 {
+typedef enum CpuTableRp2 : uint8_t {
     CpuTableRp2_BC = 0,
     CpuTableRp2_DE = 1,
     CpuTableRp2_HL = 2,
     CpuTableRp2_AF = 3,
 } CpuTableRp2;
 
-typedef enum CpuTableCc {
+typedef enum CpuTableCc : uint8_t {
     CpuTableCc_NZ = 0,
     CpuTableCc_Z = 1,
     CpuTableCc_NC = 2,
     CpuTableCc_C = 3,
 } CpuTableCc;
 
-typedef enum CpuTableAlu {
+typedef enum CpuTableAlu : uint8_t {
     CpuTableAlu_ADD = 0,
     CpuTableAlu_ADC = 1,
     CpuTableAlu_SUB = 2,
@@ -60,6 +59,12 @@ typedef struct Memory {
     void (*write)(void* ctx, uint16_t addr, uint8_t value);
 } Memory;
 
+typedef enum CpuMode {
+    CpuMode_RUNNING,
+    CpuMode_HALTED,
+    CpuMode_STOPPED,
+} CpuMode;
+
 typedef struct Cpu {
     uint8_t b;
     uint8_t c;
@@ -71,20 +76,21 @@ typedef struct Cpu {
     uint8_t f;
     uint16_t sp;
     uint16_t pc;
-    bool halted;
+    CpuMode mode;
+    bool queued_ime;
     bool ime;
     int cycle_count;
 } Cpu;
 
-Cpu Cpu_new(void);
+[[nodiscard]] Cpu Cpu_new(void);
 
-bool Cpu_read_cc(const Cpu* restrict cpu, CpuTableCc cc);
+[[nodiscard]] bool Cpu_read_cc(const Cpu* restrict cpu, CpuTableCc cc);
 
-uint16_t Cpu_read_rp(const Cpu* restrict cpu, CpuTableRp rp);
+[[nodiscard]] uint16_t Cpu_read_rp(const Cpu* restrict cpu, CpuTableRp rp);
 
 void Cpu_write_rp(Cpu* restrict cpu, CpuTableRp rp, uint16_t value);
 
-uint16_t Cpu_read_rp2(const Cpu* restrict cpu, CpuTableRp rp);
+[[nodiscard]] uint16_t Cpu_read_rp2(const Cpu* restrict cpu, CpuTableRp rp);
 
 void Cpu_write_rp2(Cpu* restrict cpu, CpuTableRp rp, uint16_t value);
 

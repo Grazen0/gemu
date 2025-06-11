@@ -2,8 +2,9 @@
 #define CORE_DATA_H
 
 #include <stddef.h>
+#include <stdint.h>
 
-typedef enum RomData {
+typedef enum RomData : uint16_t {
     RomData_ENTRY_POINT = 0x100,
     RomData_NINTENDO_LOGO = 0x104,
     RomData_TITLE = 0x134,
@@ -21,7 +22,7 @@ typedef enum RomData {
     RomData_GLOBAL_CHECKSUM = 0x14E,
 } RomData;
 
-enum CartridgeType {
+enum CartridgeType : uint8_t {
     CartridgeType_ROM_ONLY = 0x00,
     CartridgeType_MCB1 = 0x01,
     CartridgeType_MCB1_RAM = 0x02,

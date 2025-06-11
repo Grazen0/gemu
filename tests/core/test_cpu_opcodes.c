@@ -7,7 +7,7 @@
 #include "core/cpu.h"
 
 typedef struct DumbRam {
-    uint8_t active[0x10000];
+    bool active[0x10000];
     uint8_t data[0x10000];
 } DumbRam;
 
@@ -93,7 +93,7 @@ static CpuState CpuState_from_cjson(const cJSON* const src) {
 
 static void CpuState_destroy(CpuState* const restrict state) {
     free(state->ram);
-    state->ram = NULL;
+    state->ram = nullptr;
     state->ram_len = 0;
 }
 
@@ -104,9 +104,7 @@ static void run_cpu_tick_test(
 ) {
     Cpu cpu = Cpu_new();
 
-    DumbRam dumb_ram;
-    memset(&dumb_ram.data, 0, sizeof(dumb_ram.data));
-    memset(&dumb_ram.active, false, sizeof(dumb_ram.active));
+    DumbRam dumb_ram = {};
 
     Memory mock_memory = (Memory){
         .ctx = &dumb_ram,
@@ -124,7 +122,7 @@ static void run_cpu_tick_test(
     cpu.f = initial_state->f;
     cpu.h = initial_state->h;
     cpu.l = initial_state->l;
-    cpu.ime = initial_state->ime;
+    cpu.ime = (bool)initial_state->ime;
 
     // Set up memory
     for (int j = 0; j < initial_state->ram_len; ++j) {
@@ -185,7 +183,7 @@ static void run_opcode_test_file(const char* const restrict filepath) {
     TEST_ASSERT_NOT_NULL_MESSAGE(test_cases, "could not parse JSON");
     free(file_content);
 
-    for (cJSON* test_case = test_cases->child; test_case != NULL; test_case = test_case->next) {
+    for (cJSON* test_case = test_cases->child; test_case != nullptr; test_case = test_case->next) {
         const cJSON* const name = cJSON_GetObjectItemCaseSensitive(test_case, "name");
 
         const cJSON* const initial = cJSON_GetObjectItemCaseSensitive(test_case, "initial");
@@ -211,7 +209,7 @@ static int dirent_filter(const struct dirent* const restrict entry) {
 }
 
 void test_cpu_opcodes(void) {
-    struct dirent** entries = NULL;
+    struct dirent** entries = nullptr;
     const int entries_len = scandir("data/core/cpu_opcodes", &entries, dirent_filter, alphasort);
     TEST_ASSERT_NOT_EQUAL_MESSAGE(-1, entries_len, "could not read data directory");
 

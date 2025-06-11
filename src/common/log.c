@@ -1,54 +1,52 @@
 #include "common/log.h"
 #include <errno.h>
 #include <limits.h>
-#include <pthread.h>
 #include <semaphore.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include "common/control.h"
 
 static bool logger_ready = false;
-static LogFn current_log_fn = NULL;
+static LogFn current_log_fn = nullptr;
 static int current_category_mask = LogCategory_ALL;
-static pthread_t logger_thread = 0;
-static LogQueue log_queue = {0};
+static thrd_t logger_thread = 0;
+static LogQueue log_queue = {};
 
 static void
 log_fallback(const LogLevel level, const LogCategory category, const char* const restrict text) {
-    FILE* const restrict stream = level == LogLevel_ERROR ? stderr : stdout;
+    FILE* const stream = level == LogLevel_ERROR ? stderr : stdout;
     fprintf(stream, "(%d) ", category);
     fputs(text, stream);
     fputc('\n', stream);
     fflush(stream);
 }
 
-static void* logger_thread_fn(void* const restrict _arg) {
-    (void)_arg;  // Tell the compiler to stfu
-
+static int logger_thread_fn([[maybe_unused]] void* _arg) {
     while (true) {
-        pthread_mutex_lock(&log_queue.mtx);
+        mtx_lock(&log_queue.mtx);
 
         while (!log_queue.quit && log_queue.head == log_queue.tail) {
-            pthread_cond_wait(&log_queue.cond, &log_queue.mtx);
+            cnd_wait(&log_queue.cond, &log_queue.mtx);
         }
 
-        if (log_queue.quit && log_queue.head == log_queue.tail) {
-            pthread_mutex_unlock(&log_queue.mtx);
+        if (!!log_queue.quit && log_queue.head == log_queue.tail) {
+            mtx_unlock(&log_queue.mtx);
             break;
         }
 
         const LogMessage message = log_queue.messages[log_queue.tail];
         log_queue.tail = (log_queue.tail + 1) % log_queue.capacity;
-        pthread_mutex_unlock(&log_queue.mtx);
+        mtx_unlock(&log_queue.mtx);
 
-        const LogFn log_fn = current_log_fn != NULL ? current_log_fn : log_fallback;
+        const LogFn log_fn = current_log_fn != nullptr ? current_log_fn : log_fallback;
         log_fn(message.level, message.category, message.text);
     }
 
-    return NULL;
+    return 0;
 }
 
 void logger_set_category_mask(const int category_mask) {
@@ -63,15 +61,15 @@ int logger_init(const LogFn log_fn) {
         .messages = calloc(1, sizeof(log_queue.messages[0])),
         .head = 0,
         .tail = 0,
-        .mtx = PTHREAD_MUTEX_INITIALIZER,
-        .cond = PTHREAD_COND_INITIALIZER,
+        .mtx = {},
+        .cond = {},
         .quit = false,
     };
 
-    pthread_mutex_init(&log_queue.mtx, NULL);
-    pthread_cond_init(&log_queue.cond, NULL);
+    mtx_init(&log_queue.mtx, mtx_plain);
+    cnd_init(&log_queue.cond);
 
-    const int result = pthread_create(&logger_thread, NULL, logger_thread_fn, NULL);
+    const int result = thrd_create(&logger_thread, logger_thread_fn, nullptr);
     if (result != 0) {
         return result;
     }
@@ -83,19 +81,22 @@ int logger_init(const LogFn log_fn) {
 
 void logger_cleanup(void) {
     logger_ready = false;
-    pthread_mutex_lock(&log_queue.mtx);
+    mtx_lock(&log_queue.mtx);
     log_queue.quit = true;
-    pthread_cond_signal(&log_queue.cond);
-    pthread_mutex_unlock(&log_queue.mtx);
-    pthread_join(logger_thread, NULL);
+    cnd_signal(&log_queue.cond);
+    mtx_unlock(&log_queue.mtx);
+    thrd_join(logger_thread, nullptr);
+
+    mtx_destroy(&log_queue.mtx);
+    cnd_destroy(&log_queue.cond);
 }
 
 static void grow_log_queue(void) {
     const size_t new_capacity = log_queue.capacity * 2;
 
     LogMessage* const restrict new_messages = calloc(new_capacity, sizeof(log_queue.messages[0]));
-    if (new_messages == NULL) {
-        BAIL("Could not reallocate space for log queue. errno %i", errno);
+    if (new_messages == nullptr) {
+        bail("Could not reallocate space for log queue. errno %i", errno);
     }
 
     const size_t old_size =
@@ -124,22 +125,22 @@ void vlog(
         return;
     }
 
-    pthread_mutex_lock(&log_queue.mtx);
+    mtx_lock(&log_queue.mtx);
     if ((log_queue.head + 1) % log_queue.capacity == log_queue.tail) {
         grow_log_queue();
     }
 
-    LogMessage* const restrict next_message = &log_queue.messages[log_queue.head];
+    LogMessage* const next_message = &log_queue.messages[log_queue.head];
     *next_message = (LogMessage){
-        .text = {0},
+        .text = {},
         .level = level,
         .category = category,
     };
     vsnprintf(next_message->text, sizeof(next_message->text), format, args);
 
     log_queue.head = (log_queue.head + 1) % log_queue.capacity;
-    pthread_cond_signal(&log_queue.cond);
-    pthread_mutex_unlock(&log_queue.mtx);
+    cnd_signal(&log_queue.cond);
+    mtx_unlock(&log_queue.mtx);
 }
 
 void log_info(const LogCategory category, const char* const restrict format, ...) {

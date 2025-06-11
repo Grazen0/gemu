@@ -1,23 +1,8 @@
 #ifndef COMMON_CONTROL_H
 #define COMMON_CONTROL_H
 
-#include <stdio.h>
-#include <stdlib.h>
+[[noreturn]] void bail(const char* format, ...);
 
-#define BAIL(...)                     \
-    do {                              \
-        fprintf(stderr, __VA_ARGS__); \
-        fputc('\n', stderr);          \
-        exit(1);                      \
-    } while (0);
-
-#define BAIL_IF(cond, ...)                \
-    do {                                  \
-        if (cond) {                       \
-            fprintf(stderr, __VA_ARGS__); \
-            fputc('\n', stderr);          \
-            exit(1);                      \
-        }                                 \
-    } while (0);
+void bail_if(bool condition, const char* format, ...);
 
 #endif

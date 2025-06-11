@@ -1,11 +1,10 @@
 #ifndef LIB_LOG_H
 #define LIB_LOG_H
 
-#include <pthread.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <threads.h>
 
 typedef enum LogLevel {
     LogLevel_INFO,
@@ -21,7 +20,8 @@ typedef enum LogCategory {
     LogCategory_IO = 1 << 2,
     LogCategory_MEMORY = 1 << 3,
     LogCategory_INTERRUPT = 1 << 4,
-    LogCategory_KEEP = 1 << 5
+    LogCategory_KEEP = 1 << 5,
+    LogCategory_TODO = 1 << 6,
 } LogCategory;
 
 typedef void (*LogFn)(LogLevel level, LogCategory category, const char* restrict text);
@@ -37,8 +37,8 @@ typedef struct LogQueue {
     LogMessage* messages;
     size_t head;
     size_t tail;
-    pthread_mutex_t mtx;
-    pthread_cond_t cond;
+    mtx_t mtx;
+    cnd_t cond;
     bool quit;
 } LogQueue;
 

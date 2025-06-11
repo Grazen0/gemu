@@ -3,7 +3,6 @@
 
 #include <pthread.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -21,7 +20,8 @@ typedef enum LogCategory {
     LogCategory_IO = 1 << 2,
     LogCategory_MEMORY = 1 << 3,
     LogCategory_INTERRUPT = 1 << 4,
-    LogCategory_KEEP = 1 << 5
+    LogCategory_KEEP = 1 << 5,
+    LogCategory_TODO = 1 << 6,
 } LogCategory;
 
 typedef void (*LogFn)(LogLevel level, LogCategory category, const char* restrict text);
@@ -42,9 +42,7 @@ typedef struct LogQueue {
     bool quit;
 } LogQueue;
 
-void logger_set_category_mask(int category_mask);
-
-int logger_init(LogFn log_fn);
+int logger_init(LogFn log_fn, int category_mask);
 
 void logger_cleanup(void);
 

@@ -19,18 +19,13 @@
 #include "frontend/log.h"
 #include "string.h"
 
-#define SDL_CHECK(result, message)                                          \
-    do {                                                                    \
-        if (!(result)) {                                                    \
-            log_error(LogCategory_KEEP, "%s: %s", message, SDL_GetError()); \
-            exit(1);                                                        \
-        }                                                                   \
-    } while (0);
+#define SDL_CHECK(result, message) BAIL_IF(!(result), "%s: %s", message, SDL_GetError());
 
 int main(const int argc, const char* const argv[]) {
-    logger_set_category_mask(LogCategory_ALL & ~LogCategory_INSTRUCTION);
-
-    const int log_init_result = logger_init(pretty_log);
+    const int log_init_result = logger_init(
+        pretty_log,
+        LogCategory_ALL & ~LogCategory_MEMORY & ~LogCategory_INSTRUCTION & ~LogCategory_INTERRUPT
+    );
     if (log_init_result != 0) {
         fprintf(stderr, "Could not create logger thread. Error code %i", log_init_result);
     }
@@ -46,7 +41,7 @@ int main(const int argc, const char* const argv[]) {
     size_t rom_len = 0;
     uint8_t* const rom = SDL_LoadFile(argv[1], &rom_len);
 
-    BAIL_IF(rom == NULL, "Could not read ROM file.");
+    BAIL_IF(rom == nullptr, "Could not read ROM file.");
     BAIL_IF(
         rom_len != 0x8000 * ((size_t)1 << (size_t)rom[RomData_ROM_SIZE]),
         "ROM length does not match header info."
@@ -60,8 +55,8 @@ int main(const int argc, const char* const argv[]) {
 
     SDL_CHECK(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
 
-    SDL_Window* window = NULL;
-    SDL_Renderer* renderer = NULL;
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
 
     SDL_CHECK(
         SDL_CreateWindowAndRenderer(
@@ -73,7 +68,7 @@ int main(const int argc, const char* const argv[]) {
     SDL_Texture* const restrict texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GB_BG_WIDTH, GB_BG_HEIGHT
     );
-    SDL_CHECK(texture != NULL, "Could not create texture");
+    SDL_CHECK(texture != nullptr, "Could not create texture");
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 

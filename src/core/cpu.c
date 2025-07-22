@@ -26,13 +26,13 @@ Cpu Cpu_new(void) {
 bool Cpu_read_cc(const Cpu* const restrict cpu, const CpuTableCc cc) {
     switch (cc) {
         case CpuTableCc_NZ:
-            return (bool)((cpu->f & CpuFlag_Z) == 0);
+            return (cpu->f & CpuFlag_Z) == 0;
         case CpuTableCc_Z:
-            return (bool)((cpu->f & CpuFlag_Z) != 0);
+            return (cpu->f & CpuFlag_Z) != 0;
         case CpuTableCc_NC:
-            return (bool)((cpu->f & CpuFlag_C) == 0);
+            return (cpu->f & CpuFlag_C) == 0;
         case CpuTableCc_C:
-            return (bool)((cpu->f & CpuFlag_C) != 0);
+            return (cpu->f & CpuFlag_C) != 0;
         default:
             BAIL("invalid cc: %i", cc);
     }
@@ -239,8 +239,8 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
             const uint8_t prev_a = cpu->a;
             cpu->a += rhs;
 
-            set_bits(&cpu->f, CpuFlag_C, (bool)(rhs > (0xFF - prev_a)));
-            set_bits(&cpu->f, CpuFlag_H, (bool)((prev_a & 0xF) + (rhs & 0xF) > 0xF));
+            set_bits(&cpu->f, CpuFlag_C, rhs > (0xFF - prev_a));
+            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) + (rhs & 0xF) > 0xF);
             set_bits(&cpu->f, CpuFlag_N, false);
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             break;
@@ -253,8 +253,8 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
 
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             set_bits(&cpu->f, CpuFlag_N, false);
-            set_bits(&cpu->f, CpuFlag_H, (bool)((prev_a & 0xF) + (rhs & 0xF) + carry > 0xF));
-            set_bits(&cpu->f, CpuFlag_C, (bool)(result > 0xFF));
+            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) + (rhs & 0xF) + carry > 0xF);
+            set_bits(&cpu->f, CpuFlag_C, result > 0xFF);
             break;
         }
         case CpuTableAlu_SUB: {
@@ -263,8 +263,8 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
 
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             set_bits(&cpu->f, CpuFlag_N, true);
-            set_bits(&cpu->f, CpuFlag_H, (bool)((prev_a & 0xF) < (rhs & 0xF)));
-            set_bits(&cpu->f, CpuFlag_C, (bool)(rhs > prev_a));
+            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) < (rhs & 0xF));
+            set_bits(&cpu->f, CpuFlag_C, rhs > prev_a);
             break;
         }
         case CpuTableAlu_SBC: {
@@ -274,8 +274,8 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
 
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
             set_bits(&cpu->f, CpuFlag_N, true);
-            set_bits(&cpu->f, CpuFlag_H, (bool)((prev_a & 0xF) < (rhs & 0xF) + borrow));
-            set_bits(&cpu->f, CpuFlag_C, (bool)(prev_a < (uint16_t)rhs + borrow));
+            set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) < (rhs & 0xF) + borrow);
+            set_bits(&cpu->f, CpuFlag_C, prev_a < (uint16_t)rhs + borrow);
             break;
         }
         case CpuTableAlu_AND: {
@@ -305,8 +305,8 @@ void Cpu_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) 
         case CpuTableAlu_CP: {
             set_bits(&cpu->f, CpuFlag_Z, cpu->a == rhs);
             set_bits(&cpu->f, CpuFlag_N, true);
-            set_bits(&cpu->f, CpuFlag_H, (bool)((cpu->a & 0xF) < (rhs & 0xF)));
-            set_bits(&cpu->f, CpuFlag_C, (bool)(cpu->a < rhs));
+            set_bits(&cpu->f, CpuFlag_H, (cpu->a & 0xF) < (rhs & 0xF));
+            set_bits(&cpu->f, CpuFlag_C, cpu->a < rhs);
             break;
         }
         default: {
@@ -393,8 +393,8 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
                         Cpu_write_rp(cpu, CpuTableRp_HL, hl + rhs);
 
                         set_bits(&cpu->f, CpuFlag_N, false);
-                        set_bits(&cpu->f, CpuFlag_H, (bool)((hl & 0xFFF) + (rhs & 0xFFF) > 0xFFF));
-                        set_bits(&cpu->f, CpuFlag_C, (bool)(rhs > 0xFFFF - hl));
+                        set_bits(&cpu->f, CpuFlag_H, (hl & 0xFFF) + (rhs & 0xFFF) > 0xFFF);
+                        set_bits(&cpu->f, CpuFlag_C, rhs > 0xFFFF - hl);
 
                         cpu->cycle_count++;
                     }
@@ -533,7 +533,7 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
                             set_bits(&cpu->f, CpuFlag_H, false);
-                            set_bits(&cpu->f, CpuFlag_C, (bool)bit_7);
+                            set_bits(&cpu->f, CpuFlag_C, bit_7);
                             break;
                         }
                         case 1: {  // RRCA
@@ -545,7 +545,7 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
                             set_bits(&cpu->f, CpuFlag_H, false);
-                            set_bits(&cpu->f, CpuFlag_C, (bool)bit_0);
+                            set_bits(&cpu->f, CpuFlag_C, bit_0);
                             break;
                         }
                         case 2: {  // RLA
@@ -558,7 +558,7 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
                             set_bits(&cpu->f, CpuFlag_H, false);
-                            set_bits(&cpu->f, CpuFlag_C, (bool)new_carry);
+                            set_bits(&cpu->f, CpuFlag_C, new_carry);
                             break;
                         }
                         case 3: {  // RRA
@@ -571,7 +571,7 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
                             set_bits(&cpu->f, CpuFlag_H, false);
-                            set_bits(&cpu->f, CpuFlag_C, (bool)new_carry);
+                            set_bits(&cpu->f, CpuFlag_C, new_carry);
                             break;
                         }
                         case 4: {  // DAA
@@ -627,7 +627,7 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
 
                             set_bits(&cpu->f, CpuFlag_N, false);
                             set_bits(&cpu->f, CpuFlag_H, false);
-                            set_bits(&cpu->f, CpuFlag_C, (bool)(!(cpu->f & CpuFlag_C)));
+                            set_bits(&cpu->f, CpuFlag_C, !(cpu->f & CpuFlag_C));
                             break;
                         }
                         default: {
@@ -680,14 +680,8 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
 
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
-                            set_bits(
-                                &cpu->f,
-                                CpuFlag_H,
-                                (bool)((cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF)
-                            );
-                            set_bits(
-                                &cpu->f, CpuFlag_C, (bool)((cpu->sp & 0xFF) + offset_u8 > 0xFF)
-                            );
+                            set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF);
+                            set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset_u8 > 0xFF);
 
                             cpu->sp += offset;
                             cpu->cycle_count += 2;
@@ -708,14 +702,8 @@ void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
 
                             set_bits(&cpu->f, CpuFlag_Z, false);
                             set_bits(&cpu->f, CpuFlag_N, false);
-                            set_bits(
-                                &cpu->f,
-                                CpuFlag_H,
-                                (bool)((cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF)
-                            );
-                            set_bits(
-                                &cpu->f, CpuFlag_C, (bool)((cpu->sp & 0xFF) + offset_u8 > 0xFF)
-                            );
+                            set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF);
+                            set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset_u8 > 0xFF);
 
                             Cpu_write_rp(cpu, CpuTableRp_HL, cpu->sp + offset);
                             cpu->cycle_count++;
@@ -931,7 +919,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)bit_7);
+                    set_bits(&cpu->f, CpuFlag_C, bit_7);
                     break;
                 }
                 case 1: {  // RRC r8
@@ -942,7 +930,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)bit_0);
+                    set_bits(&cpu->f, CpuFlag_C, bit_0);
                     break;
                 }
                 case 2: {  // RL r8
@@ -956,7 +944,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)new_carry);
+                    set_bits(&cpu->f, CpuFlag_C, new_carry);
                     break;
                 }
                 case 3: {  // RR r8
@@ -969,7 +957,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)new_carry);
+                    set_bits(&cpu->f, CpuFlag_C, new_carry);
                     break;
                 }
                 case 4: {  // SLA r8
@@ -980,7 +968,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)bit_7);
+                    set_bits(&cpu->f, CpuFlag_C, bit_7);
                     break;
                 }
                 case 5: {  // SRA r8
@@ -992,7 +980,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)bit_0);
+                    set_bits(&cpu->f, CpuFlag_C, bit_0);
                     break;
                 }
                 case 6: {  // SWAP r8
@@ -1015,7 +1003,7 @@ void Cpu_execute_prefixed(
                     set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
                     set_bits(&cpu->f, CpuFlag_N, false);
                     set_bits(&cpu->f, CpuFlag_H, false);
-                    set_bits(&cpu->f, CpuFlag_C, (bool)bit_0);
+                    set_bits(&cpu->f, CpuFlag_C, bit_0);
                     break;
                 }
                 default: {

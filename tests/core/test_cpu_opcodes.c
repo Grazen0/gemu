@@ -122,7 +122,7 @@ static void run_cpu_tick_test(
     cpu.f = initial_state->f;
     cpu.h = initial_state->h;
     cpu.l = initial_state->l;
-    cpu.ime = (bool)initial_state->ime;
+    cpu.ime = initial_state->ime;
 
     // Set up memory
     for (int j = 0; j < initial_state->ram_len; ++j) {

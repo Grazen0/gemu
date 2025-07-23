@@ -22,7 +22,7 @@ typedef enum RomData : uint16_t {
     RomData_GLOBAL_CHECKSUM = 0x14E,
 } RomData;
 
-enum CartridgeType : uint8_t {
+typedef enum CartridgeType : uint8_t {
     CartridgeType_ROM_ONLY = 0x00,
     CartridgeType_MCB1 = 0x01,
     CartridgeType_MCB1_RAM = 0x02,
@@ -51,6 +51,6 @@ enum CartridgeType : uint8_t {
     CartridgeType_BANDAI_TAMA5 = 0xFD,
     CartridgeType_HUC3 = 0xFE,
     CartridgeType_HUC1_RAM_BATTERY = 0xFF,
-};
+} CartridgeType;
 
 #endif

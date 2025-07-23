@@ -11,3 +11,4 @@ BinPackArguments: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 IndentCaseLabels: true
+LineEnding: LF

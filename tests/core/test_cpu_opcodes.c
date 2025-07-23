@@ -1,10 +1,10 @@
+#include "core/cpu/cpu.h"
 #include <cjson/cJSON.h>
 #include <dirent.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unity.h>
-#include "core/cpu.h"
 
 typedef struct DumbRam {
     bool active[0x10000];
@@ -98,8 +98,7 @@ static void CpuState_destroy(CpuState* const restrict state) {
 }
 
 static void run_cpu_tick_test(
-    const CpuState* const restrict initial_state,
-    const CpuState* const restrict final_state,
+    const CpuState* const restrict initial_state, const CpuState* const restrict final_state,
     const char* const restrict test_name
 ) {
     Cpu cpu = Cpu_new();

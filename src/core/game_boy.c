@@ -1,12 +1,12 @@
 #include "game_boy.h"
+#include "common/control.h"
+#include "common/log.h"
+#include "common/num.h"
+#include "cpu/cpu.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "common/control.h"
-#include "common/log.h"
-#include "common/num.h"
-#include "cpu.h"
 
 GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){

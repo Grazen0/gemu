@@ -1,9 +1,9 @@
 #ifndef CORE_GAME_BOY_H
 #define CORE_GAME_BOY_H
 
+#include "cpu/cpu.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "cpu.h"
 
 constexpr int GB_LCD_WIDTH = 160;
 constexpr int GB_LCD_HEIGHT = 144;

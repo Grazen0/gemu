@@ -1,9 +1,4 @@
 #include "frontend/frontend.h"
-#include <math.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_pixels.h"
@@ -11,14 +6,19 @@
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_timer.h"
 #include "common/log.h"
-#include "core/cpu.h"
+#include "core/cpu/cpu.h"
 #include "core/game_boy.h"
 #include "frontend/sdl.h"
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static constexpr int FPS = 60;
 static constexpr double DELTA = 1.0 / FPS;
 static constexpr double MAX_TIME_ACCUMULATOR = 4 * DELTA;
-static constexpr int DIV_FREQUENCY_HZ = 16384;  // 16779 Hz on SGB
+static constexpr int DIV_FREQUENCY_HZ = 16384; // 16779 Hz on SGB
 
 static const uint8_t PALETTE_RGB[][3] = {
     {186, 218, 85},

@@ -1,0 +1,950 @@
+#include "instructions.h"
+#include "common/control.h"
+#include "common/log.h"
+#include "common/num.h"
+#include "core/cpu/cpu.h"
+
+static inline void Cpu_instr_add_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    const uint8_t prev_a = cpu->a;
+    cpu->a += rhs;
+
+    set_bits(&cpu->f, CpuFlag_C, rhs > (0xFF - prev_a));
+    set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) + (rhs & 0xF) > 0xF);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+}
+
+static inline void Cpu_instr_adc_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    const uint8_t prev_a = cpu->a;
+    const uint8_t carry = (cpu->f & CpuFlag_C) != 0;
+    const uint16_t result = (uint16_t)prev_a + rhs + carry;
+    cpu->a = (uint8_t)result;
+
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) + (rhs & 0xF) + carry > 0xF);
+    set_bits(&cpu->f, CpuFlag_C, result > 0xFF);
+}
+
+static inline void Cpu_instr_sub_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    const uint8_t prev_a = cpu->a;
+    cpu->a -= rhs;
+
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+    set_bits(&cpu->f, CpuFlag_N, true);
+    set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) < (rhs & 0xF));
+    set_bits(&cpu->f, CpuFlag_C, rhs > prev_a);
+}
+
+static inline void Cpu_instr_sbc_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    const uint8_t prev_a = cpu->a;
+    const uint8_t borrow = (cpu->f & CpuFlag_C) != 0;
+    cpu->a = prev_a - rhs - borrow;
+
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+    set_bits(&cpu->f, CpuFlag_N, true);
+    set_bits(&cpu->f, CpuFlag_H, (prev_a & 0xF) < (rhs & 0xF) + borrow);
+    set_bits(&cpu->f, CpuFlag_C, prev_a < (uint16_t)rhs + borrow);
+}
+
+static inline void Cpu_instr_and_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    cpu->a &= rhs;
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, true);
+    set_bits(&cpu->f, CpuFlag_C, false);
+}
+
+static inline void Cpu_instr_xor_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    cpu->a ^= rhs;
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, false);
+}
+
+static inline void Cpu_instr_or_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    cpu->a |= rhs;
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, false);
+}
+
+static inline void Cpu_instr_cp_u8(Cpu* const restrict cpu, const uint8_t rhs) {
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == rhs);
+    set_bits(&cpu->f, CpuFlag_N, true);
+    set_bits(&cpu->f, CpuFlag_H, (cpu->a & 0xF) < (rhs & 0xF));
+    set_bits(&cpu->f, CpuFlag_C, cpu->a < rhs);
+}
+
+static inline void
+Cpu_instr_alu(Cpu* const restrict cpu, const CpuTableAlu alu, const uint8_t rhs) {
+    // clang-format off
+    switch (alu) {
+        case CpuTableAlu_ADD: Cpu_instr_add_u8(cpu, rhs); break;
+        case CpuTableAlu_ADC: Cpu_instr_adc_u8(cpu, rhs); break;
+        case CpuTableAlu_SUB: Cpu_instr_sub_u8(cpu, rhs); break;
+        case CpuTableAlu_SBC: Cpu_instr_sbc_u8(cpu, rhs); break;
+        case CpuTableAlu_AND: Cpu_instr_and_u8(cpu, rhs); break;
+        case CpuTableAlu_XOR: Cpu_instr_xor_u8(cpu, rhs); break;
+        case CpuTableAlu_OR: Cpu_instr_or_u8(cpu, rhs); break;
+        case CpuTableAlu_CP: Cpu_instr_cp_u8(cpu, rhs); break;
+        default: BAIL("invalid alu: %i", alu);
+    }
+    // clang-format on
+}
+
+static inline void Cpu_instr_nop() {
+    log_info(LogCategory_INSTRUCTION, "nop");
+}
+
+static inline void Cpu_instr_ld_n16_sp(Cpu* const restrict cpu, Memory* const restrict mem) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ld [$%04X], SP", addr);
+
+    Cpu_write_mem_u16(cpu, mem, addr, cpu->sp);
+}
+
+static inline void Cpu_instr_stop(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "stop");
+    cpu->mode = CpuMode_STOPPED;
+
+    log_warn(LogCategory_TODO, "TODO: implement STOP instruction properly");
+}
+
+static inline void Cpu_instr_jr_e8(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    const int8_t offset = (int8_t)Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "jr %i", offset);
+
+    cpu->pc += offset;
+    cpu->cycle_count++;
+}
+
+static inline void
+Cpu_instr_jr_cc_e8(Cpu* const restrict cpu, const Memory* const restrict mem, const uint8_t y) {
+    const uint8_t cc = y - 4;
+    const int8_t offset = (int8_t)Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "jr cc(%i), %i", cc, offset);
+
+    if (Cpu_read_cc(cpu, cc)) {
+        cpu->pc += offset;
+        cpu->cycle_count++;
+    }
+}
+
+static inline void
+Cpu_instr_ld_r16_n16(Cpu* const restrict cpu, const Memory* const restrict mem, const uint8_t p) {
+    const uint16_t value = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ld rp(%d), $%04X", p, value);
+
+    Cpu_write_rp(cpu, p, value);
+}
+
+static inline void Cpu_instr_add_hl_r16(Cpu* const restrict cpu, const uint8_t p) {
+    log_info(LogCategory_INSTRUCTION, "add hl, rp(%d)", p);
+
+    const uint16_t hl = Cpu_read_rp(cpu, CpuTableRp_HL);
+    const uint16_t rhs = Cpu_read_rp(cpu, p);
+
+    Cpu_write_rp(cpu, CpuTableRp_HL, hl + rhs);
+
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, (hl & 0xFFF) + (rhs & 0xFFF) > 0xFFF);
+    set_bits(&cpu->f, CpuFlag_C, rhs > 0xFFFF - hl);
+
+    cpu->cycle_count++;
+}
+
+static inline void Cpu_instr_ld_bc_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld [bc], a");
+
+    const uint16_t bc = Cpu_read_rp(cpu, CpuTableRp_BC);
+    Cpu_write_mem(cpu, mem, bc, cpu->a);
+}
+
+static inline void Cpu_instr_ld_de_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld [de], a");
+
+    const uint16_t de = Cpu_read_rp(cpu, CpuTableRp_DE);
+    Cpu_write_mem(cpu, mem, de, cpu->a);
+}
+
+static inline void Cpu_instr_ld_hli_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld [hl+], a");
+
+    const uint16_t hl = Cpu_read_rp(cpu, CpuTableRp_HL);
+    Cpu_write_mem(cpu, mem, hl, cpu->a);
+    Cpu_write_rp(cpu, CpuTableRp_HL, hl + 1);
+}
+
+static inline void Cpu_instr_ld_hld_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld [hl-], a");
+
+    const uint16_t hl = Cpu_read_rp(cpu, CpuTableRp_HL);
+    Cpu_write_mem(cpu, mem, hl, cpu->a);
+    Cpu_write_rp(cpu, CpuTableRp_HL, hl - 1);
+}
+
+static inline void Cpu_instr_ld_a_bc(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld a, [bc]");
+    const uint16_t bc = Cpu_read_rp(cpu, CpuTableRp_BC);
+    cpu->a = Cpu_read_mem(cpu, mem, bc);
+}
+
+static inline void Cpu_instr_ld_a_de(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld a, [de]");
+
+    const uint16_t de = Cpu_read_rp(cpu, CpuTableRp_DE);
+    cpu->a = Cpu_read_mem(cpu, mem, de);
+}
+
+static inline void Cpu_instr_ld_a_hli(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld a, [hl+]");
+
+    const uint16_t hl = Cpu_read_rp(cpu, CpuTableRp_HL);
+    cpu->a = Cpu_read_mem(cpu, mem, hl);
+    Cpu_write_rp(cpu, CpuTableRp_HL, hl + 1);
+}
+
+static inline void Cpu_instr_ld_a_hld(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ld a, [hl-]");
+
+    const uint16_t hl = Cpu_read_rp(cpu, CpuTableRp_HL);
+    cpu->a = Cpu_read_mem(cpu, mem, hl);
+    Cpu_write_rp(cpu, CpuTableRp_HL, hl - 1);
+}
+
+static inline void Cpu_instr_inc_r16(Cpu* const restrict cpu, const uint8_t p) {
+    log_info(LogCategory_INSTRUCTION, "inc rp(%d)", p);
+
+    const uint16_t value = Cpu_read_rp(cpu, p);
+    Cpu_write_rp(cpu, p, value + 1);
+    cpu->cycle_count++;
+}
+
+static inline void Cpu_instr_dec_r16(Cpu* const restrict cpu, const uint8_t p) {
+    log_info(LogCategory_INSTRUCTION, "dec rp(%d)", p);
+
+    const uint16_t value = Cpu_read_rp(cpu, p);
+    Cpu_write_rp(cpu, p, value - 1);
+    cpu->cycle_count++;
+}
+
+static inline void
+Cpu_instr_inc_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    log_info(LogCategory_INSTRUCTION, "inc r(%d)", y);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, y);
+    const uint8_t new_value = value + 1;
+    Cpu_write_r(cpu, mem, y, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, (new_value & 0xF) == 0);
+}
+
+static inline void
+Cpu_instr_dec_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    log_info(LogCategory_INSTRUCTION, "dec r(%d)", y);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, y);
+    const uint8_t new_value = value - 1;
+    Cpu_write_r(cpu, mem, y, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, true);
+    set_bits(&cpu->f, CpuFlag_H, (new_value & 0xF) == 0xF);
+}
+
+static inline void
+Cpu_instr_ld_r8_n(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    const uint8_t value = Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ld r(%d), $%02X", y, value);
+
+    Cpu_write_r(cpu, mem, y, value);
+}
+
+static inline void Cpu_instr_rlca(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "rlca");
+
+    const uint8_t bit_7 = (cpu->a & 0x80) != 0;
+    cpu->a = (cpu->a << 1) | bit_7;
+
+    set_bits(&cpu->f, CpuFlag_Z, false);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_7);
+}
+
+static inline void Cpu_instr_rrca(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "rrca");
+
+    const uint8_t bit_0 = cpu->a & 1;
+    cpu->a = (cpu->a >> 1) | (bit_0 << 7);
+
+    set_bits(&cpu->f, CpuFlag_Z, false);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_0);
+}
+
+static inline void Cpu_instr_rla(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "rla");
+
+    const uint8_t prev_carry = (cpu->f & CpuFlag_C) != 0;
+    const uint8_t new_carry = (cpu->a & 0x80) != 0;
+    cpu->a = (cpu->a << 1) | prev_carry;
+
+    set_bits(&cpu->f, CpuFlag_Z, false);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, new_carry);
+}
+
+static inline void Cpu_instr_rra(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "rra");
+
+    const uint8_t prev_carry = (cpu->f & CpuFlag_C) != 0;
+    const uint8_t new_carry = cpu->a & 1;
+    cpu->a = (cpu->a >> 1) | (prev_carry << 7);
+
+    set_bits(&cpu->f, CpuFlag_Z, false);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, new_carry);
+}
+
+static inline void Cpu_instr_daa(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "daa");
+
+    uint8_t adj = 0;
+
+    if (cpu->f & CpuFlag_N) {
+        if (cpu->f & CpuFlag_H) {
+            adj += 0x06;
+        }
+
+        if (cpu->f & CpuFlag_C) {
+            adj += 0x60;
+        }
+
+        cpu->a -= adj;
+    } else {
+        if (cpu->f & CpuFlag_H || (cpu->a & 0xF) > 0x9) {
+            adj += 0x06;
+        }
+
+        if (cpu->f & CpuFlag_C || cpu->a > 0x99) {
+            adj += 0x60;
+            set_bits(&cpu->f, CpuFlag_C, true);
+        }
+
+        cpu->a += adj;
+    }
+
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_Z, cpu->a == 0);
+}
+
+static inline void Cpu_instr_cpl(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "cpl");
+
+    cpu->a = ~cpu->a;
+    set_bits(&cpu->f, CpuFlag_N, true);
+    set_bits(&cpu->f, CpuFlag_H, true);
+}
+
+static inline void Cpu_instr_scf(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "scf");
+
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, true);
+}
+
+static inline void Cpu_instr_ccf(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "ccf");
+
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, !(cpu->f & CpuFlag_C));
+}
+
+static inline void Cpu_instr_halt(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "halt");
+    cpu->mode = CpuMode_HALTED;
+}
+
+static inline void Cpu_instr_ld_r8_r8(
+    Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y, const uint8_t z
+) {
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    log_info(LogCategory_INSTRUCTION, "ld r(%d), r(%d)", y, z);
+
+    Cpu_write_r(cpu, mem, y, value);
+}
+
+static inline void Cpu_instr_alu_r8(
+    Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y, const uint8_t z
+) {
+
+    log_info(LogCategory_INSTRUCTION, "{alu} a, r(%d)", z);
+
+    const uint8_t rhs = Cpu_read_r(cpu, mem, z);
+    Cpu_instr_alu(cpu, y, rhs);
+}
+
+static inline void Cpu_instr_ldh_n16_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    const uint8_t offset = Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ldh [$%02X], a", offset);
+
+    const uint16_t addr = 0xFF00 + offset;
+    Cpu_write_mem(cpu, mem, addr, cpu->a);
+}
+
+static inline void Cpu_instr_add_sp_e8(Cpu* const restrict cpu, Memory* const restrict mem) {
+    const uint8_t offset_u8 = (int8_t)Cpu_read_pc(cpu, mem);
+    const int8_t offset = (int8_t)offset_u8;
+    log_info(LogCategory_INSTRUCTION, "add sp, %d", offset);
+
+    set_bits(&cpu->f, CpuFlag_Z, false);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF);
+    set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset_u8 > 0xFF);
+
+    cpu->sp += offset;
+    cpu->cycle_count += 2;
+}
+
+static inline void Cpu_instr_ldh_a_n16(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    const uint8_t offset = Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ldh a, [$%02X]", offset);
+
+    const uint16_t addr = 0xFF00 + offset;
+    cpu->a = Cpu_read_mem(cpu, mem, addr);
+}
+
+static inline void
+Cpu_instr_ld_hl_sp_plus_e8(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    const uint8_t offset_u8 = (int8_t)Cpu_read_pc(cpu, mem);
+    const int8_t offset = (int8_t)offset_u8;
+    log_info(LogCategory_INSTRUCTION, "ld hl, sp%+d", offset);
+
+    set_bits(&cpu->f, CpuFlag_Z, false);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, (cpu->sp & 0xF) + (offset_u8 & 0xF) > 0xF);
+    set_bits(&cpu->f, CpuFlag_C, (cpu->sp & 0xFF) + offset_u8 > 0xFF);
+
+    Cpu_write_rp(cpu, CpuTableRp_HL, cpu->sp + offset);
+    cpu->cycle_count++;
+}
+
+static inline void
+Cpu_instr_ret_cc(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    log_info(LogCategory_INSTRUCTION, "ret cc(%d)", y);
+
+    cpu->cycle_count++;
+    if (Cpu_read_cc(cpu, y)) {
+        cpu->pc = Cpu_stack_pop_u16(cpu, mem);
+        cpu->cycle_count++;
+    }
+}
+
+static inline void
+Cpu_instr_pop_r16(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t p) {
+    log_info(LogCategory_INSTRUCTION, "pop rp2(%d)", p);
+
+    const uint16_t value = Cpu_stack_pop_u16(cpu, mem);
+    Cpu_write_rp2(cpu, p, value);
+}
+
+static inline void Cpu_instr_ret(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ret");
+
+    cpu->pc = Cpu_stack_pop_u16(cpu, mem);
+    cpu->cycle_count++;
+}
+
+static inline void Cpu_instr_reti(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "reti");
+
+    cpu->ime = true;
+    cpu->pc = Cpu_stack_pop_u16(cpu, mem);
+    cpu->cycle_count++;
+}
+
+static inline void Cpu_instr_jp_hl(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "jp hl");
+
+    cpu->pc = Cpu_read_rp(cpu, CpuTableRp_HL);
+}
+
+static inline void Cpu_instr_ld_sp_hl(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "ld sp, hl");
+
+    cpu->sp = Cpu_read_rp(cpu, CpuTableRp_HL);
+    cpu->cycle_count++;
+}
+
+static inline void Cpu_instr_ldh_c_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    log_info(LogCategory_INSTRUCTION, "ldh [c], a");
+
+    const uint16_t addr = 0xFF00 + cpu->c;
+    Cpu_write_mem(cpu, mem, addr, cpu->a);
+}
+
+static inline void Cpu_instr_ld_a16_a(Cpu* const restrict cpu, Memory* const restrict mem) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ld [$%04X], a", addr);
+
+    Cpu_write_mem(cpu, mem, addr, cpu->a);
+}
+
+static inline void Cpu_instr_ldh_a_c(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    const uint16_t addr = 0xFF00 + cpu->c;
+    log_info(LogCategory_INSTRUCTION, "ld a, [c]");
+
+    cpu->a = Cpu_read_mem(cpu, mem, addr);
+}
+
+static inline void Cpu_instr_ld_a_a16(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "ld a, [$%04X]", addr);
+
+    cpu->a = Cpu_read_mem(cpu, mem, addr);
+}
+
+static inline void
+Cpu_instr_jp_cc_a16(Cpu* const restrict cpu, const Memory* const restrict mem, const uint8_t y) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "jp cc(%d), $%04X", y, addr);
+
+    if (Cpu_read_cc(cpu, y)) {
+        cpu->pc = addr;
+        cpu->cycle_count++;
+    }
+}
+
+static inline void Cpu_instr_jp_a16(Cpu* const restrict cpu, const Memory* const restrict mem) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "jp $%04X", addr);
+
+    cpu->pc = addr;
+    cpu->cycle_count++;
+}
+
+static inline void Cpu_instr_di(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "di");
+
+    cpu->ime = false;
+    cpu->queued_ime = false;
+}
+
+static inline void Cpu_instr_ei(Cpu* const restrict cpu) {
+    log_info(LogCategory_INSTRUCTION, "ei");
+
+    cpu->queued_ime = true;
+}
+
+static inline void
+Cpu_instr_call_cc_n16(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "call cc(%d), $%04X", y, addr);
+
+    if (Cpu_read_cc(cpu, y)) {
+        Cpu_stack_push_u16(cpu, mem, cpu->pc);
+        cpu->pc = addr;
+    }
+}
+
+static inline void
+Cpu_instr_push_r16(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t p) {
+    log_info(LogCategory_INSTRUCTION, "push rp2(%d)", p);
+
+    const uint16_t value = Cpu_read_rp2(cpu, p);
+    Cpu_stack_push_u16(cpu, mem, value);
+}
+
+static inline void Cpu_instr_call_n16(Cpu* const restrict cpu, Memory* const restrict mem) {
+    const uint16_t addr = Cpu_read_pc_u16(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "call $%04X", addr);
+
+    Cpu_stack_push_u16(cpu, mem, cpu->pc);
+    cpu->pc = addr;
+}
+
+static inline void
+Cpu_instr_alu_a_a8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    const uint8_t rhs = Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "{alu} a, $%02X", rhs);
+
+    Cpu_instr_alu(cpu, y, rhs);
+}
+
+static inline void
+Cpu_instr_rst_vec(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y) {
+    log_info(LogCategory_INSTRUCTION, "rst $%02X", y * 8);
+
+    Cpu_stack_push_u16(cpu, mem, cpu->pc);
+    cpu->pc = y * 8;
+}
+
+static inline void
+Cpu_instr_rlc_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "rlc r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t bit_7 = (value & 0x80) != 0;
+    const uint8_t new_value = (value << 1) | bit_7;
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_7);
+}
+
+static inline void
+Cpu_instr_rrc_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "rrc r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t bit_0 = value & 1;
+    const uint8_t new_value = (value >> 1) | (bit_0 << 7);
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_0);
+}
+
+static inline void
+Cpu_instr_rl_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "rl r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t prev_carry = (cpu->f & CpuFlag_C) != 0;
+    const uint8_t new_carry = (value & 0x80) != 0;
+
+    const uint8_t new_value = (value << 1) | prev_carry;
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, new_carry);
+}
+
+static inline void
+Cpu_instr_rr_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "rr r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t prev_carry = (cpu->f & CpuFlag_C) != 0;
+    const uint8_t new_carry = value & 1;
+
+    const uint8_t new_value = (value >> 1) | (prev_carry << 7);
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, new_carry);
+}
+
+static inline void
+Cpu_instr_sla_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "sla r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t bit_7 = (value & 0x80) != 0;
+    const uint8_t new_value = value << 1;
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_7);
+}
+
+static inline void
+Cpu_instr_sra_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "sra r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t bit_0 = value & 1;
+    const uint8_t bit_7 = (value & 0x80) != 0;
+    const uint8_t new_value = (value >> 1) | (bit_7 << 7);
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_0);
+}
+
+static inline void
+Cpu_instr_swap_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "swap r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t prev_hi = value >> 4;
+    const uint8_t prev_lo = value & 0xF;
+    const uint8_t new_value = (prev_lo << 4) | prev_hi;
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, false);
+}
+
+static inline void
+Cpu_instr_srl_r8(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t z) {
+    log_info(LogCategory_INSTRUCTION, "srl r(%d)", z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    const uint8_t bit_0 = value & 1;
+    const uint8_t new_value = value >> 1;
+    Cpu_write_r(cpu, mem, z, new_value);
+
+    set_bits(&cpu->f, CpuFlag_Z, new_value == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, false);
+    set_bits(&cpu->f, CpuFlag_C, bit_0);
+}
+
+static inline void Cpu_instr_bit_u3_r8(
+    Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y, const uint8_t z
+) {
+    log_info(LogCategory_INSTRUCTION, "bit %d,r(%d)", y, z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    set_bits(&cpu->f, CpuFlag_Z, (value & (1 << y)) == 0);
+    set_bits(&cpu->f, CpuFlag_N, false);
+    set_bits(&cpu->f, CpuFlag_H, true);
+}
+
+static inline void Cpu_instr_res_u3_r8(
+    Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y, const uint8_t z
+) {
+    log_info(LogCategory_INSTRUCTION, "res %d,r(%d)", y, z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    Cpu_write_r(cpu, mem, z, value & ~(1 << y));
+}
+
+static inline void Cpu_instr_set_u3_r8(
+    Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t y, const uint8_t z
+) {
+    log_info(LogCategory_INSTRUCTION, "set %d,r(%d)", y, z);
+
+    const uint8_t value = Cpu_read_r(cpu, mem, z);
+    Cpu_write_r(cpu, mem, z, value | (1 << y));
+}
+
+static inline void Cpu_instr_prefix(Cpu* const restrict cpu, Memory* const restrict mem) {
+    const uint8_t opcode = Cpu_read_pc(cpu, mem);
+    log_info(LogCategory_INSTRUCTION, "{prefix} $%02X", opcode);
+    log_info(LogCategory_INSTRUCTION, "    prefixed (opcode = $%02X)", opcode);
+
+    const uint8_t x = opcode >> 6;
+    const uint8_t y = (opcode >> 3) & 0b111;
+    const uint8_t z = opcode & 0b111;
+
+    // clang-format off
+    switch (x) {
+        case 0:
+            switch (y) {
+                case 0: Cpu_instr_rlc_r8(cpu, mem, z); break;
+                case 1: Cpu_instr_rrc_r8(cpu, mem, z); break;
+                case 2: Cpu_instr_rl_r8(cpu, mem, z); break;
+                case 3: Cpu_instr_rr_r8(cpu, mem, z); break;
+                case 4: Cpu_instr_sla_r8(cpu, mem, z); break;
+                case 5: Cpu_instr_sra_r8(cpu, mem, z); break;
+                case 6: Cpu_instr_swap_r8(cpu, mem, z); break;
+                case 7: Cpu_instr_srl_r8(cpu, mem, z); break;
+                default: BAIL("unreachable");
+            }
+            break;
+        case 1: Cpu_instr_bit_u3_r8(cpu, mem, y, z); break;
+        case 2: Cpu_instr_res_u3_r8(cpu, mem, y, z); break;
+        case 3: Cpu_instr_set_u3_r8(cpu, mem, y, z); break;
+        default: BAIL("unreachable");
+    }
+    // clang-format on
+}
+
+// NOLINTNEXTLINE
+void Cpu_execute(Cpu* const restrict cpu, Memory* const restrict mem, const uint8_t opcode) {
+    // Credit:
+    // https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html
+
+    const uint8_t x = opcode >> 6;
+    const uint8_t y = (opcode >> 3) & 0b111;
+    const uint8_t z = opcode & 0b111;
+    const uint8_t p = y >> 1;
+    const uint8_t q = y & 1;
+
+    switch (x) {
+        case 0:
+            switch (z) {
+                case 0:
+                    // clang-format off
+                    switch (y) {
+                        case 0: Cpu_instr_nop(); break;
+                        case 1: Cpu_instr_ld_n16_sp(cpu, mem); break;
+                        case 2: Cpu_instr_stop(cpu); break;
+                        case 3: Cpu_instr_jr_e8(cpu, mem); break;
+                        default: Cpu_instr_jr_cc_e8(cpu, mem, y);
+                    }
+                    // clang-format on
+                    break;
+                case 1:
+                    if (q == 0)
+                        Cpu_instr_ld_r16_n16(cpu, mem, p);
+                    else
+                        Cpu_instr_add_hl_r16(cpu, p);
+                    break;
+                case 2:
+                    if (q == 0) {
+                        // clang-format off
+                        switch (p) {
+                            case 0: Cpu_instr_ld_bc_a(cpu, mem); break;
+                            case 1: Cpu_instr_ld_de_a(cpu, mem); break;
+                            case 2: Cpu_instr_ld_hli_a(cpu, mem); break;
+                            case 3: Cpu_instr_ld_hld_a(cpu, mem); break;
+                            default: BAIL("unreachable");
+                        }
+                        // clang-format on
+                    } else {
+                        // clang-format off
+                        switch (p) {
+                            case 0: Cpu_instr_ld_a_bc(cpu, mem); break;
+                            case 1: Cpu_instr_ld_a_de(cpu, mem); break;
+                            case 2: Cpu_instr_ld_a_hli(cpu, mem); break;
+                            case 3: Cpu_instr_ld_a_hld(cpu, mem); break;
+                            default: BAIL("unreachable");
+                        }
+                        // clang-format on
+                    }
+                    break;
+                case 3:
+                    if (q == 0)
+                        Cpu_instr_inc_r16(cpu, p);
+                    else
+                        Cpu_instr_dec_r16(cpu, p);
+                    break;
+                    // clang-format off
+                case 4: Cpu_instr_inc_r8(cpu, mem, y); break;
+                case 5: Cpu_instr_dec_r8(cpu, mem, y); break;
+                case 6: Cpu_instr_ld_r8_n(cpu, mem, y); break;
+                    // clang-format on
+                case 7:
+                    // clang-format off
+                    switch (y) {
+                        case 0: Cpu_instr_rlca(cpu); break;
+                        case 1: Cpu_instr_rrca(cpu); break;
+                        case 2: Cpu_instr_rla(cpu); break;
+                        case 3: Cpu_instr_rra(cpu); break;
+                        case 4: Cpu_instr_daa(cpu); break;
+                        case 5: Cpu_instr_cpl(cpu); break;
+                        case 6: Cpu_instr_scf(cpu); break;
+                        case 7: Cpu_instr_ccf(cpu); break;
+                        default: BAIL("unreachable");
+                    }
+                    // clang-format on
+                    break;
+                default:
+                    BAIL("unreachable");
+            }
+            break;
+        case 1:
+            if (z == 6 && y == 6)
+                Cpu_instr_halt(cpu);
+            else
+                Cpu_instr_ld_r8_r8(cpu, mem, y, z);
+            break;
+        case 2:
+            Cpu_instr_alu_r8(cpu, mem, y, z);
+            break;
+        case 3:
+            switch (z) {
+                case 0:
+                    // clang-format off
+                    switch (y) {
+                        case 4: Cpu_instr_ldh_n16_a(cpu, mem); break;
+                        case 5: Cpu_instr_add_sp_e8(cpu, mem); break;
+                        case 6: Cpu_instr_ldh_a_n16(cpu, mem); break;
+                        case 7: Cpu_instr_ld_hl_sp_plus_e8(cpu, mem); break;
+                        default: Cpu_instr_ret_cc(cpu, mem, y);
+                    }
+                    // clang-format on
+                    break;
+                case 1:
+                    if (q == 0)
+                        Cpu_instr_pop_r16(cpu, mem, p);
+                    else {
+                        // clang-format off
+                        switch (p) {
+                            case 0: Cpu_instr_ret(cpu, mem); break;
+                            case 1: Cpu_instr_reti(cpu, mem); break;
+                            case 2: Cpu_instr_jp_hl(cpu); break;
+                            case 3: Cpu_instr_ld_sp_hl(cpu); break;
+                            default: BAIL("unreachable");
+                        }
+                        // clang-format on
+                    }
+                    break;
+                case 2:
+                    // clang-format off
+                    switch (y) {
+                        case 4: Cpu_instr_ldh_c_a(cpu, mem); break;
+                        case 5: Cpu_instr_ld_a16_a(cpu, mem); break;
+                        case 6: Cpu_instr_ldh_a_c(cpu, mem); break;
+                        case 7: Cpu_instr_ld_a_a16(cpu, mem); break;
+                        default: Cpu_instr_jp_cc_a16(cpu, mem, y);
+                    }
+                    // clang-format on
+                    break;
+                case 3:
+                    // clang-format off
+                    switch (y) {
+                        case 0: Cpu_instr_jp_a16(cpu, mem); break;
+                        case 1: Cpu_instr_prefix(cpu, mem); break;
+                        case 6: Cpu_instr_di(cpu); break;
+                        case 7: Cpu_instr_ei(cpu); break;
+                        default: BAIL("removed instruction");
+                    }
+                    // clang-format on
+                    break;
+                case 4:
+                    if (y < 4)
+                        Cpu_instr_call_cc_n16(cpu, mem, y);
+                    else
+                        BAIL("removed instruction");
+                    break;
+                case 5:
+                    if (q == 0)
+                        Cpu_instr_push_r16(cpu, mem, p);
+                    else if (p == 0)
+                        Cpu_instr_call_n16(cpu, mem);
+                    else
+                        BAIL("removed instruction");
+                    break;
+                case 6:
+                    Cpu_instr_alu_a_a8(cpu, mem, y);
+                    break;
+                case 7:
+                    Cpu_instr_rst_vec(cpu, mem, y);
+                    break;
+                default:
+                    BAIL("unreachable");
+            }
+            break;
+        default:
+            BAIL("unreachable");
+    }
+}

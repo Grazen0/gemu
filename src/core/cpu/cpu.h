@@ -94,8 +94,6 @@ void Cpu_write_rp(Cpu* restrict cpu, CpuTableRp rp, uint16_t value);
 
 void Cpu_write_rp2(Cpu* restrict cpu, CpuTableRp rp, uint16_t value);
 
-void Cpu_alu(Cpu* restrict cpu, CpuTableAlu alu, uint8_t rhs);
-
 uint8_t Cpu_read_mem(Cpu* restrict cpu, const Memory* restrict mem, uint16_t addr);
 
 uint16_t Cpu_read_mem_u16(Cpu* restrict cpu, const Memory* restrict mem, uint16_t addr);
@@ -117,10 +115,6 @@ void Cpu_stack_push_u16(Cpu* restrict cpu, Memory* restrict mem, uint16_t value)
 uint16_t Cpu_stack_pop_u16(Cpu* restrict cpu, const Memory* restrict mem);
 
 void Cpu_tick(Cpu* restrict cpu, Memory* restrict mem);
-
-void Cpu_execute(Cpu* restrict cpu, Memory* restrict mem, uint8_t opcode);
-
-void Cpu_execute_prefixed(Cpu* restrict cpu, Memory* restrict mem, uint8_t opcode);
 
 void Cpu_interrupt(Cpu* restrict cpu, Memory* restrict mem, uint8_t handler_location);
 

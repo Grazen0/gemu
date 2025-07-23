@@ -1,9 +1,9 @@
+#include "core/cpu/cpu.h"
 #include <cjson/cJSON.h>
 #include <dirent.h>
 #include <stddef.h>
 #include <sys/stat.h>
 #include <unity.h>
-#include "core/cpu.h"
 
 void test_cpu_new(void) {
     Cpu cpu = Cpu_new();

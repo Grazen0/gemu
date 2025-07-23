@@ -1,4 +1,5 @@
 #include "common/log.h"
+#include "common/control.h"
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -8,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "common/control.h"
 
 static bool logger_ready = false;
 static LogFn current_log_fn = nullptr;
@@ -35,7 +35,7 @@ static void* logger_thread_fn([[maybe_unused]] void* _arg) {
             pthread_cond_wait(&log_queue.cond, &log_queue.mtx);
         }
 
-        if (!!log_queue.quit && log_queue.head == log_queue.tail) {
+        if (log_queue.quit && log_queue.head == log_queue.tail) {
             pthread_mutex_unlock(&log_queue.mtx);
             break;
         }
@@ -114,9 +114,7 @@ static void grow_log_queue(void) {
 }
 
 void vlog(
-    const LogLevel level,
-    const LogCategory category,
-    const char* const restrict format,
+    const LogLevel level, const LogCategory category, const char* const restrict format,
     va_list args
 ) {
     if (!logger_ready) {

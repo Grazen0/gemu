@@ -8,3 +8,6 @@ AllowShortEnumsOnASingleLine: false
 AlignAfterOpenBracket: BlockIndent
 AllowAllArgumentsOnNextLine: true
 BinPackArguments: false
+DerivePointerAlignment: false
+PointerAlignment: Left
+IndentCaseLabels: true

@@ -8,7 +8,6 @@ Checks: >
   cppcoreguidelines-*,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-avoid-non-const-global-variables,
   misc-*,
   -misc-no-recursion,
@@ -16,9 +15,9 @@ Checks: >
   -modernize-use-trailing-return-type,
   mpi-*,
   performance-*,
-  -performance-avoid-endl,
   portability-*,
   readability-*,
-  -readability-magic-numbers,
+  -readability-braces-around-statements,
   -readability-identifier-length,
-  -readability-implicit-bool-conversion
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers

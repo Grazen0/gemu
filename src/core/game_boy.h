@@ -48,7 +48,19 @@ typedef enum StatSelect : uint8_t {
     StatSelect_LYC = 1 << 6,
 } StatSelect;
 
+typedef struct JoypadState {
+    bool up;
+    bool down;
+    bool right;
+    bool left;
+    bool a;
+    bool b;
+    bool start;
+    bool select;
+} JoypadState;
+
 typedef struct GameBoy {
+    JoypadState joypad;
     Cpu cpu;
     uint8_t ram[0x2000];
     uint8_t vram[0x2000];

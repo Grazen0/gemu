@@ -8,6 +8,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static inline void GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t value) {
+    gb->joyp = value | 0x0F;
+
+    if ((gb->joyp & Joypad_D_PAD_SELECT) == 0) {
+        if (gb->joypad.right) {
+            gb->joyp &= ~Joypad_A_RIGHT;
+        }
+        if (gb->joypad.left)
+            gb->joyp &= ~Joypad_B_LEFT;
+
+        if (gb->joypad.up)
+            gb->joyp &= ~Joypad_SELECT_UP;
+
+        if (gb->joypad.down)
+            gb->joyp &= ~Joypad_START_DOWN;
+    }
+
+    if ((gb->joyp & Joypad_BUTTONS_SELECT) == 0) {
+        if (gb->joypad.a)
+            gb->joyp &= ~Joypad_A_RIGHT;
+
+        if (gb->joypad.b)
+            gb->joyp &= ~Joypad_B_LEFT;
+
+        if (gb->joypad.select)
+            gb->joyp &= ~Joypad_SELECT_UP;
+
+        if (gb->joypad.start)
+            gb->joyp &= ~Joypad_START_DOWN;
+    }
+}
+
 GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),
@@ -101,40 +133,23 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
+
+        // clang-format off
         switch (addr) {
-            // LCD control
-            case 0xFF40:
-                return gb->lcdc;
-
-            // LCD status registers
-            case 0xFF44:
-                return gb->ly;
-            case 0xFF45:
-                return gb->lcy;
-            case 0xFF41:
-                return gb->stat;
-
-            // Scrolling
-            case 0xFF42:
-                return gb->scy;
-            case 0xFF43:
-                return gb->scx;
-            case 0xFF4A:
-                return gb->wy;
-            case 0xFF4B:
-                return gb->wx;
-
-            // Palettes
-            case 0xFF47:
-                return gb->bgp;
-            case 0xFF48:
-                return gb->obp0;
-            case 0xFF49:
-                return gb->obp1;
-
-            default:
-                BAIL("Unexpected I/O LCD read (addr = $%04X)", addr);
+            case 0xFF40: return gb->lcdc;
+            case 0xFF44: return gb->ly;
+            case 0xFF45: return gb->lcy;
+            case 0xFF41: return gb->stat;
+            case 0xFF42: return gb->scy;
+            case 0xFF43: return gb->scx;
+            case 0xFF4A: return gb->wy;
+            case 0xFF4B: return gb->wx;
+            case 0xFF47: return gb->bgp;
+            case 0xFF48: return gb->obp0;
+            case 0xFF49: return gb->obp1;
+            default: BAIL("Unexpected I/O LCD read (addr = $%04X)", addr);
         }
+        // clang-format on
     }
 
     if (addr == 0xFF4D) {
@@ -236,51 +251,36 @@ uint16_t GameBoy_read_mem_u16(GameBoy* const restrict gb, uint16_t addr) {
 void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uint8_t value) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        gb->joyp = (gb->joyp & 0x0F) | (value & 0xF0);
+        GameBoy_write_joyp(gb, value);
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
         gb->sb = value;
     } else if (addr == 0xFF02) {
         // FF02 (serial transfer control)
-        log_info(LogCategory_IO, "I/O serial transfer control write ($%02X)", value);
         // TODO: implement properly
         gb->sc = value;
-
-        // if (gb->sc == 0x81) {
-        //     putchar(gb->sb);
-        //     fflush(stdout);
-        // }
     } else if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
+        // clang-format off
         switch (addr) {
-            case 0xFF04:
-                gb->div = 0;
-                break;
-            case 0xFF05:
-                gb->tima = value;
-                break;
-            case 0xFF06:
-                gb->tma = value;
-                break;
-            case 0xFF07:
-                gb->tac = value;
-                break;
-            default:
-                BAIL("Unexpected I/O timer and divider write ($%04X, $%02X)", addr, value);
+            case 0xFF04: gb->div = 0; break;
+            case 0xFF05: gb->tima = value; break;
+            case 0xFF06: gb->tma = value; break;
+            case 0xFF07: gb->tac = value; break;
+            default: BAIL("Unexpected I/O timer and divider write ($%04X, $%02X)", addr, value);
         }
+        // clang-format on
     } else if (addr == 0xFF0F) {
         // FF0F (interrupts)
         gb->if_ = value;
     } else if (addr >= 0xFF10 && addr <= 0xFF26) {
         // FF10-FF26 (audio)
-        log_warn(LogCategory_TODO, "TODO: I/O audio write ($%04X, $%02X)", addr, value);
+        // TODO: I/O audio write
     } else if (addr >= 0xFF30 && addr <= 0xFF3F) {
         // FF30-FF3F (wave pattern)
-        log_warn(LogCategory_TODO, "TODO: I/O wave pattern write ($%04X, $%02X)", addr, value);
+        // TODO: I/O wave pattern write
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        log_info(LogCategory_IO, "OAM DMA source/start write ($%04X, $%02X)", addr, value);
-
         const uint16_t src = (uint16_t)value << 8;
 
         // TODO: implement proper timing
@@ -289,59 +289,31 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         }
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
+        // clang-format off
         switch (addr) {
-            // LCD control
-            case 0xFF40:
-                gb->lcdc = value;
-                break;
-
-            // LCD status registers
-            case 0xFF45:
-                gb->lcy = value;
-                break;
+            case 0xFF40: gb->lcdc = value; break;
+            case 0xFF45: gb->lcy = value; break;
             case 0xFF41:
-                log_warn(LogCategory_ALL, "STAT WRITE");
                 // Modifies only bits 3-7
-                gb->stat = value;
-                gb->stat |= value & 0xF8;
+                gb->stat = (gb->stat & 0b111) | (value & ~0b111);
                 break;
-
-            // Scrolling
-            case 0xFF42:
-                gb->scy = value;
-                break;
-            case 0xFF43:
-                gb->scx = value;
-                break;
-            case 0xFF4A:
-                gb->wy = value;
-                break;
-            case 0xFF4B:
-                gb->wx = value;
-                break;
-
-            // Palettes
-            case 0xFF47:
-                gb->bgp = value;
-                break;
-            case 0xFF48:
-                gb->obp0 = value;
-                break;
-            case 0xFF49:
-                gb->obp1 = value;
-                break;
-
-            default:
-                BAIL("Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value);
+            case 0xFF42: gb->scy = value; break;
+            case 0xFF43: gb->scx = value; break;
+            case 0xFF4A: gb->wy = value; break;
+            case 0xFF4B: gb->wx = value; break;
+            case 0xFF47: gb->bgp = value; break;
+            case 0xFF48: gb->obp0 = value; break;
+            case 0xFF49: gb->obp1 = value; break;
+            default: BAIL("Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value);
         }
+        // clang-format on
     } else if (addr == 0xFF4F) {
         // FF4F
         BAIL("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
-        if (value != 0) {
+        if (value != 0)
             gb->rom_enable = false;
-        }
     } else if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA)
         BAIL("I/O VRAM DMA write ($%04X, $%02X)", addr, value);
@@ -352,10 +324,7 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         // FF70 (WRAM bank select)
         BAIL("I/O WRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF7F) {
-        // Not sure what to do here
-        log_warn(
-            LogCategory_IO, "Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value
-        );
+        // Tetris tries to write here. Probably a no-op.
     } else {
         BAIL("Unexpected I/O write (addr = $%04X, value = $%02X)", addr, value);
     }
@@ -421,7 +390,7 @@ void GameBoy_service_interrupts(GameBoy* const restrict gb, Memory* const restri
 
     for (uint8_t i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
-            log_info(LogCategory_INTERRUPT, "Servicing interrupt #%i", i);
+            log_warn(LogCategory_INTERRUPT, "Servicing interrupt #%i", i);
             gb->if_ &= ~(1 << i);
             Cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
             break;

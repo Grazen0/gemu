@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static constexpr int FPS = 60;
 static constexpr double DELTA = 1.0 / FPS;
@@ -27,24 +28,24 @@ static const uint8_t PALETTE_RGB[][3] = {
     { 19,  22,  8}
 };
 
-bool* get_joypad_key(State* const restrict state, const SDL_Keycode key) {
+bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
     switch (key) {
         case SDLK_RETURN:
-            return &state->joypad.start;
+            return &gb->joypad.start;
         case SDLK_SPACE:
-            return &state->joypad.select;
+            return &gb->joypad.select;
         case SDLK_UP:
-            return &state->joypad.up;
+            return &gb->joypad.up;
         case SDLK_DOWN:
-            return &state->joypad.down;
+            return &gb->joypad.down;
         case SDLK_RIGHT:
-            return &state->joypad.right;
+            return &gb->joypad.right;
         case SDLK_LEFT:
-            return &state->joypad.left;
-        case SDLK_Z:
-            return &state->joypad.a;
+            return &gb->joypad.left;
         case SDLK_X:
-            return &state->joypad.b;
+            return &gb->joypad.a;
+        case SDLK_Z:
+            return &gb->joypad.b;
         default:
             return nullptr;
     }
@@ -62,14 +63,10 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
             break;
         }
         case SDL_EVENT_KEY_DOWN: {
-            if (event->key.mod != 0) {
-                break;
-            }
-
-            bool* const state_key = get_joypad_key(state, event->key.key);
-            if (state_key != nullptr) {
+            bool* const state_key = get_joypad_key(&state->gb, event->key.key);
+            if (state_key != nullptr)
                 *state_key = true;
-            }
+
             break;
         }
         case SDL_EVENT_KEY_UP: {
@@ -78,14 +75,10 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
                 break;
             }
 
-            if (event->key.mod != 0) {
-                break;
-            }
-
-            bool* const state_key = get_joypad_key(state, event->key.key);
-            if (state_key != nullptr) {
+            bool* const state_key = get_joypad_key(&state->gb, event->key.key);
+            if (state_key != nullptr)
                 *state_key = false;
-            }
+
             break;
         }
         default: {
@@ -99,45 +92,6 @@ void update(State* const restrict state, const double delta) {
         .read = GameBoy_read_mem,
         .write = GameBoy_write_mem,
     };
-
-    // Update JOYP
-    // TODO: only update when necessary
-    const uint8_t prev_joyp = state->gb.joyp;
-    state->gb.joyp |= 0x0F;
-
-    if ((state->gb.joyp & Joypad_D_PAD_SELECT) == 0) {
-        if (state->joypad.right) {
-            state->gb.joyp &= ~Joypad_A_RIGHT;
-        }
-        if (state->joypad.left) {
-            state->gb.joyp &= ~Joypad_B_LEFT;
-        }
-        if (state->joypad.up) {
-            state->gb.joyp &= ~Joypad_SELECT_UP;
-        }
-        if (state->joypad.down) {
-            state->gb.joyp &= ~Joypad_START_DOWN;
-        }
-    }
-    if ((state->gb.joyp & Joypad_BUTTONS_SELECT) == 0) {
-        if (state->joypad.a) {
-            state->gb.joyp &= ~Joypad_A_RIGHT;
-        }
-        if (state->joypad.b) {
-            state->gb.joyp &= ~Joypad_B_LEFT;
-        }
-        if (state->joypad.select) {
-            state->gb.joyp &= ~Joypad_SELECT_UP;
-        }
-        if (state->joypad.start) {
-            state->gb.joyp &= ~Joypad_START_DOWN;
-        }
-    }
-
-    // Trigger joypad interrupt if necessary
-    if ((prev_joyp & ~state->gb.joyp & 0xF) != 0) {
-        state->gb.if_ |= InterruptFlag_JOYPAD;
-    }
 
     // log_info(LogCategory_ALL, "========================");
     // log_info(LogCategory_ALL, "if:   %%%08B", state->gb.if_);
@@ -260,7 +214,7 @@ bool update_texture(const State* const restrict state) {
                         const uint8_t bit_hi = (byte_2 >> tile_col) & 1;
                         const uint8_t palette_index = bit_lo | (bit_hi << 1);
 
-                        const uint8_t color = (state->gb.bgp >> (palette_index * 2)) & 0b11;
+                        const size_t color = (state->gb.bgp >> (palette_index * 2)) & 0b11;
 
                         const size_t pixel_y = (tile_y * 8) + tile_row;
                         const size_t pixel_x = (tile_x * 8) + 7 - tile_col;
@@ -278,32 +232,53 @@ bool update_texture(const State* const restrict state) {
         }
 
         for (uint16_t i = 0; i < 0xA0; i += 4) {
-            const uint8_t y_pos = state->gb.oam[i] - 16;
-            const uint8_t x_pos = state->gb.oam[i + 1] - 8;
-            const uint8_t tile_index = state->gb.oam[i + 2];
-            const uint8_t attrs = state->gb.oam[i + 2];
+            const size_t y_pos = state->gb.oam[i] - 16;
+            const size_t x_pos = state->gb.oam[i + 1] - 8;
+            const size_t tile_index = state->gb.oam[i + 2];
+            const uint8_t attrs = state->gb.oam[i + 3];
 
-            pixels[(y_pos * surface->w) + x_pos] = SDL_MapRGB(pixel_format, nullptr, 255, 0, 0);
+            typedef enum ObjAttrs : uint8_t {
+                ObjAttrs_PRIORITY = 1 << 7,
+                ObjAttrs_Y_FLIP = 1 << 6,
+                ObjAttrs_X_FLIP = 1 << 5,
+                ObjAttrs_DMG_PALETTE = 1 << 4,
+                ObjAttrs_BANK = 1 << 3,
+                ObjAttrs_CGB_PALETTE = 0b111,
+            } ObjAttrs;
+
+            // TODO: implement priority (background over object)
+            // Will probably need two passes: low and normal priority objs
+
+            const bool flip_x = (attrs & ObjAttrs_X_FLIP) != 0;
+            const bool flip_y = (attrs & ObjAttrs_Y_FLIP) != 0;
+            const uint8_t obp =
+                (attrs & ObjAttrs_DMG_PALETTE) != 0 ? state->gb.obp1 : state->gb.obp0;
 
             for (size_t sprite_row = 0; sprite_row < 8; ++sprite_row) {
-                // const uint8_t byte_1 =
-                //     state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * tile_row)];
-                // const uint8_t byte_2 =
-                //     state->gb.vram[tile_data + (tile_index_signed * 16) + (2 * tile_row) + 1];
+                const uint8_t byte_1 =
+                    state->gb.vram[tile_data + (tile_index * 0x10) + (2 * sprite_row)];
+                const uint8_t byte_2 =
+                    state->gb.vram[tile_data + (tile_index * 0x10) + (2 * sprite_row) + 1];
 
                 for (size_t sprite_col = 0; sprite_col < 8; ++sprite_col) {
-                    // const uint8_t bit_lo = (byte_1 >> sprite_col) & 1;
-                    // const uint8_t bit_hi = (byte_2 >> sprite_col) & 1;
-                    // const uint8_t palette_index = bit_lo | (bit_hi << 1);
+                    const uint8_t bit_lo = (byte_1 >> sprite_col) & 1;
+                    const uint8_t bit_hi = (byte_2 >> sprite_col) & 1;
+                    const size_t palette_index = bit_lo | (bit_hi << 1);
+                    const size_t color = (obp >> (palette_index * 2)) & 0b11;
 
-                    // const uint8_t color = (state->gb.bgp >> (palette_index * 2)) & 0x11;
+                    if (color != 0) {
+                        const size_t pixel_y = y_pos + (flip_y ? 7 - sprite_row : sprite_row);
+                        const size_t pixel_x = x_pos + (flip_x ? sprite_col : 7 - sprite_col);
 
-                    const size_t pixel_y = (size_t)y_pos + sprite_row;
-                    const size_t pixel_x = (size_t)x_pos + sprite_col;
-
-                    if (pixel_x < (size_t)surface->w && pixel_y < (size_t)surface->h) {
-                        pixels[(pixel_y * surface->w) + pixel_x] =
-                            SDL_MapRGB(pixel_format, nullptr, 255, 0, 0);
+                        if (pixel_x < (size_t)surface->w && pixel_y < (size_t)surface->h) {
+                            pixels[(pixel_y * surface->w) + pixel_x] = SDL_MapRGB(
+                                pixel_format,
+                                nullptr,
+                                PALETTE_RGB[color][0],
+                                PALETTE_RGB[color][1],
+                                PALETTE_RGB[color][2]
+                            );
+                        }
                     }
                 }
             }

@@ -11,32 +11,32 @@
 static inline void GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t value) {
     gb->joyp = value | 0x0F;
 
-    if ((gb->joyp & Joypad_D_PAD_SELECT) == 0) {
+    if ((gb->joyp & Joypad_DPadSelect) == 0) {
         if (gb->joypad.right) {
-            gb->joyp &= ~Joypad_A_RIGHT;
+            gb->joyp &= ~Joypad_RightA;
         }
         if (gb->joypad.left)
-            gb->joyp &= ~Joypad_B_LEFT;
+            gb->joyp &= ~Joypad_LeftB;
 
         if (gb->joypad.up)
-            gb->joyp &= ~Joypad_SELECT_UP;
+            gb->joyp &= ~Joypad_UpSelect;
 
         if (gb->joypad.down)
-            gb->joyp &= ~Joypad_START_DOWN;
+            gb->joyp &= ~Joypad_DownStart;
     }
 
-    if ((gb->joyp & Joypad_BUTTONS_SELECT) == 0) {
+    if ((gb->joyp & Joypad_ButtonsSelect) == 0) {
         if (gb->joypad.a)
-            gb->joyp &= ~Joypad_A_RIGHT;
+            gb->joyp &= ~Joypad_RightA;
 
         if (gb->joypad.b)
-            gb->joyp &= ~Joypad_B_LEFT;
+            gb->joyp &= ~Joypad_LeftB;
 
         if (gb->joypad.select)
-            gb->joyp &= ~Joypad_SELECT_UP;
+            gb->joyp &= ~Joypad_UpSelect;
 
         if (gb->joypad.start)
-            gb->joyp &= ~Joypad_START_DOWN;
+            gb->joyp &= ~Joypad_DownStart;
     }
 }
 
@@ -333,12 +333,12 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
 void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint8_t value) {
     GameBoy* const restrict gb = ctx;
 
-    log_info(LogCategory_MEMORY, "write mem (addr = $%04X, value = $%02X)", addr, value);
+    log_info(LogCategory_Memory, "write mem (addr = $%04X, value = $%02X)", addr, value);
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
         log_info(
-            LogCategory_MEMORY, "TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr, value
+            LogCategory_Memory, "TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr, value
         );
     } else if (addr <= 0x9FFF) {
         // 8000-9FFF (VRAM)
@@ -359,7 +359,7 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
         log_warn(
-            LogCategory_MEMORY,
+            LogCategory_Memory,
             "Tried to write into unusable memory (addr = $%04X, $%02X)",
             addr,
             value
@@ -380,8 +380,8 @@ void GameBoy_service_interrupts(GameBoy* const restrict gb, Memory* const restri
     const uint8_t int_mask = gb->if_ & gb->ie;
 
     // Disable HALT on an interrupt
-    if (int_mask != 0 && gb->cpu.mode == CpuMode_HALTED) {
-        gb->cpu.mode = CpuMode_RUNNING;
+    if (int_mask != 0 && gb->cpu.mode == CpuMode_Halted) {
+        gb->cpu.mode = CpuMode_Running;
     }
 
     if (!gb->cpu.ime) {
@@ -390,7 +390,7 @@ void GameBoy_service_interrupts(GameBoy* const restrict gb, Memory* const restri
 
     for (uint8_t i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
-            log_warn(LogCategory_INTERRUPT, "Servicing interrupt #%i", i);
+            log_warn(LogCategory_Interrupt, "Servicing interrupt #%i", i);
             gb->if_ &= ~(1 << i);
             Cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
             break;

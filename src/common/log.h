@@ -7,21 +7,21 @@
 #include <stdio.h>
 
 typedef enum LogLevel {
-    LogLevel_INFO,
-    LogLevel_WARN,
-    LogLevel_ERROR,
+    LogLevel_Info,
+    LogLevel_Warn,
+    LogLevel_Error,
 } LogLevel;
 
 typedef enum LogCategory {
-    LogCategory_ALL = ~0,
-    LogCategory_NONE = 0,
-    LogCategory_INSTRUCTION = 1 << 0,
-    LogCategory_ERROR = 1 << 1,
-    LogCategory_IO = 1 << 2,
-    LogCategory_MEMORY = 1 << 3,
-    LogCategory_INTERRUPT = 1 << 4,
-    LogCategory_KEEP = 1 << 5,
-    LogCategory_TODO = 1 << 6,
+    LogCategory_All = ~0,
+    LogCategory_None = 0,
+    LogCategory_Instruction = 1 << 0,
+    LogCategory_Error = 1 << 1,
+    LogCategory_Io = 1 << 2,
+    LogCategory_Memory = 1 << 3,
+    LogCategory_Interrupt = 1 << 4,
+    LogCategory_Keep = 1 << 5,
+    LogCategory_Todo = 1 << 6,
 } LogCategory;
 
 typedef void (*LogFn)(LogLevel level, LogCategory category, const char* restrict text);

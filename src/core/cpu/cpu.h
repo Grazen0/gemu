@@ -43,14 +43,14 @@ typedef enum CpuTableCc : uint8_t {
 } CpuTableCc;
 
 typedef enum CpuTableAlu : uint8_t {
-    CpuTableAlu_ADD = 0,
-    CpuTableAlu_ADC = 1,
-    CpuTableAlu_SUB = 2,
-    CpuTableAlu_SBC = 3,
-    CpuTableAlu_AND = 4,
-    CpuTableAlu_XOR = 5,
-    CpuTableAlu_OR = 6,
-    CpuTableAlu_CP = 7,
+    CpuTableAlu_Add = 0,
+    CpuTableAlu_Adc = 1,
+    CpuTableAlu_Sub = 2,
+    CpuTableAlu_Sbc = 3,
+    CpuTableAlu_And = 4,
+    CpuTableAlu_Xor = 5,
+    CpuTableAlu_Or = 6,
+    CpuTableAlu_Cp = 7,
 } CpuTableAlu;
 
 typedef struct Memory {
@@ -60,9 +60,9 @@ typedef struct Memory {
 } Memory;
 
 typedef enum CpuMode {
-    CpuMode_RUNNING,
-    CpuMode_HALTED,
-    CpuMode_STOPPED,
+    CpuMode_Running,
+    CpuMode_Halted,
+    CpuMode_Stopped,
 } CpuMode;
 
 typedef struct Cpu {

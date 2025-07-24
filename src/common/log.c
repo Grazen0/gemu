@@ -12,13 +12,13 @@
 
 static bool logger_ready = false;
 static LogFn current_log_fn = nullptr;
-static int current_category_mask = LogCategory_ALL;
+static int current_category_mask = LogCategory_All;
 static pthread_t logger_thread = 0;
 static LogQueue log_queue = {};
 
 static void
 log_fallback(const LogLevel level, const LogCategory category, const char* const restrict text) {
-    FILE* const stream = level == LogLevel_ERROR ? stderr : stdout;
+    FILE* const stream = level == LogLevel_Error ? stderr : stdout;
     fprintf(stream, "(%d) ", category);
     fputs(text, stream);
     fputc('\n', stream);
@@ -143,7 +143,7 @@ void log_info(const LogCategory category, const char* const restrict format, ...
     if ((current_category_mask & category) != 0) {
         va_list args;
         va_start(args, format);
-        vlog(LogLevel_INFO, category, format, args);
+        vlog(LogLevel_Info, category, format, args);
         va_end(args);
     }
 }
@@ -152,7 +152,7 @@ void log_warn(const LogCategory category, const char* const restrict format, ...
     if ((current_category_mask & category) != 0) {
         va_list args;
         va_start(args, format);
-        vlog(LogLevel_WARN, category, format, args);
+        vlog(LogLevel_Warn, category, format, args);
         va_end(args);
     }
 }
@@ -161,7 +161,7 @@ void log_error(const LogCategory category, const char* const restrict format, ..
     if ((current_category_mask & category) != 0) {
         va_list args;
         va_start(args, format);
-        vlog(LogLevel_ERROR, category, format, args);
+        vlog(LogLevel_Error, category, format, args);
         va_end(args);
     }
 }

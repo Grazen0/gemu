@@ -17,7 +17,7 @@ Cpu Cpu_new(void) {
         .f = 0,
         .pc = 0,
         .sp = 0,
-        .mode = CpuMode_RUNNING,
+        .mode = CpuMode_Running,
         .queued_ime = false,
         .ime = true,
         .cycle_count = 0,
@@ -226,7 +226,7 @@ void Cpu_write_r(
 }
 
 void Cpu_tick(Cpu* const restrict cpu, Memory* const restrict mem) {
-    if (cpu->mode != CpuMode_RUNNING) {
+    if (cpu->mode != CpuMode_Running) {
         cpu->cycle_count++; // Makes the frontend work lmao
         return;
     }

@@ -14,47 +14,47 @@ constexpr int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
 constexpr double GB_VBLANK_FREQ = 59.7;
 
 typedef enum LcdControl : uint8_t {
-    LcdControl_ENABLE = 1 << 7,
-    LcdControl_WIN_TILE_MAP = 1 << 6,
-    LcdControl_WIN_ENABLE = 1 << 5,
-    LcdControl_BGW_TILE_AREA = 1 << 4,
-    LcdControl_BG_TILE_MAP = 1 << 3,
-    LcdControl_OBJ_SIZE = 1 << 2,
-    LcdControl_OBJ_ENABLE = 1 << 1,
-    LcdControl_OBJ_BGW_ENABLE = 1 << 0,
+    LcdControl_Enable = 1 << 7,
+    LcdControl_WinTileMap = 1 << 6,
+    LcdControl_WinEnable = 1 << 5,
+    LcdControl_BgwTileArea = 1 << 4,
+    LcdControl_BgTileMap = 1 << 3,
+    LcdControl_ObjSize = 1 << 2,
+    LcdControl_ObjEnable = 1 << 1,
+    LcdControl_ObjBgwEnable = 1 << 0,
 } LcdControl;
 
 typedef enum InterruptFlag : uint8_t {
-    InterruptFlag_VBLANK = 1 << 0,
-    InterruptFlag_LCD = 1 << 1,
-    InterruptFlag_TIMER = 1 << 2,
-    InterruptFlag_SERIAL = 1 << 3,
-    InterruptFlag_JOYPAD = 1 << 4,
+    InterruptFlag_VBlank = 1 << 0,
+    InterruptFlag_Lcd = 1 << 1,
+    InterruptFlag_Timer = 1 << 2,
+    InterruptFlag_Serial = 1 << 3,
+    InterruptFlag_Joypad = 1 << 4,
 } InterruptFlag;
 
 typedef enum Joypad : uint8_t {
-    Joypad_A_RIGHT = 1 << 0,
-    Joypad_B_LEFT = 1 << 1,
-    Joypad_SELECT_UP = 1 << 2,
-    Joypad_START_DOWN = 1 << 3,
-    Joypad_D_PAD_SELECT = 1 << 4,
-    Joypad_BUTTONS_SELECT = 1 << 5,
+    Joypad_RightA = 1 << 0,
+    Joypad_LeftB = 1 << 1,
+    Joypad_UpSelect = 1 << 2,
+    Joypad_DownStart = 1 << 3,
+    Joypad_DPadSelect = 1 << 4,
+    Joypad_ButtonsSelect = 1 << 5,
 } Joypad;
 
 typedef enum StatSelect : uint8_t {
-    StatSelect_MODE_0 = 1 << 3,
-    StatSelect_MODE_1 = 1 << 4,
-    StatSelect_MODE_2 = 1 << 5,
-    StatSelect_LYC = 1 << 6,
+    StatSelect_Mode0 = 1 << 3,
+    StatSelect_Mode1 = 1 << 4,
+    StatSelect_Mode2 = 1 << 5,
+    StatSelect_Lyc = 1 << 6,
 } StatSelect;
 
 typedef enum ObjAttrs : uint8_t {
-    ObjAttrs_PRIORITY = 1 << 7,
-    ObjAttrs_Y_FLIP = 1 << 6,
-    ObjAttrs_X_FLIP = 1 << 5,
-    ObjAttrs_DMG_PALETTE = 1 << 4,
-    ObjAttrs_BANK = 1 << 3,
-    ObjAttrs_CGB_PALETTE = 0b111,
+    ObjAttrs_Priority = 1 << 7,
+    ObjAttrs_FlipY = 1 << 6,
+    ObjAttrs_FlipX = 1 << 5,
+    ObjAttrs_DmgPalette = 1 << 4,
+    ObjAttrs_Bank = 1 << 3,
+    ObjAttrs_CgbPalette = 0b111,
 } ObjAttrs;
 
 typedef struct JoypadState {

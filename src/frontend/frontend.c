@@ -124,12 +124,12 @@ void update(State* const restrict state, const double delta) {
         if (prev_ly != state->gb.ly) {
             // VBlank interrupt
             if (state->gb.ly == 144) {
-                state->gb.if_ |= InterruptFlag_VBLANK;
+                state->gb.if_ |= InterruptFlag_VBlank;
             }
 
             // STAT lcy == ly interrupt
-            if ((state->gb.stat & StatSelect_LYC) != 0 && state->gb.ly == state->gb.lcy) {
-                state->gb.if_ |= InterruptFlag_LCD;
+            if ((state->gb.stat & StatSelect_Lyc) != 0 && state->gb.ly == state->gb.lcy) {
+                state->gb.if_ |= InterruptFlag_Lcd;
             }
         }
 
@@ -137,7 +137,7 @@ void update(State* const restrict state, const double delta) {
         Cpu_tick(&state->gb.cpu, &memory);
 
         // DIV counter
-        if (state->gb.cpu.mode != CpuMode_STOPPED) {
+        if (state->gb.cpu.mode != CpuMode_Stopped) {
             state->div_cycle_counter += state->gb.cpu.cycle_count;
 
             while (state->div_cycle_counter >= DIV_FREQUENCY_CYCLES) {
@@ -160,7 +160,7 @@ void update(State* const restrict state, const double delta) {
                 // Trigger timer interrupt when tima overflows
                 if (state->gb.tima == 0) {
                     state->gb.tima = state->gb.tma;
-                    state->gb.if_ |= InterruptFlag_TIMER;
+                    state->gb.if_ |= InterruptFlag_Timer;
                 }
             }
         }
@@ -191,17 +191,17 @@ bool update_texture(const State* const restrict state) {
 
     SDL_FillSurfaceRect(surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));
 
-    if (state->gb.lcdc & LcdControl_ENABLE) {
+    if (state->gb.lcdc & LcdControl_Enable) {
         uint32_t* const pixels = surface->pixels;
 
-        const size_t tile_data = state->gb.lcdc & LcdControl_BGW_TILE_AREA ? 0 : 0x1000;
-        const size_t tile_map = state->gb.lcdc & LcdControl_BG_TILE_MAP ? 0x1C00 : 0x1800;
+        const size_t tile_data = state->gb.lcdc & LcdControl_BgwTileArea ? 0 : 0x1000;
+        const size_t tile_map = state->gb.lcdc & LcdControl_BgTileMap ? 0x1C00 : 0x1800;
 
         for (size_t tile_y = 0; tile_y < 32; ++tile_y) {
             for (size_t tile_x = 0; tile_x < 32; ++tile_x) {
                 const uint8_t tile_index = state->gb.vram[tile_map + (tile_y * 32) + tile_x];
                 const long tile_index_signed =
-                    state->gb.lcdc & LcdControl_BGW_TILE_AREA ? tile_index : (int8_t)tile_index;
+                    state->gb.lcdc & LcdControl_BgwTileArea ? tile_index : (int8_t)tile_index;
 
                 for (size_t tile_row = 0; tile_row < 8; ++tile_row) {
                     const uint8_t byte_1 =
@@ -242,10 +242,10 @@ bool update_texture(const State* const restrict state) {
             // TODO: implement priority (background over object)
             // Will probably need two passes: low and normal priority objs
 
-            const bool flip_x = (attrs & ObjAttrs_X_FLIP) != 0;
-            const bool flip_y = (attrs & ObjAttrs_Y_FLIP) != 0;
+            const bool flip_x = (attrs & ObjAttrs_FlipX) != 0;
+            const bool flip_y = (attrs & ObjAttrs_FlipY) != 0;
             const uint8_t obp =
-                (attrs & ObjAttrs_DMG_PALETTE) != 0 ? state->gb.obp1 : state->gb.obp0;
+                (attrs & ObjAttrs_DmgPalette) != 0 ? state->gb.obp1 : state->gb.obp0;
 
             for (size_t sprite_row = 0; sprite_row < 8; ++sprite_row) {
                 const uint8_t byte_1 =
@@ -286,7 +286,7 @@ void render(const State* const restrict state, SDL_Renderer* const restrict rend
     const double ASPECT_RATIO = (double)GB_LCD_WIDTH / GB_LCD_HEIGHT;
 
     if (!update_texture(state)) {
-        log_warn(LogCategory_KEEP, "Could not update texture: %s", SDL_GetError());
+        log_warn(LogCategory_Keep, "Could not update texture: %s", SDL_GetError());
     }
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);

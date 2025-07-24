@@ -1,7 +1,3 @@
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_iostream.h"
@@ -18,13 +14,17 @@
 #include "frontend/boot_rom.h"
 #include "frontend/log.h"
 #include "string.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define SDL_CHECK(result, message) BAIL_IF(!(result), "%s: %s", message, SDL_GetError());
 
 int main(const int argc, const char* const argv[]) {
     const int log_init_result = logger_init(
         pretty_log,
-        LogCategory_ALL & ~LogCategory_MEMORY & ~LogCategory_INSTRUCTION & ~LogCategory_INTERRUPT
+        LogCategory_All & ~LogCategory_Memory & ~LogCategory_Instruction & ~LogCategory_Interrupt
     );
     if (log_init_result != 0) {
         fprintf(stderr, "Could not create logger thread. Error code %i", log_init_result);
@@ -34,7 +34,7 @@ int main(const int argc, const char* const argv[]) {
     const int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
 
     if (argc < 2) {
-        log_error(LogCategory_KEEP, "No ROM filename specified.");
+        log_error(LogCategory_Keep, "No ROM filename specified.");
         return 1;
     }
 
@@ -43,15 +43,15 @@ int main(const int argc, const char* const argv[]) {
 
     BAIL_IF(rom == nullptr, "Could not read ROM file.");
     BAIL_IF(
-        rom_len != 0x8000 * ((size_t)1 << (size_t)rom[RomData_ROM_SIZE]),
+        rom_len != 0x8000 * ((size_t)1 << (size_t)rom[RomData_RomSize]),
         "ROM length does not match header info."
     );
 
-    log_info(LogCategory_KEEP, "Cartridge type: $%02X", rom[RomData_CARTRIDGE_TYPE]);
+    log_info(LogCategory_Keep, "Cartridge type: $%02X", rom[RomData_CartridgeType]);
 
     char game_title[0x11];
-    SDL_strlcpy(game_title, (char*)&rom[RomData_TITLE], sizeof(game_title));
-    log_info(LogCategory_KEEP, "Game title: %s", game_title);
+    SDL_strlcpy(game_title, (char*)&rom[RomData_Title], sizeof(game_title));
+    log_info(LogCategory_Keep, "Game title: %s", game_title);
 
     SDL_CHECK(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
 

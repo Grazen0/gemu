@@ -48,6 +48,15 @@ typedef enum StatSelect : uint8_t {
     StatSelect_LYC = 1 << 6,
 } StatSelect;
 
+typedef enum ObjAttrs : uint8_t {
+    ObjAttrs_PRIORITY = 1 << 7,
+    ObjAttrs_Y_FLIP = 1 << 6,
+    ObjAttrs_X_FLIP = 1 << 5,
+    ObjAttrs_DMG_PALETTE = 1 << 4,
+    ObjAttrs_BANK = 1 << 3,
+    ObjAttrs_CGB_PALETTE = 0b111,
+} ObjAttrs;
+
 typedef struct JoypadState {
     bool up;
     bool down;

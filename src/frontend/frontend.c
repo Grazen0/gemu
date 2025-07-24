@@ -192,7 +192,7 @@ bool update_texture(const State* const restrict state) {
     SDL_FillSurfaceRect(surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));
 
     if (state->gb.lcdc & LcdControl_ENABLE) {
-        uint32_t* const restrict pixels = surface->pixels;
+        uint32_t* const pixels = surface->pixels;
 
         const size_t tile_data = state->gb.lcdc & LcdControl_BGW_TILE_AREA ? 0 : 0x1000;
         const size_t tile_map = state->gb.lcdc & LcdControl_BG_TILE_MAP ? 0x1C00 : 0x1800;
@@ -231,20 +231,13 @@ bool update_texture(const State* const restrict state) {
             }
         }
 
-        for (uint16_t i = 0; i < 0xA0; i += 4) {
-            const size_t y_pos = state->gb.oam[i] - 16;
-            const size_t x_pos = state->gb.oam[i + 1] - 8;
-            const size_t tile_index = state->gb.oam[i + 2];
-            const uint8_t attrs = state->gb.oam[i + 3];
+        for (size_t obj = 0; obj < 40; ++obj) {
+            const uint8_t* const obj_data = &state->gb.oam[obj * 4];
 
-            typedef enum ObjAttrs : uint8_t {
-                ObjAttrs_PRIORITY = 1 << 7,
-                ObjAttrs_Y_FLIP = 1 << 6,
-                ObjAttrs_X_FLIP = 1 << 5,
-                ObjAttrs_DMG_PALETTE = 1 << 4,
-                ObjAttrs_BANK = 1 << 3,
-                ObjAttrs_CGB_PALETTE = 0b111,
-            } ObjAttrs;
+            const size_t y_pos = obj_data[0] - 16;
+            const size_t x_pos = obj_data[1] - 8;
+            const size_t tile_index = obj_data[2];
+            const uint8_t attrs = obj_data[3];
 
             // TODO: implement priority (background over object)
             // Will probably need two passes: low and normal priority objs

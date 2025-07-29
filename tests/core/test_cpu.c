@@ -5,6 +5,10 @@
 #include <sys/stat.h>
 #include <unity.h>
 
+void setUp(void) {}
+
+void tearDown(void) {}
+
 void test_cpu_new(void) {
     Cpu cpu = Cpu_new();
 
@@ -18,7 +22,13 @@ void test_cpu_new(void) {
     TEST_ASSERT_EQUAL(cpu.f, 0);
     TEST_ASSERT_EQUAL(cpu.sp, 0);
     TEST_ASSERT_EQUAL(cpu.pc, 0);
-    TEST_ASSERT_EQUAL(cpu.mode, CpuMode_RUNNING);
+    TEST_ASSERT_EQUAL(cpu.mode, CpuMode_Running);
     TEST_ASSERT_EQUAL(cpu.ime, true);
     TEST_ASSERT_EQUAL(cpu.cycle_count, 0);
+}
+
+int main(void) {
+    UNITY_BEGIN();
+    RUN_TEST(test_cpu_new);
+    return UNITY_END();
 }

@@ -207,6 +207,10 @@ static int dirent_filter(const struct dirent* const restrict entry) {
     return entry->d_type == DT_REG && entry->d_name[0] != '.';
 }
 
+void setUp(void) {}
+
+void tearDown(void) {}
+
 void test_cpu_opcodes(void) {
     struct dirent** entries = nullptr;
     const int entries_len = scandir("data/core/cpu_opcodes", &entries, dirent_filter, alphasort);
@@ -223,4 +227,10 @@ void test_cpu_opcodes(void) {
     }
 
     free((void*)entries);
+}
+
+int main(void) {
+    UNITY_BEGIN();
+    RUN_TEST(test_cpu_opcodes);
+    return UNITY_END();
 }

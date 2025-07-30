@@ -23,4 +23,4 @@ jobs:
         run: nix build
 
       - name: Check flake
-        run: nix flake check
+        run: nix flake check --show-trace

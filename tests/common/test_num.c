@@ -1,11 +1,6 @@
-#include "common/num.h"
 #include <stdint.h>
 #include <unity.h>
-#include <unity_internals.h>
-
-void setUp(void) {}
-
-void tearDown(void) {}
+#include "common/num.h"
 
 void test_concat_u16(void) {
     TEST_ASSERT_EQUAL_HEX(0x1234, concat_u16(0x12, 0x34));
@@ -28,11 +23,4 @@ void test_set_bits(void) {
     TEST_ASSERT_EQUAL_HEX(0x00, bits);
     set_bits(&bits, 0xFF, true);
     TEST_ASSERT_EQUAL_HEX(0xFF, bits);
-}
-
-int main(void) {
-    UNITY_BEGIN();
-    RUN_TEST(test_concat_u16);
-    RUN_TEST(test_set_bits);
-    return UNITY_END();
 }

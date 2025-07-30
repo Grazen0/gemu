@@ -43,14 +43,14 @@ int main(const int argc, const char* const argv[]) {
 
     BAIL_IF(rom == nullptr, "Could not read ROM file.");
     BAIL_IF(
-        rom_len != 0x8000 * ((size_t)1 << (size_t)rom[RomData_RomSize]),
+        rom_len != 0x8000 * ((size_t)1 << rom[RomHeader_RomSize]),
         "ROM length does not match header info."
     );
 
-    log_info(LogCategory_Keep, "Cartridge type: $%02X", rom[RomData_CartridgeType]);
+    log_info(LogCategory_Keep, "Cartridge type: $%02X", rom[RomHeader_CartridgeType]);
 
     char game_title[0x11];
-    SDL_strlcpy(game_title, (char*)&rom[RomData_Title], sizeof(game_title));
+    SDL_strlcpy(game_title, (char*)&rom[RomHeader_Title], sizeof(game_title));
     log_info(LogCategory_Keep, "Game title: %s", game_title);
 
     SDL_CHECK(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");

@@ -4,23 +4,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum RomData : uint16_t {
-    RomData_EntryPoint = 0x100,
-    RomDjta_NintendoLogo = 0x104,
-    RomData_Title = 0x134,
-    RomData_ManufacturerCode = 0x13F,
-    RomData_CgbFlag = 0x143,
-    RomData_NewLicenseeCode = 0x144,
-    RomData_SgbFlag = 0x146,
-    RomData_CartridgeType = 0x147,
-    RomData_RomSize = 0x148,
-    RomData_RamSize = 0x149,
-    RomData_DestinationCode = 0x14A,
-    RomData_OldLicenseeCode = 0x14B,
-    RomData_MaskRomVersionNumber = 0x14C,
-    RomData_HeaderChecksum = 0x14D,
-    RomData_GlobalChecksum = 0x14E,
-} RomData;
+typedef enum RomHeader : uint16_t {
+    RomHeader_EntryPoint = 0x100,
+    RomHeader_NintendoLogo = 0x104,
+    RomHeader_Title = 0x134,
+    RomHeader_ManufacturerCode = 0x13F,
+    RomHeader_CgbFlag = 0x143,
+    RomHeader_NewLicenseeCode = 0x144,
+    RomHeader_SgbFlag = 0x146,
+    RomHeader_CartridgeType = 0x147,
+    RomHeader_RomSize = 0x148,
+    RomHeader_RamSize = 0x149,
+    RomHeader_DestinationCode = 0x14A,
+    RomHeader_OldLicenseeCode = 0x14B,
+    RomHeader_MaskRomVersionNumber = 0x14C,
+    RomHeader_HeaderChecksum = 0x14D,
+    RomHeader_GlobalChecksum = 0x14E,
+} RomHeader;
 
 typedef enum CartridgeType : uint8_t {
     CartridgeType_RomOnly = 0x00,

@@ -1,6 +1,5 @@
 #include "cpu.h"
 #include "common/control.h"
-#include "common/log.h"
 #include "common/num.h"
 #include "instructions.h"
 #include <stdint.h>

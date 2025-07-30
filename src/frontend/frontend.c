@@ -211,7 +211,7 @@ static inline void draw_tiles(
     static constexpr size_t TILES_HORIZONTAL = 32;
     static constexpr size_t TILES_VERTICAL = 32;
 
-    uint8_t* const pixels = surface->pixels;
+    uint32_t* const pixels = surface->pixels;
 
     const size_t tile_data_start = state->gb.lcdc & LcdControl_BgwTileArea ? 0 : 0x1000;
     const size_t tile_map_start = state->gb.lcdc & LcdControl_BgTileMap ? 0x1C00 : 0x1800;
@@ -251,7 +251,7 @@ static inline void draw_objects(
     const State* const state, const SDL_Surface* const surface,
     const SDL_PixelFormatDetails* const pixel_format
 ) {
-    uint8_t* const pixels = surface->pixels;
+    uint32_t* const pixels = surface->pixels;
 
     for (size_t obj = 0; obj < 40; ++obj) {
         const uint8_t* const obj_data = &state->gb.oam[obj * 4];

@@ -16,7 +16,7 @@ foreach(test_file ${test_sources})
     OUTPUT ${runner_file}
     COMMAND
       ${CMAKE_COMMAND} -E env ruby
-      ${PROJECT_SOURCE_DIR}/scripts/generate_test_runner.rb ${test_file}
+      ${PROJECT_SOURCE_DIR}/tools/generate_test_runner.rb ${test_file}
       ${runner_file}
     DEPENDS ${test_file}
     COMMENT "Generating Unity test runner for ${test_file}")

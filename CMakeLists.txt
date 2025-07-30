@@ -29,7 +29,7 @@ target_include_directories(gemu_core PUBLIC src)
 target_link_libraries(gemu_core PRIVATE gemu_common)
 
 set(boot_rom
-    "${PROJECT_SOURCE_DIR}/res/bootix_dmg.bin"
+    "${PROJECT_SOURCE_DIR}/data/bootix_dmg.bin"
     CACHE FILEPATH "Path to boot ROM file")
 add_custom_command(
   OUTPUT boot_rom.c

@@ -1,4 +1,4 @@
-#include "frontend/frontend.h"
+#include "frontend.h"
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_pixels.h"
@@ -6,11 +6,11 @@
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_timer.h"
-#include "common/control.h"
-#include "common/log.h"
-#include "core/cpu/cpu.h"
-#include "core/game_boy.h"
-#include "frontend/sdl.h"
+#include "control.h"
+#include "cpu.h"
+#include "game_boy.h"
+#include "log.h"
+#include "sdl.h"
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>

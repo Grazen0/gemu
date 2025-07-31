@@ -3,16 +3,14 @@
 #include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_render.h"
-#include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_video.h"
-#include "common/control.h"
-#include "common/log.h"
-#include "core/data.h"
-#include "core/game_boy.h"
+#include "boot_rom.h"
+#include "control.h"
+#include "data.h"
 #include "frontend.h"
-#include "frontend/boot_rom.h"
-#include "frontend/log.h"
+#include "game_boy.h"
+#include "log.h"
 #include "string.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -23,15 +21,14 @@
 
 int main(const int argc, const char* const argv[]) {
     const int log_init_result = logger_init(
-        pretty_log,
         LogCategory_All & ~LogCategory_Memory & ~LogCategory_Instruction & ~LogCategory_Interrupt
     );
     if (log_init_result != 0) {
         fprintf(stderr, "Could not create logger thread. Error code %i", log_init_result);
     }
 
-    const int WINDOW_WIDTH_INITIAL = GB_LCD_WIDTH * 4;
-    const int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
+    static constexpr int WINDOW_WIDTH_INITIAL = GB_LCD_WIDTH * 4;
+    static constexpr int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
 
     if (argc < 2) {
         log_error(LogCategory_Keep, "No ROM filename specified.");

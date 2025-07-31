@@ -2,7 +2,7 @@
 #define FRONTEND_H
 
 #include "SDL3/SDL_render.h"
-#include "core/game_boy.h"
+#include "game_boy.h"
 
 typedef struct State {
     GameBoy gb;

@@ -1,8 +1,8 @@
 #include "instructions.h"
-#include "common/control.h"
-#include "common/log.h"
-#include "common/num.h"
-#include "core/cpu/cpu.h"
+#include "control.h"
+#include "cpu.h"
+#include "log.h"
+#include "num.h"
 
 static inline void Cpu_instr_add_u8(Cpu* const restrict cpu, const uint8_t rhs) {
     const uint8_t prev_a = cpu->a;

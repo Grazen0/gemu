@@ -1,7 +1,7 @@
 #include "cpu.h"
-#include "common/control.h"
-#include "common/num.h"
+#include "control.h"
 #include "instructions.h"
+#include "num.h"
 #include <stdint.h>
 
 Cpu Cpu_new(void) {

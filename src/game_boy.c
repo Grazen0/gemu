@@ -1,8 +1,8 @@
 #include "game_boy.h"
-#include "common/control.h"
-#include "common/log.h"
-#include "common/num.h"
-#include "cpu/cpu.h"
+#include "control.h"
+#include "cpu.h"
+#include "log.h"
+#include "num.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

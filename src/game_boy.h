@@ -1,7 +1,7 @@
 #ifndef CORE_GAME_BOY_H
 #define CORE_GAME_BOY_H
 
-#include "cpu/cpu.h"
+#include "cpu.h"
 #include <stddef.h>
 #include <stdint.h>
 

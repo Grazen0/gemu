@@ -1,5 +1,5 @@
-#ifndef COMMON_CONTROL_H
-#define COMMON_CONTROL_H
+#ifndef CONTROL_H
+#define CONTROL_H
 
 #include <stdio.h>
 #include <stdlib.h>

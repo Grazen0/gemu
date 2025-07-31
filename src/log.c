@@ -1,5 +1,5 @@
-#include "common/log.h"
-#include "common/control.h"
+#include "log.h"
+#include "control.h"
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -11,23 +11,33 @@
 #include <string.h>
 
 static bool logger_ready = false;
-static LogFn current_log_fn = nullptr;
 static int current_category_mask = LogCategory_All;
 static pthread_t logger_thread = 0;
 static LogQueue log_queue = {};
 
-static void
-log_fallback(const LogLevel level, const LogCategory category, const char* const restrict text) {
-    FILE* const stream = level == LogLevel_Error ? stderr : stdout;
-    fprintf(stream, "(%d) ", category);
+static const char* level_label(const LogLevel level) {
+    switch (level) {
+        case LogLevel_Info:
+            return "\033[34mINFO";
+        case LogLevel_Warn:
+            return "\033[33mWARN";
+        case LogLevel_Error:
+            return "\033[31mERROR";
+        default:
+            BAIL("unreachable");
+    }
+}
+
+void pretty_log(const LogLevel level, const LogCategory category, const char* const restrict text) {
+    const char* const restrict label = level_label(level);
+    FILE* const restrict stream = level == LogLevel_Error ? stderr : stdout;
+
+    fprintf(stream, "\033[90m[%s\033[90m] (%d):\033[0m ", label, category);
     fputs(text, stream);
     fputc('\n', stream);
-    fflush(stream);
 }
 
 static void* logger_thread_fn([[maybe_unused]] void* _arg) {
-    const LogFn log_fn = current_log_fn != nullptr ? current_log_fn : log_fallback;
-
     while (true) {
         pthread_mutex_lock(&log_queue.mtx);
 
@@ -44,14 +54,13 @@ static void* logger_thread_fn([[maybe_unused]] void* _arg) {
         log_queue.tail = (log_queue.tail + 1) % log_queue.capacity;
         pthread_mutex_unlock(&log_queue.mtx);
 
-        log_fn(message.level, message.category, message.text);
+        pretty_log(message.level, message.category, message.text);
     }
 
     return nullptr;
 }
 
-int logger_init(const LogFn log_fn, const int category_mask) {
-    current_log_fn = log_fn;
+int logger_init(const int category_mask) {
     current_category_mask = category_mask;
 
     log_queue = (LogQueue){
@@ -117,9 +126,8 @@ void vlog(
     const LogLevel level, const LogCategory category, const char* const restrict format,
     va_list args
 ) {
-    if (!logger_ready) {
+    if (!logger_ready)
         return;
-    }
 
     pthread_mutex_lock(&log_queue.mtx);
     if ((log_queue.head + 1) % log_queue.capacity == log_queue.tail) {

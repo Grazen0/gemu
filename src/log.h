@@ -1,5 +1,5 @@
-#ifndef LIB_LOG_H
-#define LIB_LOG_H
+#ifndef LOG_H
+#define LOG_H
 
 #include <pthread.h>
 #include <stdarg.h>
@@ -42,7 +42,7 @@ typedef struct LogQueue {
     bool quit;
 } LogQueue;
 
-int logger_init(LogFn log_fn, int category_mask);
+int logger_init(int category_mask);
 
 void logger_cleanup(void);
 

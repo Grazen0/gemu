@@ -1,5 +1,5 @@
-#ifndef LIB_NUM_H
-#define LIB_NUM_H
+#ifndef NUM_H
+#define NUM_H
 
 #include <stdint.h>
 

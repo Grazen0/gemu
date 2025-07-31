@@ -1,4 +1,4 @@
-#include "core/cpu/cpu.h"
+#include "cpu.h"
 #include <cjson/cJSON.h>
 #include <dirent.h>
 #include <stdint.h>

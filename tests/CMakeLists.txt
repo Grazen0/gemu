@@ -1,12 +1,12 @@
 find_package(unity REQUIRED CONFIG REQUIRED)
 find_package(cJSON REQUIRED CONFIG REQUIRED)
 
-set(TEST_SOURCES test_cpu.c test_cpu_opcodes.c test_num.c)
+set(test_sources test_cpu.c test_cpu_opcodes.c test_num.c)
 
 file(COPY data DESTINATION .)
 
 # Generate test runners for each test file
-foreach(test_source ${TEST_SOURCES})
+foreach(test_source ${test_sources})
   set(test_source_path "${CMAKE_CURRENT_SOURCE_DIR}/${test_source}")
 
   get_filename_component(test_name ${test_source} NAME_WE)

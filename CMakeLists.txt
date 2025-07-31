@@ -19,9 +19,17 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
       CACHE STRING "Build type" FORCE)
 endif()
 
-file(GLOB_RECURSE gemu_sources CONFIGURE_DEPENDS src/*.c)
+set(GEMU_SOURCES
+    src/control.c
+    src/cpu.c
+    src/frontend.c
+    src/game_boy.c
+    src/instructions.c
+    src/log.c
+    src/num.c
+    src/sdl.c)
 
-add_library(gemu_lib ${gemu_sources})
+add_library(gemu_lib ${GEMU_SOURCES})
 target_include_directories(gemu_lib PUBLIC src)
 target_link_libraries(gemu_lib PRIVATE SDL3::SDL3)
 target_link_libraries(gemu_lib PRIVATE argparse_static)

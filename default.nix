@@ -1,17 +1,13 @@
 {
-  pkgs ? import <nixpkgs> { },
+  stdenv,
+  lib,
+  cmake,
+  sdl3,
+  argparse,
+  unity-test,
+  cjson,
+  ruby,
 }:
-let
-  inherit (pkgs)
-    stdenv
-    lib
-    cmake
-    sdl3
-    unity-test
-    cjson
-    ruby
-    ;
-in
 stdenv.mkDerivation {
   pname = "gemu";
   version = "0.1.0";
@@ -20,6 +16,7 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [
     cmake
+    argparse
     sdl3
     unity-test
     cjson

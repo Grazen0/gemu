@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.11)
 project(gemu C)
 
 set(CMAKE_C_STANDARD 23)
@@ -18,8 +18,6 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
       Debug
       CACHE STRING "Build type" FORCE)
 endif()
-
-add_subdirectory(external/argparse)
 
 file(GLOB_RECURSE gemu_sources CONFIGURE_DEPENDS src/*.c)
 

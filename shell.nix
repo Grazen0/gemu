@@ -1,22 +1,10 @@
 {
-  pkgs ? import <nixpkgs> { },
+  gemu,
+  mkShell,
+  clang-tools,
 }:
-let
-  inherit (pkgs)
-    sdl3
-    unity-test
-    cjson
-    clang-tools
-    ;
-in
-pkgs.mkShell {
-  inputsFrom = [ (pkgs.callPackage ./default.nix { }) ];
+mkShell {
+  inputsFrom = [ gemu ];
 
-  packages = [
-    clang-tools
-  ];
-
-  env = {
-    CMAKE_PREFIX_PATH = "${sdl3.dev}/lib/cmake:${unity-test}/lib/cmake:${cjson}/lib/cmake";
-  };
+  packages = [ clang-tools ];
 }

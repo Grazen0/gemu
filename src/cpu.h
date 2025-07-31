@@ -1,5 +1,5 @@
-#ifndef CORE_CPU_H
-#define CORE_CPU_H
+#ifndef GEMU_CPU_H
+#define GEMU_CPU_H
 
 #include <stdint.h>
 

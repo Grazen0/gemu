@@ -60,7 +60,7 @@ static void* logger_thread_fn([[maybe_unused]] void* _arg) {
     return nullptr;
 }
 
-int logger_init(const int category_mask) {
+void logger_init(const int category_mask) {
     current_category_mask = category_mask;
 
     log_queue = (LogQueue){
@@ -76,14 +76,10 @@ int logger_init(const int category_mask) {
     pthread_mutex_init(&log_queue.mtx, nullptr);
     pthread_cond_init(&log_queue.cond, nullptr);
 
-    const int result = pthread_create(&logger_thread, nullptr, logger_thread_fn, nullptr);
-    if (result != 0) {
-        return result;
-    }
+    pthread_create(&logger_thread, nullptr, logger_thread_fn, nullptr);
 
     atexit(logger_cleanup);
     logger_ready = true;
-    return 0;
 }
 
 void logger_cleanup(void) {

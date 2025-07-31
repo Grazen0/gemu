@@ -1,4 +1,5 @@
 #include "frontend.h"
+#include "SDL3/SDL_error.h"
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_pixels.h"
@@ -9,7 +10,6 @@
 #include "control.h"
 #include "cpu.h"
 #include "game_boy.h"
-#include "log.h"
 #include "sdl.h"
 #include <math.h>
 #include <stddef.h>
@@ -53,7 +53,18 @@ static const uint8_t PALETTE_RGB[PALETTE_RGB_LEN][3] = {
     { 19,  22,  8}
 };
 
-static inline uint32_t
+/**
+ * \brief Maps an index in the range 0-3 (inclusive) to its corresponding RGB color.
+ *
+ * Will bail if color_index > 3.
+ *
+ * \param color_index the index of the desired color (must be in the range 0-3 inclusive).
+ * \param pixel_format the desired pixel format.
+ * \return the RGB color that color_index corresponds to, in the format pointed to by pixel_format.
+ *
+ * \sa SDL_MapRGB
+ */
+static uint32_t
 map_color_index(const size_t color_index, const SDL_PixelFormatDetails* const pixel_format) {
     if (color_index >= PALETTE_RGB_LEN)
         BAIL("color index out of bounds: %zu", color_index);
@@ -62,7 +73,7 @@ map_color_index(const size_t color_index, const SDL_PixelFormatDetails* const pi
     return SDL_MapRGB(pixel_format, nullptr, color_rgb[0], color_rgb[1], color_rgb[2]);
 }
 
-bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
+static bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
     switch (key) {
         case SDLK_RETURN:
             return &gb->joypad.start;
@@ -85,7 +96,7 @@ bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
     }
 }
 
-void handle_event(State* const restrict state, const SDL_Event* const restrict event) {
+static void handle_event(State* const restrict state, const SDL_Event* const restrict event) {
     switch (event->type) {
         case SDL_EVENT_QUIT: {
             state->quit = true;
@@ -120,7 +131,7 @@ void handle_event(State* const restrict state, const SDL_Event* const restrict e
     }
 }
 
-void update(State* const restrict state, const double delta) {
+static void update(State* const restrict state, const double delta) {
     Memory memory = (Memory){
         .ctx = &state->gb,
         .read = GameBoy_read_mem,
@@ -204,7 +215,7 @@ void update(State* const restrict state, const double delta) {
     }
 }
 
-static inline void draw_tiles(
+static void draw_tiles(
     const State* const state, const SDL_Surface* const surface,
     const SDL_PixelFormatDetails* const pixel_format
 ) {
@@ -247,7 +258,7 @@ static inline void draw_tiles(
     }
 }
 
-static inline void draw_objects(
+static void draw_objects(
     const State* const state, const SDL_Surface* const surface,
     const SDL_PixelFormatDetails* const pixel_format
 ) {
@@ -293,18 +304,15 @@ static inline void draw_objects(
     }
 }
 
-// TODO: use BAILs instead of returning false
-bool update_texture(const State* const restrict state) {
+static void update_texture(const State* const restrict state) {
     SDL_Surface* surface = nullptr;
 
-    if (!SDL_LockTextureToSurface(state->screen_texture, nullptr, &surface)) {
-        return false;
-    }
+    SDL_CHECKED(
+        SDL_LockTextureToSurface(state->screen_texture, nullptr, &surface), "Could not lock texture"
+    );
 
     const SDL_PixelFormatDetails* const pixel_format = SDL_GetPixelFormatDetails(surface->format);
-    if (pixel_format == nullptr) {
-        return false;
-    }
+    BAIL_IF(pixel_format == nullptr, "Could not get pixel format: %s", SDL_GetError());
 
     SDL_FillSurfaceRect(surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));
 
@@ -317,15 +325,12 @@ bool update_texture(const State* const restrict state) {
     }
 
     SDL_UnlockTexture(state->screen_texture);
-    return true;
 }
 
-void render(const State* const restrict state, SDL_Renderer* const restrict renderer) {
-    const double ASPECT_RATIO = (double)GB_LCD_WIDTH / GB_LCD_HEIGHT;
+static void render(const State* const restrict state, SDL_Renderer* const restrict renderer) {
+    const float ASPECT_RATIO = (float)GB_LCD_WIDTH / GB_LCD_HEIGHT;
 
-    if (!update_texture(state)) {
-        log_warn(LogCategory_Keep, "Could not update texture: %s", SDL_GetError());
-    }
+    update_texture(state);
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
@@ -338,28 +343,9 @@ void render(const State* const restrict state, SDL_Renderer* const restrict rend
         .h = GB_LCD_HEIGHT,
     };
 
-    const double real_aspect_ratio = (double)state->window_width / state->window_height;
-    SDL_FRect dest_rect;
-
-    if (real_aspect_ratio == ASPECT_RATIO) {
-        // Window is exactly the right aspect ratio
-        dest_rect.w = (float)state->window_width;
-        dest_rect.h = (float)state->window_height;
-        dest_rect.x = 0.0F;
-        dest_rect.y = 0.0F;
-    } else if (real_aspect_ratio > ASPECT_RATIO) {
-        // Window is stretched out horizontally
-        dest_rect.w = (float)(state->window_height * ASPECT_RATIO);
-        dest_rect.h = (float)state->window_height;
-        dest_rect.x = ((float)state->window_width / 2.0F) - (dest_rect.w / 2.0F);
-        dest_rect.y = 0.0F;
-    } else {
-        // Window is stretched out vertically
-        dest_rect.w = (float)state->window_width;
-        dest_rect.h = (float)(state->window_width / ASPECT_RATIO);
-        dest_rect.x = 0.0F;
-        dest_rect.y = ((float)state->window_height / 2.0F) - (dest_rect.h / 2.0F);
-    }
+    const SDL_FRect dest_rect = fit_rect_to_aspect_ratio(
+        &(SDL_FRect){0, 0, (float)state->window_width, (float)state->window_height}, ASPECT_RATIO
+    );
 
     SDL_RenderTexture(renderer, state->screen_texture, &src_rect, &dest_rect);
     SDL_RenderPresent(renderer);

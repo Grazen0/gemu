@@ -1,5 +1,5 @@
-#ifndef NUM_H
-#define NUM_H
+#ifndef GEMU_NUM_H
+#define GEMU_NUM_H
 
 #include <stdint.h>
 

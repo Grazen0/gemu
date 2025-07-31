@@ -1,6 +1,7 @@
 #include "game_boy.h"
 #include "control.h"
 #include "cpu.h"
+#include "data.h"
 #include "log.h"
 #include "num.h"
 #include <stddef.h>
@@ -8,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static inline void GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t value) {
+static void GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t value) {
     gb->joyp = value | 0x0F;
 
     if ((gb->joyp & Joypad_DPadSelect) == 0) {
@@ -40,13 +41,49 @@ static inline void GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t 
     }
 }
 
-GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
+static void verify_rom_checksum(const uint8_t* const rom) {
+    uint8_t checksum = 0;
+    for (uint16_t addr = 0x0134; addr <= 0x014C; ++addr) {
+        checksum = checksum - rom[addr] - 1;
+    }
+
+    const uint8_t checksum_lo = checksum & 0x0F;
+
+    if (checksum_lo != rom[RomHeader_HeaderChecksum]) {
+        log_error(
+            LogCategory_Keep,
+            "Lower 8 bits of ROM checksum do not match expected value in header (expected "
+            "$%02X, was $%02X)",
+            rom[RomHeader_HeaderChecksum],
+            checksum_lo
+        );
+        exit(1);
+    }
+}
+
+static void GameBoy_simulate_boot(GameBoy* const gb) {
+    verify_rom_checksum(gb->rom);
+
+    gb->cpu.a = 0x01;
+    gb->cpu.b = 0x00;
+    gb->cpu.c = 0x13;
+    gb->cpu.d = 0x00;
+    gb->cpu.e = 0xD8;
+    gb->cpu.h = 0x01;
+    gb->cpu.l = 0x4D;
+    gb->cpu.sp = 0xFFFE;
+    gb->cpu.pc = 0x0100;
+
+    gb->boot_rom_enable = false;
+}
+
+GameBoy GameBoy_new(const uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),
         .boot_rom = boot_rom,
         .rom = rom,
         .rom_len = rom_len,
-        .rom_enable = true,
+        .boot_rom_enable = true,
         .lcdc = 0,
         .stat = 0,
         .ly = 0,
@@ -68,6 +105,9 @@ GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t ro
         .tac = 0,
         .joyp = 0x0F,
     };
+
+    if (boot_rom == nullptr)
+        GameBoy_simulate_boot(&gb);
 
     return gb;
 }
@@ -189,8 +229,11 @@ uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
     const GameBoy* const gb = ctx;
 
     if (addr <= 0x7FFF) {
-        if ((int)gb->rom_enable && addr <= 0xFF) {
+        if (gb->boot_rom_enable && addr <= 0x100) {
             // 0000-0100 (Boot ROM)
+            if (gb->boot_rom == nullptr)
+                BAIL("Tried to read non-existing boot ROM");
+
             return gb->boot_rom[addr];
         }
 
@@ -313,7 +356,7 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
         if (value != 0)
-            gb->rom_enable = false;
+            gb->boot_rom_enable = false;
     } else if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA)
         BAIL("I/O VRAM DMA write ($%04X, $%02X)", addr, value);

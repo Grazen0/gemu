@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(gemu C)
 
 set(CMAKE_C_STANDARD 23)
@@ -19,21 +19,9 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
       CACHE STRING "Build type" FORCE)
 endif()
 
-set(boot_rom_file
-    "${PROJECT_SOURCE_DIR}/data/bootix_dmg.bin"
-    CACHE FILEPATH "Path to boot ROM file")
-set(boot_rom_source "${PROJECT_BINARY_DIR}/boot_rom.c")
-
-add_custom_command(
-  OUTPUT ${boot_rom_source}
-  COMMAND ${CMAKE_COMMAND} -E env xxd -i -n BOOT_ROM ${boot_rom_file} >
-          ${boot_rom_source}
-  DEPENDS ${boot_rom_file}
-  COMMENT "Dumping ${boot_rom_file}")
-
 file(GLOB_RECURSE gemu_sources CONFIGURE_DEPENDS src/*.c)
 
-add_library(gemu_lib ${gemu_sources} ${boot_rom_source})
+add_library(gemu_lib ${gemu_sources})
 target_include_directories(gemu_lib PUBLIC src)
 target_link_libraries(gemu_lib PRIVATE SDL3::SDL3)
 target_link_libraries(gemu_lib PRIVATE m) # math.h

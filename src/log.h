@@ -1,5 +1,5 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef GEMU_LOG_H
+#define GEMU_LOG_H
 
 #include <pthread.h>
 #include <stdarg.h>
@@ -42,7 +42,7 @@ typedef struct LogQueue {
     bool quit;
 } LogQueue;
 
-int logger_init(int category_mask);
+void logger_init(int category_mask);
 
 void logger_cleanup(void);
 

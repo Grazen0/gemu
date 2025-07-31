@@ -1,5 +1,5 @@
-#ifndef CORE_DATA_H
-#define CORE_DATA_H
+#ifndef GEMU_DATA_H
+#define GEMU_DATA_H
 
 #include <stddef.h>
 #include <stdint.h>

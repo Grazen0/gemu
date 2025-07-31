@@ -1,5 +1,5 @@
-#ifndef INSTRUCTIONS_H
-#define INSTRUCTIONS_H
+#ifndef GEMU_INSTRUCTIONS_H
+#define GEMU_INSTRUCTIONS_H
 
 #include "cpu.h"
 #include <stdint.h>

@@ -1,5 +1,5 @@
-#ifndef CORE_GAME_BOY_H
-#define CORE_GAME_BOY_H
+#ifndef GEMU_GAME_BOY_H
+#define GEMU_GAME_BOY_H
 
 #include "cpu.h"
 #include <stddef.h>
@@ -12,6 +12,7 @@ constexpr int GB_BG_HEIGHT = 256;
 constexpr int GB_LCD_MAX_LY = 154;
 constexpr int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
 constexpr double GB_VBLANK_FREQ = 59.7;
+constexpr size_t GB_BOOT_ROM_LEN_EXPECTED = 0x100;
 
 typedef enum LcdControl : uint8_t {
     LcdControl_Enable = 1 << 7,
@@ -75,10 +76,10 @@ typedef struct GameBoy {
     uint8_t vram[0x2000];
     uint8_t hram[0x7F];
     uint8_t oam[0xA0];
-    uint8_t* boot_rom;
+    const uint8_t* boot_rom;
     uint8_t* rom;
     size_t rom_len;
-    bool rom_enable;
+    bool boot_rom_enable;
     uint8_t lcdc;
     uint8_t stat;
     uint8_t ly;
@@ -101,7 +102,7 @@ typedef struct GameBoy {
     uint8_t joyp;
 } GameBoy;
 
-[[nodiscard]] GameBoy GameBoy_new(uint8_t* boot_rom, uint8_t* rom, size_t rom_len);
+[[nodiscard]] GameBoy GameBoy_new(const uint8_t* boot_rom, uint8_t* rom, size_t rom_len);
 
 void GameBoy_destroy(GameBoy* restrict gb);
 

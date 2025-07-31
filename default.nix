@@ -7,7 +7,6 @@ let
     lib
     cmake
     sdl3
-    xxd
     unity-test
     cjson
     ruby
@@ -22,7 +21,6 @@ stdenv.mkDerivation {
   nativeBuildInputs = [
     cmake
     sdl3
-    xxd
     unity-test
     cjson
     ruby

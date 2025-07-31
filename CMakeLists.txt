@@ -19,11 +19,14 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
       CACHE STRING "Build type" FORCE)
 endif()
 
+add_subdirectory(external/argparse)
+
 file(GLOB_RECURSE gemu_sources CONFIGURE_DEPENDS src/*.c)
 
 add_library(gemu_lib ${gemu_sources})
 target_include_directories(gemu_lib PUBLIC src)
 target_link_libraries(gemu_lib PRIVATE SDL3::SDL3)
+target_link_libraries(gemu_lib PRIVATE argparse_static)
 target_link_libraries(gemu_lib PRIVATE m) # math.h
 
 add_executable(gemu src/main.c)

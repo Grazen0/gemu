@@ -25,7 +25,6 @@ add_library(gemu_lib ${gemu_sources})
 target_include_directories(gemu_lib PUBLIC src)
 target_link_libraries(gemu_lib PRIVATE SDL3::SDL3)
 target_link_libraries(gemu_lib PRIVATE argparse_static)
-target_link_libraries(gemu_lib PRIVATE m) # math.h
 
 add_executable(gemu src/main.c)
 target_link_libraries(gemu PRIVATE gemu_lib)

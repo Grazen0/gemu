@@ -365,7 +365,10 @@ void run_until_quit(State* const restrict state, SDL_Renderer* const restrict re
 
         const double new_time = sdl_get_performance_time();
 
-        time_accumulator = fmin(time_accumulator + new_time - last_time, MAX_TIME_ACCUMULATOR);
+        time_accumulator += new_time - last_time;
+        if (time_accumulator > MAX_TIME_ACCUMULATOR)
+            time_accumulator = MAX_TIME_ACCUMULATOR;
+
         last_time = new_time;
 
         while (time_accumulator >= DELTA) {

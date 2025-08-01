@@ -10,7 +10,7 @@
         log_error("BAIL (%s:%d):", __FILE__, __LINE__);                        \
         log_error(__VA_ARGS__);                                                \
         exit(1);                                                               \
-    } while (0);
+    } while (0)
 
 #define BAIL_IF(cond, ...)                                                     \
     do {                                                                       \
@@ -19,6 +19,6 @@
             log_error(__VA_ARGS__);                                            \
             exit(1);                                                           \
         }                                                                      \
-    } while (0);
+    } while (0)
 
 #endif

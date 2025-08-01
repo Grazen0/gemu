@@ -114,9 +114,8 @@ GameBoy GameBoy_new(u8* const boot_rom, u8* const rom, const size_t rom_len) {
 
 void GameBoy_destroy(GameBoy* const restrict gb) {
     free(gb->rom);
-    if (gb->boot_rom != nullptr) {
-        free(gb->boot_rom);
-    }
+    free(gb->boot_rom);
+
     gb->rom = nullptr;
     gb->rom_len = 0;
 }

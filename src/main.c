@@ -70,11 +70,7 @@ int main(int argc, const char* argv[]) {
 
     size_t rom_len = 0;
     u8* const rom = SDL_LoadFile(argv[0], &rom_len);
-
-    if (rom == nullptr) {
-        log_error("Could not read ROM file.");
-        return 1;
-    }
+    SDL_CHECKED(rom != nullptr, "Could not read ROM file.");
 
     if (rom_len != 0x8000 * ((size_t)1 << rom[RomHeader_RomSize])) {
         log_error("ROM length does not match header info.");
@@ -117,11 +113,7 @@ int main(int argc, const char* argv[]) {
     if (boot_rom_path != nullptr) {
         size_t boot_rom_len = 0;
         boot_rom = SDL_LoadFile(boot_rom_path, &boot_rom_len);
-
-        if (boot_rom == nullptr) {
-            log_error("Could not read boot ROM file.");
-            return 1;
-        }
+        SDL_CHECKED(boot_rom != nullptr, "Could not read boot ROM file.");
 
         if (boot_rom_len != GB_BOOT_ROM_LEN_EXPECTED) {
             log_error(

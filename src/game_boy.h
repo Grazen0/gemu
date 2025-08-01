@@ -102,7 +102,8 @@ typedef struct GameBoy {
     uint8_t joyp;
 } GameBoy;
 
-[[nodiscard]] GameBoy GameBoy_new(uint8_t* boot_rom, uint8_t* rom, size_t rom_len);
+[[nodiscard]] GameBoy
+GameBoy_new(uint8_t* boot_rom, uint8_t* rom, size_t rom_len);
 
 void GameBoy_destroy(GameBoy* restrict gb);
 

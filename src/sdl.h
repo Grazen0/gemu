@@ -4,10 +4,12 @@
 #include "SDL3/SDL_rect.h"
 #include "control.h"
 
-#define SDL_CHECKED(result, message) BAIL_IF(!(result), "%s: %s", message, SDL_GetError())
+#define SDL_CHECKED(result, message)                                           \
+    BAIL_IF(!(result), "%s: %s", message, SDL_GetError())
 
 [[nodiscard]] double sdl_get_performance_time(void);
 
-[[nodiscard]] SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect* container, float aspect_ratio);
+[[nodiscard]] SDL_FRect
+fit_rect_to_aspect_ratio(const SDL_FRect* container, float aspect_ratio);
 
 #endif

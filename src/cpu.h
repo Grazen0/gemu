@@ -94,13 +94,19 @@ void Cpu_write_rp(Cpu* restrict cpu, CpuTableRp rp, uint16_t value);
 
 void Cpu_write_rp2(Cpu* restrict cpu, CpuTableRp rp, uint16_t value);
 
-uint8_t Cpu_read_mem(Cpu* restrict cpu, const Memory* restrict mem, uint16_t addr);
+uint8_t
+Cpu_read_mem(Cpu* restrict cpu, const Memory* restrict mem, uint16_t addr);
 
-uint16_t Cpu_read_mem_u16(Cpu* restrict cpu, const Memory* restrict mem, uint16_t addr);
+uint16_t
+Cpu_read_mem_u16(Cpu* restrict cpu, const Memory* restrict mem, uint16_t addr);
 
-void Cpu_write_mem(Cpu* restrict cpu, Memory* restrict mem, uint16_t addr, uint8_t value);
+void Cpu_write_mem(
+    Cpu* restrict cpu, Memory* restrict mem, uint16_t addr, uint8_t value
+);
 
-void Cpu_write_mem_u16(Cpu* restrict cpu, Memory* restrict mem, uint16_t addr, uint16_t value);
+void Cpu_write_mem_u16(
+    Cpu* restrict cpu, Memory* restrict mem, uint16_t addr, uint16_t value
+);
 
 uint8_t Cpu_read_pc(Cpu* restrict cpu, const Memory* restrict mem);
 
@@ -110,12 +116,16 @@ uint8_t Cpu_read_r(Cpu* restrict cpu, const Memory* restrict mem, CpuTableR r);
 
 void Cpu_write_r(Cpu* restrict cpu, Memory* mem, CpuTableR r, uint8_t value);
 
-void Cpu_stack_push_u16(Cpu* restrict cpu, Memory* restrict mem, uint16_t value);
+void Cpu_stack_push_u16(
+    Cpu* restrict cpu, Memory* restrict mem, uint16_t value
+);
 
 uint16_t Cpu_stack_pop_u16(Cpu* restrict cpu, const Memory* restrict mem);
 
 void Cpu_tick(Cpu* restrict cpu, Memory* restrict mem);
 
-void Cpu_interrupt(Cpu* restrict cpu, Memory* restrict mem, uint8_t handler_location);
+void Cpu_interrupt(
+    Cpu* restrict cpu, Memory* restrict mem, uint8_t handler_location
+);
 
 #endif

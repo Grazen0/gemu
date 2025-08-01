@@ -37,8 +37,8 @@ LogLevel LogLevel_from_str(const char* restrict str);
 /**
  * \brief Initializes logging.
  *
- * This function must be called before using any other log-related functions. Otherwise, no logging
- * will take effect.
+ * This function must be called before using any other log-related functions.
+ * Otherwise, no logging will take effect.
  *
  * \param log_level LogLevel to use.
  *

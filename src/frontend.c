@@ -54,23 +54,29 @@ static const uint8_t PALETTE_RGB[PALETTE_RGB_LEN][3] = {
 };
 
 /**
- * \brief Maps an index in the range 0-3 (inclusive) to its corresponding RGB color.
+ * \brief Maps an index in the range 0-3 (inclusive) to its corresponding RGB
+ * color.
  *
  * Will bail if color_index > 3.
  *
- * \param color_index the index of the desired color (must be in the range 0-3 inclusive).
+ * \param color_index the index of the desired color (must be in the range 0-3
+ * inclusive).
  * \param pixel_format the desired pixel format.
- * \return the RGB color that color_index corresponds to, in the format pointed to by pixel_format.
+ * \return the RGB color that color_index corresponds to, in the format pointed
+ * to by pixel_format.
  *
  * \sa SDL_MapRGB
  */
-static uint32_t
-map_color_index(const size_t color_index, const SDL_PixelFormatDetails* const pixel_format) {
+static uint32_t map_color_index(
+    const size_t color_index, const SDL_PixelFormatDetails* const pixel_format
+) {
     if (color_index >= PALETTE_RGB_LEN)
         BAIL("color index out of bounds: %zu", color_index);
 
     const uint8_t* color_rgb = PALETTE_RGB[color_index];
-    return SDL_MapRGB(pixel_format, nullptr, color_rgb[0], color_rgb[1], color_rgb[2]);
+    return SDL_MapRGB(
+        pixel_format, nullptr, color_rgb[0], color_rgb[1], color_rgb[2]
+    );
 }
 
 static bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
@@ -96,7 +102,9 @@ static bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
     }
 }
 
-static void handle_event(State* const restrict state, const SDL_Event* const restrict event) {
+static void handle_event(
+    State* const restrict state, const SDL_Event* const restrict event
+) {
     switch (event->type) {
         case SDL_EVENT_QUIT: {
             state->quit = true;
@@ -147,7 +155,8 @@ static void update(State* const restrict state, const double delta) {
 
     while (state->cycle_accumulator < total_frame_cycles) {
         const double actual_vframe_time =
-            state->vframe_time + (state->cycle_accumulator / GB_CPU_FREQUENCY_HZ);
+            state->vframe_time +
+            (state->cycle_accumulator / GB_CPU_FREQUENCY_HZ);
         double progress = actual_vframe_time / VFRAME_DURATION;
         while (progress >= 1.0) {
             progress -= 1.0;
@@ -166,7 +175,8 @@ static void update(State* const restrict state, const double delta) {
             }
 
             // STAT lcy == ly interrupt
-            if ((state->gb.stat & StatSelect_Lyc) != 0 && state->gb.ly == state->gb.lcy) {
+            if ((state->gb.stat & StatSelect_Lyc) != 0 &&
+                state->gb.ly == state->gb.lcy) {
                 state->gb.if_ |= InterruptFlag_Lcd;
             }
         }
@@ -187,7 +197,8 @@ static void update(State* const restrict state, const double delta) {
         // TIMA is only incremented if TAC's bit 2 is set
         if (state->gb.tac & 0b100) {
             const uint8_t clock_select = state->gb.tac & 0b11;
-            const int tac_delay_cycles = clock_select == 0 ? 256 : 4 * clock_select;
+            const int tac_delay_cycles =
+                clock_select == 0 ? 256 : 4 * clock_select;
 
             // TIMA counter
             state->tima_cycle_counter += state->gb.cpu.cycle_count;
@@ -224,34 +235,43 @@ static void draw_tiles(
 
     uint32_t* const pixels = surface->pixels;
 
-    const size_t tile_data_start = state->gb.lcdc & LcdControl_BgwTileArea ? 0 : 0x1000;
-    const size_t tile_map_start = state->gb.lcdc & LcdControl_BgTileMap ? 0x1C00 : 0x1800;
+    const size_t tile_data_start =
+        state->gb.lcdc & LcdControl_BgwTileArea ? 0 : 0x1000;
+    const size_t tile_map_start =
+        state->gb.lcdc & LcdControl_BgTileMap ? 0x1C00 : 0x1800;
 
     const uint8_t* const tile_data = &state->gb.vram[tile_data_start];
     const uint8_t* const tile_map = &state->gb.vram[tile_map_start];
 
     for (size_t tile_y = 0; tile_y < TILES_VERTICAL; ++tile_y) {
         for (size_t tile_x = 0; tile_x < TILES_HORIZONTAL; ++tile_x) {
-            const uint8_t tile_index = tile_map[(tile_y * TILES_HORIZONTAL) + tile_x];
+            const uint8_t tile_index =
+                tile_map[(tile_y * TILES_HORIZONTAL) + tile_x];
             const long tile_index_signed =
-                state->gb.lcdc & LcdControl_BgwTileArea ? tile_index : (int8_t)tile_index;
+                state->gb.lcdc & LcdControl_BgwTileArea ? tile_index
+                                                        : (int8_t)tile_index;
 
-            for (size_t tile_row_index = 0; tile_row_index < 8; ++tile_row_index) {
-                const uint8_t byte_1 = tile_data[(tile_index_signed * 16) + (2 * tile_row_index)];
-                const uint8_t byte_2 =
-                    tile_data[(tile_index_signed * 16) + (2 * tile_row_index) + 1];
+            for (size_t tile_row_index = 0; tile_row_index < 8;
+                 ++tile_row_index) {
+                const uint8_t byte_1 =
+                    tile_data[(tile_index_signed * 16) + (2 * tile_row_index)];
+                const uint8_t byte_2 = tile_data
+                    [(tile_index_signed * 16) + (2 * tile_row_index) + 1];
 
-                for (size_t tile_col_index = 0; tile_col_index < 8; ++tile_col_index) {
+                for (size_t tile_col_index = 0; tile_col_index < 8;
+                     ++tile_col_index) {
                     const uint8_t bit_lo = (byte_1 >> tile_col_index) & 1;
                     const uint8_t bit_hi = (byte_2 >> tile_col_index) & 1;
                     const uint8_t palette_index = bit_lo | (bit_hi << 1);
 
-                    const size_t color = (state->gb.bgp >> (2 * palette_index)) & 0b11;
+                    const size_t color =
+                        (state->gb.bgp >> (2 * palette_index)) & 0b11;
 
                     const size_t pixel_y = (8 * tile_y) + tile_row_index;
                     const size_t pixel_x = (8 * tile_x) + 7 - tile_col_index;
 
-                    pixels[(pixel_y * surface->w) + pixel_x] = map_color_index(color, pixel_format);
+                    pixels[(pixel_y * surface->w) + pixel_x] =
+                        map_color_index(color, pixel_format);
                 }
             }
         }
@@ -277,12 +297,15 @@ static void draw_objects(
 
         const bool flip_x = (attrs & ObjAttrs_FlipX) != 0;
         const bool flip_y = (attrs & ObjAttrs_FlipY) != 0;
-        const uint8_t obp = (attrs & ObjAttrs_DmgPalette) != 0 ? state->gb.obp1 : state->gb.obp0;
+        const uint8_t obp = (attrs & ObjAttrs_DmgPalette) != 0 ? state->gb.obp1
+                                                               : state->gb.obp0;
 
         for (size_t sprite_row = 0; sprite_row < 8; ++sprite_row) {
             // Objects always use the $8000 method
-            const uint8_t byte_1 = state->gb.vram[(tile_index * 0x10) + (2 * sprite_row)];
-            const uint8_t byte_2 = state->gb.vram[(tile_index * 0x10) + (2 * sprite_row) + 1];
+            const uint8_t byte_1 =
+                state->gb.vram[(tile_index * 0x10) + (2 * sprite_row)];
+            const uint8_t byte_2 =
+                state->gb.vram[(tile_index * 0x10) + (2 * sprite_row) + 1];
 
             for (size_t sprite_col = 0; sprite_col < 8; ++sprite_col) {
                 const uint8_t bit_lo = (byte_1 >> sprite_col) & 1;
@@ -291,10 +314,13 @@ static void draw_objects(
                 const size_t color = (obp >> (palette_index * 2)) & 0b11;
 
                 if (color != 0) {
-                    const size_t pixel_y = y_pos + (flip_y ? 7 - sprite_row : sprite_row);
-                    const size_t pixel_x = x_pos + (flip_x ? sprite_col : 7 - sprite_col);
+                    const size_t pixel_y =
+                        y_pos + (flip_y ? 7 - sprite_row : sprite_row);
+                    const size_t pixel_x =
+                        x_pos + (flip_x ? sprite_col : 7 - sprite_col);
 
-                    if (pixel_x < (size_t)surface->w && pixel_y < (size_t)surface->h) {
+                    if (pixel_x < (size_t)surface->w &&
+                        pixel_y < (size_t)surface->h) {
                         pixels[(pixel_y * surface->w) + pixel_x] =
                             map_color_index(color, pixel_format);
                     }
@@ -308,13 +334,21 @@ static void update_texture(const State* const restrict state) {
     SDL_Surface* surface = nullptr;
 
     SDL_CHECKED(
-        SDL_LockTextureToSurface(state->screen_texture, nullptr, &surface), "Could not lock texture"
+        SDL_LockTextureToSurface(state->screen_texture, nullptr, &surface),
+        "Could not lock texture"
     );
 
-    const SDL_PixelFormatDetails* const pixel_format = SDL_GetPixelFormatDetails(surface->format);
-    BAIL_IF(pixel_format == nullptr, "Could not get pixel format: %s", SDL_GetError());
+    const SDL_PixelFormatDetails* const pixel_format =
+        SDL_GetPixelFormatDetails(surface->format);
+    BAIL_IF(
+        pixel_format == nullptr,
+        "Could not get pixel format: %s",
+        SDL_GetError()
+    );
 
-    SDL_FillSurfaceRect(surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));
+    SDL_FillSurfaceRect(
+        surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0)
+    );
 
     if ((state->gb.lcdc & LcdControl_Enable) != 0) {
         draw_tiles(state, surface, pixel_format);
@@ -327,7 +361,9 @@ static void update_texture(const State* const restrict state) {
     SDL_UnlockTexture(state->screen_texture);
 }
 
-static void render(const State* const restrict state, SDL_Renderer* const restrict renderer) {
+static void render(
+    const State* const restrict state, SDL_Renderer* const restrict renderer
+) {
     const float ASPECT_RATIO = (float)GB_LCD_WIDTH / GB_LCD_HEIGHT;
 
     update_texture(state);
@@ -344,14 +380,18 @@ static void render(const State* const restrict state, SDL_Renderer* const restri
     };
 
     const SDL_FRect dest_rect = fit_rect_to_aspect_ratio(
-        &(SDL_FRect){0, 0, (float)state->window_width, (float)state->window_height}, ASPECT_RATIO
+        &(SDL_FRect
+        ){0, 0, (float)state->window_width, (float)state->window_height},
+        ASPECT_RATIO
     );
 
     SDL_RenderTexture(renderer, state->screen_texture, &src_rect, &dest_rect);
     SDL_RenderPresent(renderer);
 }
 
-void run_until_quit(State* const restrict state, SDL_Renderer* const restrict renderer) {
+void run_until_quit(
+    State* const restrict state, SDL_Renderer* const restrict renderer
+) {
     double last_time = sdl_get_performance_time();
     double time_accumulator = 0.0;
 

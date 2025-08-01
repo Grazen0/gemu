@@ -45,7 +45,15 @@ int main(int argc, const char* argv[]) {
 
     struct argparse_option options[] = {
         OPT_HELP(),
-        OPT_STRING('b', "boot-rom", (void*)&boot_rom_path, "path to boot ROM", nullptr, 0, 0),
+        OPT_STRING(
+            'b',
+            "boot-rom",
+            (void*)&boot_rom_path,
+            "path to boot ROM",
+            nullptr,
+            0,
+            0
+        ),
         OPT_END(),
     };
 
@@ -83,13 +91,22 @@ int main(int argc, const char* argv[]) {
 
     SDL_CHECKED(
         SDL_CreateWindowAndRenderer(
-            "gemu", WINDOW_WIDTH_INITIAL, WINDOW_HEIGHT_INITIAL, 0, &window, &renderer
+            "gemu",
+            WINDOW_WIDTH_INITIAL,
+            WINDOW_HEIGHT_INITIAL,
+            0,
+            &window,
+            &renderer
         ),
         "Could not create window or renderer"
     );
 
     SDL_Texture* const restrict texture = SDL_CreateTexture(
-        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GB_BG_WIDTH, GB_BG_HEIGHT
+        renderer,
+        SDL_PIXELFORMAT_RGBA32,
+        SDL_TEXTUREACCESS_STREAMING,
+        GB_BG_WIDTH,
+        GB_BG_HEIGHT
     );
     SDL_CHECKED(texture != nullptr, "Could not create texture");
 

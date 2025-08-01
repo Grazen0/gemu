@@ -34,7 +34,8 @@ static const char* log_level_label(const LogLevel level) {
 
 static void print_log_message(const LogMessage* const restrict message) {
     const char* const restrict label = log_level_label(message->level);
-    FILE* const restrict stream = message->level == LogLevel_Error ? stderr : stdout;
+    FILE* const restrict stream =
+        message->level == LogLevel_Error ? stderr : stdout;
 
     fprintf(stream, "\033[90m[%s\033[90m]:\033[0m ", label);
     fputs(message->text, stream);
@@ -100,13 +101,15 @@ void logger_cleanup(void) {
 static void grow_log_queue(void) {
     const size_t new_capacity = log_queue.capacity * 2;
 
-    LogMessage* const new_messages = malloc(new_capacity * sizeof(log_queue.messages[0]));
+    LogMessage* const new_messages =
+        malloc(new_capacity * sizeof(log_queue.messages[0]));
 
     if (new_messages == nullptr)
         BAIL("Could not reallocate space for log queue. errno %i", errno);
 
     const size_t old_size =
-        ((log_queue.head - log_queue.tail) + log_queue.capacity) % log_queue.capacity;
+        ((log_queue.head - log_queue.tail) + log_queue.capacity) %
+        log_queue.capacity;
 
     for (size_t i = 0; i < old_size; ++i) {
         size_t old_index = (log_queue.tail + i) % log_queue.capacity;
@@ -121,7 +124,8 @@ static void grow_log_queue(void) {
     log_queue.messages = new_messages;
 }
 
-static void vlog(const LogLevel level, const char* const restrict format, va_list args) {
+static void
+vlog(const LogLevel level, const char* const restrict format, va_list args) {
     if (!logger_ready || level > active_log_level)
         return;
 

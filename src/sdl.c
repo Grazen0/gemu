@@ -3,10 +3,13 @@
 #include "SDL3/SDL_timer.h"
 
 double sdl_get_performance_time(void) {
-    return (double)SDL_GetPerformanceCounter() / (double)SDL_GetPerformanceFrequency();
+    return (double)SDL_GetPerformanceCounter() /
+           (double)SDL_GetPerformanceFrequency();
 }
 
-SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect* const container, const float aspect_ratio) {
+SDL_FRect fit_rect_to_aspect_ratio(
+    const SDL_FRect* const container, const float aspect_ratio
+) {
     const double container_aspect_ratio = container->w / container->h;
 
     if (container_aspect_ratio > aspect_ratio) {

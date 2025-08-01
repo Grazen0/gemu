@@ -1,3 +1,5 @@
+enable_testing()
+
 find_package(unity REQUIRED CONFIG REQUIRED)
 find_package(cJSON REQUIRED CONFIG REQUIRED)
 
@@ -25,7 +27,7 @@ foreach(test_source ${test_sources})
   add_executable(${test_exec} ${test_source_path} ${runner_source})
   target_link_libraries(${test_exec} PRIVATE gemu_lib)
   target_link_libraries(${test_exec} PRIVATE unity::framework)
-  target_link_libraries(${test_exec} PRIVATE cjson)
+  target_link_libraries(${test_exec} PRIVATE cjson-static)
 
   add_test(NAME ${test_name} COMMAND ${test_exec})
 endforeach()

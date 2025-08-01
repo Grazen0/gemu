@@ -97,7 +97,7 @@ int main(int argc, const char* argv[]) {
         "Could not create window or renderer"
     );
 
-    SDL_Texture* const restrict texture = SDL_CreateTexture(
+    SDL_Texture* const texture = SDL_CreateTexture(
         renderer,
         SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_STREAMING,

@@ -33,9 +33,8 @@ static const char* log_level_label(const LogLevel level) {
 }
 
 static void print_log_message(const LogMessage* const restrict message) {
-    const char* const restrict label = log_level_label(message->level);
-    FILE* const restrict stream =
-        message->level == LogLevel_Error ? stderr : stdout;
+    const char* const label = log_level_label(message->level);
+    FILE* const stream = message->level == LogLevel_Error ? stderr : stdout;
 
     fprintf(stream, "\033[90m[%s\033[90m]:\033[0m ", label);
     fputs(message->text, stream);

@@ -12,9 +12,7 @@
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_surface.h>
 #include <SDL3/SDL_timer.h>
-#include <math.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,79 +66,80 @@ static const u8 PALETTE_RGB[PALETTE_RGB_LEN][3] = {
  *
  * \sa SDL_MapRGB
  */
-static u32 map_color_index(
-    const size_t color_index, const SDL_PixelFormatDetails* const pixel_format
-) {
+static u32 map_color_index(const size_t color_index,
+                           const SDL_PixelFormatDetails *const pixel_format)
+{
     if (color_index >= PALETTE_RGB_LEN)
         BAIL("color index out of bounds: %zu", color_index);
 
-    const u8* color_rgb = PALETTE_RGB[color_index];
-    return SDL_MapRGB(
-        pixel_format, nullptr, color_rgb[0], color_rgb[1], color_rgb[2]
-    );
+    const u8 *color_rgb = PALETTE_RGB[color_index];
+    return SDL_MapRGB(pixel_format, nullptr, color_rgb[0], color_rgb[1],
+                      color_rgb[2]);
 }
 
-static bool* get_joypad_key(GameBoy* const restrict gb, const SDL_Keycode key) {
+static bool *get_joypad_key(GameBoy *const restrict gb, const SDL_Keycode key)
+{
     switch (key) {
-        case SDLK_RETURN:
-            return &gb->joypad.start;
-        case SDLK_SPACE:
-            return &gb->joypad.select;
-        case SDLK_UP:
-            return &gb->joypad.up;
-        case SDLK_DOWN:
-            return &gb->joypad.down;
-        case SDLK_RIGHT:
-            return &gb->joypad.right;
-        case SDLK_LEFT:
-            return &gb->joypad.left;
-        case SDLK_X:
-            return &gb->joypad.a;
-        case SDLK_Z:
-            return &gb->joypad.b;
-        default:
-            return nullptr;
+    case SDLK_RETURN:
+        return &gb->joypad.start;
+    case SDLK_SPACE:
+        return &gb->joypad.select;
+    case SDLK_UP:
+        return &gb->joypad.up;
+    case SDLK_DOWN:
+        return &gb->joypad.down;
+    case SDLK_RIGHT:
+        return &gb->joypad.right;
+    case SDLK_LEFT:
+        return &gb->joypad.left;
+    case SDLK_X:
+        return &gb->joypad.a;
+    case SDLK_Z:
+        return &gb->joypad.b;
+    default:
+        return nullptr;
     }
 }
 
-static void handle_event(
-    State* const restrict state, const SDL_Event* const restrict event
-) {
+static void handle_event(State *const restrict state,
+                         const SDL_Event *const restrict event)
+{
     switch (event->type) {
-        case SDL_EVENT_QUIT: {
-            state->quit = true;
-            break;
-        }
-        case SDL_EVENT_WINDOW_RESIZED: {
-            state->window_width = event->window.data1;
-            state->window_height = event->window.data2;
-            break;
-        }
-        case SDL_EVENT_KEY_DOWN: {
-            bool* const state_key = get_joypad_key(&state->gb, event->key.key);
-            if (state_key != nullptr)
-                *state_key = true;
+    case SDL_EVENT_QUIT: {
+        state->quit = true;
+        break;
+    }
+    case SDL_EVENT_WINDOW_RESIZED: {
+        state->window_width = event->window.data1;
+        state->window_height = event->window.data2;
+        break;
+    }
+    case SDL_EVENT_KEY_DOWN: {
+        bool *const state_key = get_joypad_key(&state->gb, event->key.key);
+        if (state_key != nullptr)
+            *state_key = true;
 
+        break;
+    }
+    case SDL_EVENT_KEY_UP: {
+        if (event->key.mod == SDL_KMOD_CTRL && event->key.key == SDLK_O) {
+            // TODO: open new ROM
             break;
         }
-        case SDL_EVENT_KEY_UP: {
-            if (event->key.mod == SDL_KMOD_CTRL && event->key.key == SDLK_O) {
-                // TODO: open new ROM
-                break;
-            }
 
-            bool* const state_key = get_joypad_key(&state->gb, event->key.key);
-            if (state_key != nullptr)
-                *state_key = false;
+        bool *const state_key = get_joypad_key(&state->gb, event->key.key);
+        if (state_key != nullptr)
+            *state_key = false;
 
-            break;
-        }
-        default: {
-        }
+        break;
+    }
+    default: {
+    }
     }
 }
 
-static void update(State* const restrict state, const double delta) {
+static void update(State *const restrict state, const double delta)
+{
     Memory memory = (Memory){
         .ctx = &state->gb,
         .read = GameBoy_read_mem,
@@ -227,22 +226,22 @@ static void update(State* const restrict state, const double delta) {
     }
 }
 
-static void draw_tiles(
-    const State* const state, const SDL_Surface* const surface,
-    const SDL_PixelFormatDetails* const pixel_format
-) {
+static void draw_tiles(const State *const state,
+                       const SDL_Surface *const surface,
+                       const SDL_PixelFormatDetails *const pixel_format)
+{
     static constexpr size_t TILES_HORIZONTAL = 32;
     static constexpr size_t TILES_VERTICAL = 32;
 
-    u32* const pixels = surface->pixels;
+    u32 *const pixels = surface->pixels;
 
     const size_t tile_data_start =
         state->gb.lcdc & LcdControl_BgwTileArea ? 0 : 0x1000;
     const size_t tile_map_start =
         state->gb.lcdc & LcdControl_BgTileMap ? 0x1C00 : 0x1800;
 
-    const u8* const tile_data = &state->gb.vram[tile_data_start];
-    const u8* const tile_map = &state->gb.vram[tile_map_start];
+    const u8 *const tile_data = &state->gb.vram[tile_data_start];
+    const u8 *const tile_map = &state->gb.vram[tile_map_start];
 
     for (size_t tile_y = 0; tile_y < TILES_VERTICAL; ++tile_y) {
         for (size_t tile_x = 0; tile_x < TILES_HORIZONTAL; ++tile_x) {
@@ -256,8 +255,8 @@ static void draw_tiles(
                  ++tile_row_index) {
                 const u8 byte_1 =
                     tile_data[(tile_index_signed * 16) + (2 * tile_row_index)];
-                const u8 byte_2 = tile_data
-                    [(tile_index_signed * 16) + (2 * tile_row_index) + 1];
+                const u8 byte_2 = tile_data[(tile_index_signed * 16) +
+                                            (2 * tile_row_index) + 1];
 
                 for (size_t tile_col_index = 0; tile_col_index < 8;
                      ++tile_col_index) {
@@ -279,14 +278,14 @@ static void draw_tiles(
     }
 }
 
-static void draw_objects(
-    const State* const state, const SDL_Surface* const surface,
-    const SDL_PixelFormatDetails* const pixel_format
-) {
-    u32* const pixels = surface->pixels;
+static void draw_objects(const State *const state,
+                         const SDL_Surface *const surface,
+                         const SDL_PixelFormatDetails *const pixel_format)
+{
+    u32 *const pixels = surface->pixels;
 
     for (size_t obj = 0; obj < 40; ++obj) {
-        const u8* const obj_data = &state->gb.oam[obj * 4];
+        const u8 *const obj_data = &state->gb.oam[obj * 4];
 
         const size_t y_pos = obj_data[0] - 16;
         const size_t x_pos = obj_data[1] - 8;
@@ -331,25 +330,21 @@ static void draw_objects(
     }
 }
 
-static void update_texture(const State* const restrict state) {
-    SDL_Surface* surface = nullptr;
+static void update_texture(const State *const restrict state)
+{
+    SDL_Surface *surface = nullptr;
 
     SDL_CHECKED(
         SDL_LockTextureToSurface(state->screen_texture, nullptr, &surface),
-        "Could not lock texture"
-    );
+        "Could not lock texture");
 
-    const SDL_PixelFormatDetails* const pixel_format =
+    const SDL_PixelFormatDetails *const pixel_format =
         SDL_GetPixelFormatDetails(surface->format);
-    BAIL_IF(
-        pixel_format == nullptr,
-        "Could not get pixel format: %s",
-        SDL_GetError()
-    );
+    BAIL_IF(pixel_format == nullptr, "Could not get pixel format: %s",
+            SDL_GetError());
 
-    SDL_FillSurfaceRect(
-        surface, nullptr, SDL_MapRGB(pixel_format, nullptr, 0, 0, 0)
-    );
+    SDL_FillSurfaceRect(surface, nullptr,
+                        SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));
 
     if ((state->gb.lcdc & LcdControl_Enable) != 0) {
         draw_tiles(state, surface, pixel_format);
@@ -362,9 +357,9 @@ static void update_texture(const State* const restrict state) {
     SDL_UnlockTexture(state->screen_texture);
 }
 
-static void render(
-    const State* const restrict state, SDL_Renderer* const restrict renderer
-) {
+static void render(const State *const restrict state,
+                   SDL_Renderer *const restrict renderer)
+{
     const float ASPECT_RATIO = (float)GB_LCD_WIDTH / GB_LCD_HEIGHT;
 
     update_texture(state);
@@ -380,19 +375,18 @@ static void render(
         .h = GB_LCD_HEIGHT,
     };
 
-    const SDL_FRect dest_rect = fit_rect_to_aspect_ratio(
-        &(SDL_FRect
-        ){0, 0, (float)state->window_width, (float)state->window_height},
-        ASPECT_RATIO
-    );
+    const SDL_FRect dest_rect =
+        fit_rect_to_aspect_ratio(&(SDL_FRect){0, 0, (float)state->window_width,
+                                              (float)state->window_height},
+                                 ASPECT_RATIO);
 
     SDL_RenderTexture(renderer, state->screen_texture, &src_rect, &dest_rect);
     SDL_RenderPresent(renderer);
 }
 
-void run_until_quit(
-    State* const restrict state, SDL_Renderer* const restrict renderer
-) {
+void run_until_quit(State *const restrict state,
+                    SDL_Renderer *const restrict renderer)
+{
     double last_time = sdl_get_performance_time();
     double time_accumulator = 0.0;
 

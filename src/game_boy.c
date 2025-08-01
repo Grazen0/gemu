@@ -9,7 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
+static void GameBoy_write_joyp(GameBoy *const restrict gb, const u8 value)
+{
     gb->joyp = value | 0x0F;
 
     if ((gb->joyp & Joypad_DPadSelect) == 0) {
@@ -41,7 +42,8 @@ static void GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
     }
 }
 
-static void verify_rom_checksum(const u8* const rom) {
+static void verify_rom_checksum(const u8 *const rom)
+{
     u8 checksum = 0;
     for (u16 addr = 0x0134; addr <= 0x014C; ++addr)
         checksum = checksum - rom[addr] - 1;
@@ -50,15 +52,12 @@ static void verify_rom_checksum(const u8* const rom) {
 
     BAIL_IF(
         checksum_lo != rom[RomHeader_HeaderChecksum],
-        "Lower 8 bits of ROM checksum do not match expected value in "
-        "header (expected "
-        "$%02X, was $%02X)",
-        rom[RomHeader_HeaderChecksum],
-        checksum_lo
-    );
+        "Lower 8 bits of ROM checksum do not match expected value in header (expected $%02X, was $%02X)",
+        rom[RomHeader_HeaderChecksum], checksum_lo);
 }
 
-static void GameBoy_simulate_boot(GameBoy* const gb) {
+static void GameBoy_simulate_boot(GameBoy *const gb)
+{
     verify_rom_checksum(gb->rom);
 
     gb->cpu.a = 0x01;
@@ -74,7 +73,8 @@ static void GameBoy_simulate_boot(GameBoy* const gb) {
     gb->boot_rom_enable = false;
 }
 
-GameBoy GameBoy_new(u8* const boot_rom, u8* const rom, const size_t rom_len) {
+GameBoy GameBoy_new(u8 *const boot_rom, u8 *const rom, const size_t rom_len)
+{
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),
         .boot_rom = boot_rom,
@@ -109,7 +109,8 @@ GameBoy GameBoy_new(u8* const boot_rom, u8* const rom, const size_t rom_len) {
     return gb;
 }
 
-void GameBoy_destroy(GameBoy* const restrict gb) {
+void GameBoy_destroy(GameBoy *const restrict gb)
+{
     free(gb->rom);
     free(gb->boot_rom);
 
@@ -118,7 +119,8 @@ void GameBoy_destroy(GameBoy* const restrict gb) {
 }
 
 // NOLINTNEXTLINE
-u8 GameBoy_read_io(const GameBoy* const restrict gb, const u16 addr) {
+u8 GameBoy_read_io(const GameBoy *const restrict gb, const u16 addr)
+{
     if (addr == 0xFF00) // FF00 (joypad input)
         return gb->joyp;
 
@@ -193,8 +195,9 @@ u8 GameBoy_read_io(const GameBoy* const restrict gb, const u16 addr) {
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
 }
 
-u8 GameBoy_read_mem(const void* const restrict ctx, const u16 addr) {
-    const GameBoy* const gb = ctx;
+u8 GameBoy_read_mem(const void *const restrict ctx, const u16 addr)
+{
+    const GameBoy *const gb = ctx;
 
     if (addr <= 0x7FFF) {
         if (gb->boot_rom_enable && addr <= 0x100) {
@@ -237,15 +240,16 @@ u8 GameBoy_read_mem(const void* const restrict ctx, const u16 addr) {
     return gb->ie;
 }
 
-u16 GameBoy_read_mem_u16(GameBoy* const restrict gb, u16 addr) {
+u16 GameBoy_read_mem_u16(GameBoy *const restrict gb, u16 addr)
+{
     const u8 lo = GameBoy_read_mem(gb, addr);
     const u8 hi = GameBoy_read_mem(gb, addr + 1);
     return concat_u16(hi, lo);
 }
 
-void GameBoy_write_io(
-    GameBoy* const restrict gb, const u16 addr, const u8 value
-) {
+void GameBoy_write_io(GameBoy *const restrict gb, const u16 addr,
+                      const u8 value)
+{
     if (addr == 0xFF00) {
         // FF00 (joypad input)
         GameBoy_write_joyp(gb, value);
@@ -324,18 +328,16 @@ void GameBoy_write_io(
     }
 }
 
-void GameBoy_write_mem(
-    void* const restrict ctx, const u16 addr, const u8 value
-) {
-    GameBoy* const gb = ctx;
+void GameBoy_write_mem(void *const restrict ctx, const u16 addr, const u8 value)
+{
+    GameBoy *const gb = ctx;
 
     log_trace("write mem (addr = $%04X, value = $%02X)", addr, value);
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
-        log_debug(
-            "TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr, value
-        );
+        log_debug("TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr,
+                  value);
     } else if (addr <= 0x9FFF) {
         // 8000-9FFF (VRAM)
         gb->vram[addr - 0x8000] = value;
@@ -354,11 +356,8 @@ void GameBoy_write_mem(
         gb->oam[addr - 0xFE00] = value;
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
-        log_debug(
-            "Tried to write into unusable memory (addr = $%04X, $%02X)",
-            addr,
-            value
-        );
+        log_debug("Tried to write into unusable memory (addr = $%04X, $%02X)",
+                  addr, value);
     } else if (addr <= 0xFF7F) {
         // FF00-FF7F I/O registers
         GameBoy_write_io(gb, addr, value);
@@ -371,9 +370,9 @@ void GameBoy_write_mem(
     }
 }
 
-void GameBoy_service_interrupts(
-    GameBoy* const restrict gb, Memory* const restrict mem
-) {
+void GameBoy_service_interrupts(GameBoy *const restrict gb,
+                                Memory *const restrict mem)
+{
     const u8 int_mask = gb->if_ & gb->ie;
 
     // Disable HALT on an interrupt

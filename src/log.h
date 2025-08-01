@@ -24,15 +24,15 @@ typedef struct LogMessage {
 
 typedef struct LogQueue {
     size_t capacity;
-    LogMessage* messages;
+    LogMessage *messages;
     size_t head;
     size_t tail;
-    SDL_Mutex* mtx;
-    SDL_Condition* cond;
+    SDL_Mutex *mtx;
+    SDL_Condition *cond;
     bool quit;
 } LogQueue;
 
-LogLevel LogLevel_from_str(const char* restrict str);
+LogLevel LogLevel_from_str(const char *restrict str);
 
 /**
  * \brief Initializes logging.
@@ -55,14 +55,14 @@ void logger_init(LogLevel log_level);
  */
 void logger_cleanup(void);
 
-void log_trace(const char* restrict format, ...);
+void log_trace(const char *restrict format, ...);
 
-void log_debug(const char* restrict format, ...);
+void log_debug(const char *restrict format, ...);
 
-void log_info(const char* restrict format, ...);
+void log_info(const char *restrict format, ...);
 
-void log_warn(const char* restrict format, ...);
+void log_warn(const char *restrict format, ...);
 
-void log_error(const char* restrict format, ...);
+void log_error(const char *restrict format, ...);
 
 #endif

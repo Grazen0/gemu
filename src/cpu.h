@@ -54,9 +54,9 @@ typedef enum CpuTableAlu : u8 {
 } CpuTableAlu;
 
 typedef struct Memory {
-    void* ctx;
-    u8 (*read)(const void* ctx, u16 addr);
-    void (*write)(void* ctx, u16 addr, u8 value);
+    void *ctx;
+    u8 (*read)(const void *ctx, u16 addr);
+    void (*write)(void *ctx, u16 addr, u8 value);
 } Memory;
 
 typedef enum CpuMode : u8 {
@@ -84,42 +84,40 @@ typedef struct Cpu {
 
 [[nodiscard]] Cpu Cpu_new(void);
 
-[[nodiscard]] bool Cpu_read_cc(const Cpu* restrict cpu, CpuTableCc cc);
+[[nodiscard]] bool Cpu_read_cc(const Cpu *restrict cpu, CpuTableCc cc);
 
-[[nodiscard]] u16 Cpu_read_rp(const Cpu* restrict cpu, CpuTableRp rp);
+[[nodiscard]] u16 Cpu_read_rp(const Cpu *restrict cpu, CpuTableRp rp);
 
-void Cpu_write_rp(Cpu* restrict cpu, CpuTableRp rp, u16 value);
+void Cpu_write_rp(Cpu *restrict cpu, CpuTableRp rp, u16 value);
 
-[[nodiscard]] u16 Cpu_read_rp2(const Cpu* restrict cpu, CpuTableRp rp);
+[[nodiscard]] u16 Cpu_read_rp2(const Cpu *restrict cpu, CpuTableRp rp);
 
-void Cpu_write_rp2(Cpu* restrict cpu, CpuTableRp rp, u16 value);
+void Cpu_write_rp2(Cpu *restrict cpu, CpuTableRp rp, u16 value);
 
-u8 Cpu_read_mem(Cpu* restrict cpu, const Memory* restrict mem, u16 addr);
+u8 Cpu_read_mem(Cpu *restrict cpu, const Memory *restrict mem, u16 addr);
 
-u16 Cpu_read_mem_u16(Cpu* restrict cpu, const Memory* restrict mem, u16 addr);
+u16 Cpu_read_mem_u16(Cpu *restrict cpu, const Memory *restrict mem, u16 addr);
 
-void Cpu_write_mem(Cpu* restrict cpu, Memory* restrict mem, u16 addr, u8 value);
+void Cpu_write_mem(Cpu *restrict cpu, Memory *restrict mem, u16 addr, u8 value);
 
-void Cpu_write_mem_u16(
-    Cpu* restrict cpu, Memory* restrict mem, u16 addr, u16 value
-);
+void Cpu_write_mem_u16(Cpu *restrict cpu, Memory *restrict mem, u16 addr,
+                       u16 value);
 
-u8 Cpu_read_pc(Cpu* restrict cpu, const Memory* restrict mem);
+u8 Cpu_read_pc(Cpu *restrict cpu, const Memory *restrict mem);
 
-u16 Cpu_read_pc_u16(Cpu* restrict cpu, const Memory* restrict mem);
+u16 Cpu_read_pc_u16(Cpu *restrict cpu, const Memory *restrict mem);
 
-u8 Cpu_read_r(Cpu* restrict cpu, const Memory* restrict mem, CpuTableR r);
+u8 Cpu_read_r(Cpu *restrict cpu, const Memory *restrict mem, CpuTableR r);
 
-void Cpu_write_r(Cpu* restrict cpu, Memory* mem, CpuTableR r, u8 value);
+void Cpu_write_r(Cpu *restrict cpu, Memory *mem, CpuTableR r, u8 value);
 
-void Cpu_stack_push_u16(Cpu* restrict cpu, Memory* restrict mem, u16 value);
+void Cpu_stack_push_u16(Cpu *restrict cpu, Memory *restrict mem, u16 value);
 
-u16 Cpu_stack_pop_u16(Cpu* restrict cpu, const Memory* restrict mem);
+u16 Cpu_stack_pop_u16(Cpu *restrict cpu, const Memory *restrict mem);
 
-void Cpu_tick(Cpu* restrict cpu, Memory* restrict mem);
+void Cpu_tick(Cpu *restrict cpu, Memory *restrict mem);
 
-void Cpu_interrupt(
-    Cpu* restrict cpu, Memory* restrict mem, u8 handler_location
-);
+void Cpu_interrupt(Cpu *restrict cpu, Memory *restrict mem,
+                   u8 handler_location);
 
 #endif

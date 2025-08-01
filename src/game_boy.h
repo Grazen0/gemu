@@ -75,8 +75,8 @@ typedef struct GameBoy {
     u8 vram[0x2000];
     u8 hram[0x7F];
     u8 oam[0xA0];
-    u8* boot_rom;
-    u8* rom;
+    u8 *boot_rom;
+    u8 *rom;
     size_t rom_len;
     bool boot_rom_enable;
     u8 lcdc;
@@ -101,14 +101,14 @@ typedef struct GameBoy {
     u8 joyp;
 } GameBoy;
 
-[[nodiscard]] GameBoy GameBoy_new(u8* boot_rom, u8* rom, size_t rom_len);
+[[nodiscard]] GameBoy GameBoy_new(u8 *boot_rom, u8 *rom, size_t rom_len);
 
-void GameBoy_destroy(GameBoy* restrict gb);
+void GameBoy_destroy(GameBoy *restrict gb);
 
-[[nodiscard]] u8 GameBoy_read_mem(const void* restrict ctx, u16 addr);
+[[nodiscard]] u8 GameBoy_read_mem(const void *restrict ctx, u16 addr);
 
-void GameBoy_write_mem(void* restrict ctx, u16 addr, u8 value);
+void GameBoy_write_mem(void *restrict ctx, u16 addr, u8 value);
 
-void GameBoy_service_interrupts(GameBoy* restrict gb, Memory* restrict mem);
+void GameBoy_service_interrupts(GameBoy *restrict gb, Memory *restrict mem);
 
 #endif

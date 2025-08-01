@@ -1,14 +1,52 @@
 BasedOnStyle: LLVM
 
-ColumnLimit: 80
-IndentWidth: 4
-AllowShortFunctionsOnASingleLine: Empty
+AlignAfterOpenBracket: Align
 AlignArrayOfStructures: Right
-AllowShortEnumsOnASingleLine: false
-AlignAfterOpenBracket: BlockIndent
-AllowAllArgumentsOnNextLine: true
-BinPackArguments: false
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: No
+BinPackArguments: true
+BinPackParameters: true
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+BreakBeforeBraces: Custom
+BreakStringLiterals: false
+ColumnLimit: 80
 DerivePointerAlignment: false
-PointerAlignment: Left
-IndentCaseLabels: true
-LineEnding: LF
+IncludeBlocks: Merge
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+MaxEmptyLinesToKeep: 1
+PointerAlignment: Right
+SortIncludes: CaseSensitive
+SpaceBeforeAssignmentOperators: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never

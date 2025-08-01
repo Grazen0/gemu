@@ -13,9 +13,9 @@ typedef struct State {
     int div_cycle_counter;
     int tima_cycle_counter;
     bool quit;
-    SDL_Texture* restrict screen_texture;
+    SDL_Texture *restrict screen_texture;
 } State;
 
-void run_until_quit(State* restrict state, SDL_Renderer* restrict renderer);
+void run_until_quit(State *restrict state, SDL_Renderer *restrict renderer);
 
 #endif

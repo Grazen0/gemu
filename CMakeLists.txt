@@ -10,6 +10,9 @@ else()
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(argparse_static REQUIRED argparse)
+
 find_package(SDL3 REQUIRED CONFIG REQUIRED)
 
 # Set default build type to Debug

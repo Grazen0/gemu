@@ -1,7 +1,7 @@
 #include "log.h"
+#include "control.h"
 #include <SDL3/SDL_mutex.h>
 #include <SDL3/SDL_thread.h>
-#include "control.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>

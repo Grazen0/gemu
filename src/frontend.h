@@ -1,8 +1,8 @@
 #ifndef GEMU_FRONTEND_H
 #define GEMU_FRONTEND_H
 
-#include <SDL3/SDL_render.h>
 #include "game_boy.h"
+#include <SDL3/SDL_render.h>
 
 typedef struct State {
     GameBoy gb;

@@ -1,8 +1,8 @@
 #ifndef GEMU_LOG_H
 #define GEMU_LOG_H
 
-#include <SDL3/SDL_mutex.h>
 #include "stdinc.h"
+#include <SDL3/SDL_mutex.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>

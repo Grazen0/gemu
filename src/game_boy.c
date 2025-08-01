@@ -9,8 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void
-GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
+static void GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
     gb->joyp = value | 0x0F;
 
     if ((gb->joyp & Joypad_DPadSelect) == 0) {
@@ -78,8 +77,7 @@ static void GameBoy_simulate_boot(GameBoy* const gb) {
     gb->boot_rom_enable = false;
 }
 
-GameBoy
-GameBoy_new(u8* const boot_rom, u8* const rom, const size_t rom_len) {
+GameBoy GameBoy_new(u8* const boot_rom, u8* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),
         .boot_rom = boot_rom,

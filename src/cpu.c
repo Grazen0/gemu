@@ -118,16 +118,14 @@ void Cpu_write_rp2(
 }
 
 u8 Cpu_read_mem(
-    Cpu* const restrict cpu, const Memory* const restrict mem,
-    const u16 addr
+    Cpu* const restrict cpu, const Memory* const restrict mem, const u16 addr
 ) {
     cpu->cycle_count++;
     return mem->read(mem->ctx, addr);
 }
 
 u16 Cpu_read_mem_u16(
-    Cpu* const restrict cpu, const Memory* const restrict mem,
-    const u16 addr
+    Cpu* const restrict cpu, const Memory* const restrict mem, const u16 addr
 ) {
     const u8 lo = Cpu_read_mem(cpu, mem, addr);
     const u8 hi = Cpu_read_mem(cpu, mem, addr + 1);
@@ -156,8 +154,7 @@ u8 Cpu_read_pc(Cpu* const restrict cpu, const Memory* const restrict mem) {
     return value;
 }
 
-u16
-Cpu_read_pc_u16(Cpu* const restrict cpu, const Memory* const restrict mem) {
+u16 Cpu_read_pc_u16(Cpu* const restrict cpu, const Memory* const restrict mem) {
     const u16 value = Cpu_read_mem_u16(cpu, mem, cpu->pc);
     cpu->pc += 2;
     return value;
@@ -171,8 +168,7 @@ void Cpu_stack_push_u16(
     cpu->cycle_count++;
 }
 
-u16
-Cpu_stack_pop_u16(Cpu* const restrict cpu, const Memory* restrict mem) {
+u16 Cpu_stack_pop_u16(Cpu* const restrict cpu, const Memory* restrict mem) {
     const u16 value = Cpu_read_mem_u16(cpu, mem, cpu->sp);
     cpu->sp += 2;
     return value;

@@ -97,12 +97,9 @@ void Cpu_write_rp2(Cpu* restrict cpu, CpuTableRp rp, u16 value);
 
 u8 Cpu_read_mem(Cpu* restrict cpu, const Memory* restrict mem, u16 addr);
 
-u16
-Cpu_read_mem_u16(Cpu* restrict cpu, const Memory* restrict mem, u16 addr);
+u16 Cpu_read_mem_u16(Cpu* restrict cpu, const Memory* restrict mem, u16 addr);
 
-void Cpu_write_mem(
-    Cpu* restrict cpu, Memory* restrict mem, u16 addr, u8 value
-);
+void Cpu_write_mem(Cpu* restrict cpu, Memory* restrict mem, u16 addr, u8 value);
 
 void Cpu_write_mem_u16(
     Cpu* restrict cpu, Memory* restrict mem, u16 addr, u16 value
@@ -116,9 +113,7 @@ u8 Cpu_read_r(Cpu* restrict cpu, const Memory* restrict mem, CpuTableR r);
 
 void Cpu_write_r(Cpu* restrict cpu, Memory* mem, CpuTableR r, u8 value);
 
-void Cpu_stack_push_u16(
-    Cpu* restrict cpu, Memory* restrict mem, u16 value
-);
+void Cpu_stack_push_u16(Cpu* restrict cpu, Memory* restrict mem, u16 value);
 
 u16 Cpu_stack_pop_u16(Cpu* restrict cpu, const Memory* restrict mem);
 

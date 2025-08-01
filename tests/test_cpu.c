@@ -5,7 +5,8 @@
 #include <sys/stat.h>
 #include <unity.h>
 
-void test_cpu_new(void) {
+void test_cpu_new(void)
+{
     Cpu cpu = Cpu_new();
 
     TEST_ASSERT_EQUAL(cpu.b, 0);

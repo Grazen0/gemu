@@ -29,20 +29,11 @@
         {
           packages = {
             gemu = pkgs.callPackage ./default.nix {
-              # Static cJSON
               cjson = pkgs.cjson.overrideAttrs (prev: {
                 cmakeFlags = (prev.cmakeFlags or [ ]) ++ [
                   "-DBUILD_SHARED_AND_STATIC_LIBS=On"
                 ];
               });
-
-              # Static SDL3
-              sdl3 = pkgs.sdl3.overrideAttrs (prev: {
-                cmakeFlags = (prev.cmakeFlags or [ ]) ++ [
-                  "-DBUILD_SHARED_LIBS=Off"
-                ];
-              });
-
               argparse = argparse.packages.${system}.default;
             };
             default = self'.packages.gemu;

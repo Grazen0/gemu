@@ -103,12 +103,12 @@ typedef struct GameBoy {
 
 [[nodiscard]] GameBoy GameBoy_new(u8 *boot_rom, u8 *rom, size_t rom_len);
 
-void GameBoy_destroy(GameBoy *restrict gb);
+void GameBoy_destroy(GameBoy *restrict self);
 
 [[nodiscard]] u8 GameBoy_read_mem(const void *restrict ctx, u16 addr);
 
 void GameBoy_write_mem(void *restrict ctx, u16 addr, u8 value);
 
-void GameBoy_service_interrupts(GameBoy *restrict gb, Memory *restrict mem);
+void GameBoy_service_interrupts(GameBoy *restrict self, Memory *restrict mem);
 
 #endif

@@ -51,7 +51,6 @@ static void verify_rom_checksum(const uint8_t* const rom) {
 
     if (checksum_lo != rom[RomHeader_HeaderChecksum]) {
         log_error(
-            LogCategory_Keep,
             "Lower 8 bits of ROM checksum do not match expected value in header (expected "
             "$%02X, was $%02X)",
             rom[RomHeader_HeaderChecksum],
@@ -368,13 +367,11 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
 void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint8_t value) {
     GameBoy* const restrict gb = ctx;
 
-    log_info(LogCategory_Memory, "write mem (addr = $%04X, value = $%02X)", addr, value);
+    log_trace("write mem (addr = $%04X, value = $%02X)", addr, value);
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
-        log_info(
-            LogCategory_Memory, "TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr, value
-        );
+        log_debug("TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr, value);
     } else if (addr <= 0x9FFF) {
         // 8000-9FFF (VRAM)
         gb->vram[addr - 0x8000] = value;
@@ -393,12 +390,7 @@ void GameBoy_write_mem(void* const restrict ctx, const uint16_t addr, const uint
         gb->oam[addr - 0xFE00] = value;
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
-        log_warn(
-            LogCategory_Memory,
-            "Tried to write into unusable memory (addr = $%04X, $%02X)",
-            addr,
-            value
-        );
+        log_debug("Tried to write into unusable memory (addr = $%04X, $%02X)", addr, value);
     } else if (addr <= 0xFF7F) {
         // FF00-FF7F I/O registers
         GameBoy_write_io(gb, addr, value);
@@ -425,7 +417,7 @@ void GameBoy_service_interrupts(GameBoy* const restrict gb, Memory* const restri
 
     for (uint8_t i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
-            log_warn(LogCategory_Interrupt, "Servicing interrupt #%i", i);
+            log_debug("Servicing interrupt #%i", i);
             gb->if_ &= ~(1 << i);
             Cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
             break;

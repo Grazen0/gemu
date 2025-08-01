@@ -25,10 +25,21 @@ static const char* const usages[] = {
     nullptr,
 };
 
+static SDL_Window* window = nullptr;
+static SDL_Renderer* renderer = nullptr;
+static State state;
+
+static void cleanup(void) {
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_DestroyTexture(state.screen_texture);
+
+    GameBoy_destroy(&state.gb);
+    SDL_Quit();
+}
+
 int main(int argc, const char* argv[]) {
-    logger_init(
-        LogCategory_All & ~LogCategory_Memory & ~LogCategory_Instruction & ~LogCategory_Interrupt
-    );
+    logger_init(LogLevel_Info);
 
     const char* boot_rom_path = nullptr;
 
@@ -53,25 +64,22 @@ int main(int argc, const char* argv[]) {
     uint8_t* const rom = SDL_LoadFile(argv[0], &rom_len);
 
     if (rom == nullptr) {
-        log_error(LogCategory_Keep, "Could not read ROM file.");
+        log_error("Could not read ROM file.");
         return 1;
     }
 
     if (rom_len != 0x8000 * ((size_t)1 << rom[RomHeader_RomSize])) {
-        log_error(LogCategory_Keep, "ROM length does not match header info.");
+        log_error("ROM length does not match header info.");
         return 1;
     }
 
-    log_info(LogCategory_Keep, "Cartridge type: $%02X", rom[RomHeader_CartridgeType]);
+    log_info("Cartridge type: $%02X", rom[RomHeader_CartridgeType]);
 
     char game_title[17];
     SDL_strlcpy(game_title, (char*)&rom[RomHeader_Title], sizeof(game_title));
-    log_info(LogCategory_Keep, "Game title: %s", game_title);
+    log_info("Game title: %s", game_title);
 
     SDL_CHECKED(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
-
-    SDL_Window* window = nullptr;
-    SDL_Renderer* renderer = nullptr;
 
     SDL_CHECKED(
         SDL_CreateWindowAndRenderer(
@@ -94,13 +102,12 @@ int main(int argc, const char* argv[]) {
         boot_rom = SDL_LoadFile(boot_rom_path, &boot_rom_len);
 
         if (boot_rom == nullptr) {
-            log_error(LogCategory_Keep, "Could not read boot ROM file.");
+            log_error("Could not read boot ROM file.");
             return 1;
         }
 
         if (boot_rom_len != GB_BOOT_ROM_LEN_EXPECTED) {
             log_error(
-                LogCategory_Keep,
                 "Boot ROM must be exactly %zu bytes long (was %zu)",
                 GB_BOOT_ROM_LEN_EXPECTED,
                 boot_rom_len
@@ -110,7 +117,7 @@ int main(int argc, const char* argv[]) {
         }
     }
 
-    State state = (State){
+    state = (State){
         .gb = GameBoy_new(boot_rom, rom, rom_len),
         .window_width = WINDOW_WIDTH_INITIAL,
         .window_height = WINDOW_HEIGHT_INITIAL,
@@ -125,14 +132,8 @@ int main(int argc, const char* argv[]) {
     SDL_RenderPresent(renderer);
     SDL_SetWindowResizable(window, true);
 
+    atexit(cleanup);
     run_until_quit(&state, renderer);
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_DestroyTexture(state.screen_texture);
-    SDL_Quit();
-
-    GameBoy_destroy(&state.gb);
 
     return 0;
 }

@@ -59,7 +59,7 @@ typedef struct Memory {
     void (*write)(void* ctx, uint16_t addr, uint8_t value);
 } Memory;
 
-typedef enum CpuMode {
+typedef enum CpuMode : uint8_t {
     CpuMode_Running,
     CpuMode_Halted,
     CpuMode_Stopped,

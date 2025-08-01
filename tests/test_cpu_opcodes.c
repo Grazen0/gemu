@@ -60,7 +60,7 @@ static CpuState CpuState_from_cjson(const cJSON* const src) {
 
     const int ram_len = cJSON_GetArraySize(ram_src);
 
-    RamEntry* const ram = calloc(ram_len, sizeof(*ram));
+    RamEntry* const ram = malloc(ram_len * sizeof(*ram));
 
     for (int i = 0; i < ram_len; ++i) {
         const cJSON* const entry_src = cJSON_GetArrayItem(ram_src, i);
@@ -173,7 +173,7 @@ static void run_opcode_test_file(const char* const restrict filepath) {
     const size_t file_len = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* const file_content = calloc(file_len, sizeof(*file_content));
+    char* const file_content = malloc(file_len * sizeof(*file_content));
     const size_t read_bytes = fread(file_content, sizeof(*file_content), file_len, file);
     TEST_ASSERT_EQUAL_MESSAGE(file_len, read_bytes, "could not read JSON file");
     fclose(file);

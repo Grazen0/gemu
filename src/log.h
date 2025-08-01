@@ -4,32 +4,22 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
-typedef enum LogLevel {
-    LogLevel_Info,
-    LogLevel_Warn,
-    LogLevel_Error,
+static constexpr size_t LOG_MESSAGE_CAPACITY = 256;
+
+typedef enum LogLevel : uint8_t {
+    LogLevel_Trace = 4,
+    LogLevel_Debug = 3,
+    LogLevel_Info = 2,
+    LogLevel_Warn = 1,
+    LogLevel_Error = 0,
 } LogLevel;
 
-typedef enum LogCategory {
-    LogCategory_All = ~0,
-    LogCategory_None = 0,
-    LogCategory_Instruction = 1 << 0,
-    LogCategory_Error = 1 << 1,
-    LogCategory_Io = 1 << 2,
-    LogCategory_Memory = 1 << 3,
-    LogCategory_Interrupt = 1 << 4,
-    LogCategory_Keep = 1 << 5,
-    LogCategory_Todo = 1 << 6,
-} LogCategory;
-
-typedef void (*LogFn)(LogLevel level, LogCategory category, const char* restrict text);
-
 typedef struct LogMessage {
-    LogCategory category;
     LogLevel level;
-    char text[256];
+    char text[LOG_MESSAGE_CAPACITY];
 } LogMessage;
 
 typedef struct LogQueue {
@@ -42,16 +32,37 @@ typedef struct LogQueue {
     bool quit;
 } LogQueue;
 
-void logger_init(int category_mask);
+LogLevel LogLevel_from_str(const char* restrict str);
 
+/**
+ * \brief Initializes logging.
+ *
+ * This function must be called before using any other log-related functions. Otherwise, no logging
+ * will take effect.
+ *
+ * \param log_level LogLevel to use.
+ *
+ * \sa logger_cleanup
+ */
+void logger_init(LogLevel log_level);
+
+/**
+ * \brief Cleans up logging resources.
+ *
+ * This function must be called after logger_init.
+ *
+ * \sa logger_init
+ */
 void logger_cleanup(void);
 
-void vlog(LogLevel level, LogCategory category, const char* restrict format, va_list args);
+void log_trace(const char* restrict format, ...);
 
-void log_info(LogCategory category, const char* restrict format, ...);
+void log_debug(const char* restrict format, ...);
 
-void log_warn(LogCategory category, const char* restrict format, ...);
+void log_info(const char* restrict format, ...);
 
-void log_error(LogCategory category, const char* restrict format, ...);
+void log_warn(const char* restrict format, ...);
+
+void log_error(const char* restrict format, ...);
 
 #endif

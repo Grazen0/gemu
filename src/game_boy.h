@@ -3,7 +3,6 @@
 
 #include "cpu.h"
 #include <stddef.h>
-#include <stdint.h>
 
 constexpr int GB_LCD_WIDTH = 160;
 constexpr int GB_LCD_HEIGHT = 144;

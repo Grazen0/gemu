@@ -3,7 +3,6 @@
 
 #include "stdinc.h"
 #include <stddef.h>
-#include <stdint.h>
 
 typedef enum RomHeader : u16 {
     RomHeader_EntryPoint = 0x100,

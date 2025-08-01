@@ -2,7 +2,7 @@
 #include "control.h"
 #include "instructions.h"
 #include "num.h"
-#include <stdint.h>
+#include "stdinc.h"
 
 Cpu Cpu_new(void) {
     return (Cpu){

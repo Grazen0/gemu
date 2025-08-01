@@ -4,8 +4,8 @@
 #include "data.h"
 #include "log.h"
 #include "num.h"
+#include "stdinc.h"
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 

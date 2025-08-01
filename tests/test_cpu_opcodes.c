@@ -2,7 +2,6 @@
 #include "stdinc.h"
 #include <cjson/cJSON.h>
 #include <dirent.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unity.h>

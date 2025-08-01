@@ -1,5 +1,5 @@
 #include "num.h"
-#include <stdint.h>
+#include "stdinc.h"
 
 u16 concat_u16(const u8 hi, const u8 lo) {
     return ((u16)hi << 8) | (u16)lo;

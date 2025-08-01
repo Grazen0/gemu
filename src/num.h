@@ -2,7 +2,6 @@
 #define GEMU_NUM_H
 
 #include "stdinc.h"
-#include <stdint.h>
 
 [[nodiscard]] u16 concat_u16(u8 hi, u8 lo);
 

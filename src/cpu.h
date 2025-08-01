@@ -2,7 +2,6 @@
 #define GEMU_CPU_H
 
 #include "stdinc.h"
-#include <stdint.h>
 
 typedef enum CpuFlag : u8 {
     CpuFlag_C = 1 << 4,

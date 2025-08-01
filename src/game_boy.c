@@ -77,7 +77,7 @@ static void GameBoy_simulate_boot(GameBoy* const gb) {
     gb->boot_rom_enable = false;
 }
 
-GameBoy GameBoy_new(const uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
+GameBoy GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),
         .boot_rom = boot_rom,
@@ -114,6 +114,9 @@ GameBoy GameBoy_new(const uint8_t* const boot_rom, uint8_t* const rom, const siz
 
 void GameBoy_destroy(GameBoy* const restrict gb) {
     free(gb->rom);
+    if (gb->boot_rom != nullptr) {
+        free(gb->boot_rom);
+    }
     gb->rom = nullptr;
     gb->rom_len = 0;
 }
@@ -126,9 +129,8 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr == 0xFF01) {
         // FF01 (serial transfer data)
-        // TODO: implement properly
+        // TODO: implement serial transfer
         return 0xFF;
-        // return gb->sb;
     }
 
     if (addr == 0xFF02) {
@@ -138,22 +140,16 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
 
     if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
+
+        // clang-format off
         switch (addr) {
-            case 0xFF04:
-                return gb->div;
-                break;
-            case 0xFF05:
-                return gb->tima;
-                break;
-            case 0xFF06:
-                return gb->tma;
-                break;
-            case 0xFF07:
-                return gb->tac;
-                break;
-            default:
-                BAIL("Unexpected I/O timer and divider read ($%04X)", addr);
+            case 0xFF04: return gb->div;
+            case 0xFF05: return gb->tima;
+            case 0xFF06: return gb->tma;
+            case 0xFF07: return gb->tac;
+            default: BAIL("Unexpected I/O timer and divider read ($%04X)", addr);
         }
+        // clang-format on
     }
 
     if (addr == 0xFF0F) {
@@ -193,13 +189,12 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
     }
 
     if (addr == 0xFF4D) {
-        // FF4D (CGB registers, unimplemented as of now)
+        // FF4D (CGB registers, CGB-only)
         return 0xFF;
     }
 
     if (addr == 0xFF4F) {
-        // FF4F
-        BAIL("TODO: I/O VRAM bank select read ($%04X)", addr);
+        // FF4F (VRAM bank select, CGB-only)
     }
 
     if (addr == 0xFF50) {
@@ -208,18 +203,18 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
     }
 
     if (addr >= 0xFF51 && addr <= 0xFF55) {
-        // FF51-FF55 (VRAM DMA)
-        BAIL("TODO: I/O VRAM DMA read ($%04X)", addr);
+        // FF51-FF55 (VRAM DMA, CGB-only)
+        return 0xFF;
     }
 
     if (addr >= 0xFF68 && addr <= 0xFF6B) {
-        // FF68-FF6B (palettes)
-        BAIL("TODO: I/O palettes read ($%04X)", addr);
+        // FF68-FF6B (LCD color palettes, CGB-only)
+        return 0xFF;
     }
 
     if (addr == 0xFF70) {
-        // FF70 (WRAM bank select)
-        BAIL("TODO: I/O WRAM bank select read ($%04X)", addr);
+        // FF70 (WRAM bank select, CGB-only)
+        return 0xFF;
     }
 
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
@@ -358,14 +353,11 @@ void GameBoy_write_io(GameBoy* const restrict gb, const uint16_t addr, const uin
         if (value != 0)
             gb->boot_rom_enable = false;
     } else if (addr >= 0xFF51 && addr <= 0xFF55) {
-        // FF51-FF55 (VRAM DMA)
-        BAIL("I/O VRAM DMA write ($%04X, $%02X)", addr, value);
+        // FF51-FF55 (VRAM DMA, CGB-only)
     } else if (addr >= 0xFF68 && addr <= 0xFF6B) {
-        // FF68-FF6B (palettes)
-        BAIL("I/O palettes write ($%04X, $%02X)", addr, value);
+        // FF68-FF6B (LCD color palettes, CGB-only)
     } else if (addr == 0xFF70) {
-        // FF70 (WRAM bank select)
-        BAIL("I/O WRAM bank select write ($%04X, $%02X)", addr, value);
+        // FF70 (WRAM bank select, CGB-only)
     } else if (addr == 0xFF7F) {
         // Tetris tries to write here. Probably a no-op.
     } else {

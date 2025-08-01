@@ -2,9 +2,10 @@
 #include "SDL3/SDL_iostream.h"
 #include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_render.h"
+#include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_video.h"
-#include "control.h"
+#include "argparse.h"
 #include "data.h"
 #include "frontend.h"
 #include "game_boy.h"
@@ -16,21 +17,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(const int argc, const char* const argv[]) {
+static constexpr int WINDOW_WIDTH_INITIAL = GB_LCD_WIDTH * 4;
+static constexpr int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
+
+static const char* const usages[] = {
+    "gemu [options] [--] <path-to-rom>",
+    nullptr,
+};
+
+int main(int argc, const char* argv[]) {
     logger_init(
         LogCategory_All & ~LogCategory_Memory & ~LogCategory_Instruction & ~LogCategory_Interrupt
     );
 
-    static constexpr int WINDOW_WIDTH_INITIAL = GB_LCD_WIDTH * 4;
-    static constexpr int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
+    const char* boot_rom_path = nullptr;
 
-    if (argc < 2) {
-        log_error(LogCategory_Keep, "No ROM filename specified.");
+    struct argparse_option options[] = {
+        OPT_HELP(),
+        OPT_STRING('b', "boot-rom", (void*)&boot_rom_path, "path to boot ROM", nullptr, 0, 0),
+        OPT_END(),
+    };
+
+    struct argparse argparse;
+    argparse_init(&argparse, options, usages, 0);
+    argparse_describe(&argparse, "A Game Boy emulator written in C.", nullptr);
+
+    argc = argparse_parse(&argparse, argc, argv);
+
+    if (argc < 1) {
+        argparse_usage(&argparse);
         return 1;
     }
 
     size_t rom_len = 0;
-    uint8_t* const rom = SDL_LoadFile(argv[1], &rom_len);
+    uint8_t* const rom = SDL_LoadFile(argv[0], &rom_len);
 
     if (rom == nullptr) {
         log_error(LogCategory_Keep, "Could not read ROM file.");
@@ -67,8 +87,31 @@ int main(const int argc, const char* const argv[]) {
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
+    uint8_t* boot_rom = nullptr;
+
+    if (boot_rom_path != nullptr) {
+        size_t boot_rom_len = 0;
+        boot_rom = SDL_LoadFile(boot_rom_path, &boot_rom_len);
+
+        if (boot_rom == nullptr) {
+            log_error(LogCategory_Keep, "Could not read boot ROM file.");
+            return 1;
+        }
+
+        if (boot_rom_len != GB_BOOT_ROM_LEN_EXPECTED) {
+            log_error(
+                LogCategory_Keep,
+                "Boot ROM must be exactly %zu bytes long (was %zu)",
+                GB_BOOT_ROM_LEN_EXPECTED,
+                boot_rom_len
+            );
+            SDL_free(boot_rom);
+            return 1;
+        }
+    }
+
     State state = (State){
-        .gb = GameBoy_new(nullptr, rom, rom_len),
+        .gb = GameBoy_new(boot_rom, rom, rom_len),
         .window_width = WINDOW_WIDTH_INITIAL,
         .window_height = WINDOW_HEIGHT_INITIAL,
         .cycle_accumulator = 0.0,

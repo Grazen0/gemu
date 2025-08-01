@@ -13,9 +13,9 @@ static void GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
     gb->joyp = value | 0x0F;
 
     if ((gb->joyp & Joypad_DPadSelect) == 0) {
-        if (gb->joypad.right) {
+        if (gb->joypad.right)
             gb->joyp &= ~Joypad_RightA;
-        }
+
         if (gb->joypad.left)
             gb->joyp &= ~Joypad_LeftB;
 
@@ -43,22 +43,19 @@ static void GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
 
 static void verify_rom_checksum(const u8* const rom) {
     u8 checksum = 0;
-    for (u16 addr = 0x0134; addr <= 0x014C; ++addr) {
+    for (u16 addr = 0x0134; addr <= 0x014C; ++addr)
         checksum = checksum - rom[addr] - 1;
-    }
 
     const u8 checksum_lo = checksum & 0x0F;
 
-    if (checksum_lo != rom[RomHeader_HeaderChecksum]) {
-        log_error(
-            "Lower 8 bits of ROM checksum do not match expected value in "
-            "header (expected "
-            "$%02X, was $%02X)",
-            rom[RomHeader_HeaderChecksum],
-            checksum_lo
-        );
-        exit(1);
-    }
+    BAIL_IF(
+        checksum_lo != rom[RomHeader_HeaderChecksum],
+        "Lower 8 bits of ROM checksum do not match expected value in "
+        "header (expected "
+        "$%02X, was $%02X)",
+        rom[RomHeader_HeaderChecksum],
+        checksum_lo
+    );
 }
 
 static void GameBoy_simulate_boot(GameBoy* const gb) {
@@ -120,22 +117,17 @@ void GameBoy_destroy(GameBoy* const restrict gb) {
     gb->rom_len = 0;
 }
 
+// NOLINTNEXTLINE
 u8 GameBoy_read_io(const GameBoy* const restrict gb, const u16 addr) {
-    if (addr == 0xFF00) {
-        // FF00 (joypad input)
+    if (addr == 0xFF00) // FF00 (joypad input)
         return gb->joyp;
-    }
 
-    if (addr == 0xFF01) {
-        // FF01 (serial transfer data)
-        // TODO: implement serial transfer
+    // TODO: implement serial transfer
+    if (addr == 0xFF01) // FF01 (serial transfer data)
         return 0xFF;
-    }
 
-    if (addr == 0xFF02) {
-        // FF02 (serial transfer control)
+    if (addr == 0xFF02) // FF02 (serial transfer control)
         return gb->sc;
-    }
 
     if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
@@ -151,24 +143,17 @@ u8 GameBoy_read_io(const GameBoy* const restrict gb, const u16 addr) {
         // clang-format on
     }
 
-    if (addr == 0xFF0F) {
-        // FF0F (interrupts)
+    if (addr == 0xFF0F) // FF0F (interrupts)
         return gb->if_;
-    }
 
-    if (addr >= 0xFF10 && addr <= 0xFF26) {
-        // FF10-FF26 (audio)
+    if (addr >= 0xFF10 && addr <= 0xFF26) // FF10-FF26 (audio)
         BAIL("I/O audio read ($%04X)", addr);
-    }
 
-    if (addr >= 0xFF30 && addr <= 0xFF3F) {
-        // FF30-FF3F (wave pattern)
+    if (addr >= 0xFF30 && addr <= 0xFF3F) // FF30-FF3F (wave pattern)
         BAIL("I/O wave pattern read ($%04X)", addr);
-    }
 
     if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
-
         // clang-format off
         switch (addr) {
             case 0xFF40: return gb->lcdc;
@@ -187,34 +172,23 @@ u8 GameBoy_read_io(const GameBoy* const restrict gb, const u16 addr) {
         // clang-format on
     }
 
-    if (addr == 0xFF4D) {
-        // FF4D (CGB registers, CGB-only)
+    if (addr == 0xFF4D) // FF4D (CGB registers, CGB-only)
         return 0xFF;
-    }
 
-    if (addr == 0xFF4F) {
-        // FF4F (VRAM bank select, CGB-only)
-    }
-
-    if (addr == 0xFF50) {
-        // FF50 (boot ROM disable)
+    if (addr == 0xFF4F) // FF4F (VRAM bank select, CGB-only)
         return 0xFF;
-    }
 
-    if (addr >= 0xFF51 && addr <= 0xFF55) {
-        // FF51-FF55 (VRAM DMA, CGB-only)
+    if (addr == 0xFF50) // FF50 (boot ROM disable)
         return 0xFF;
-    }
 
-    if (addr >= 0xFF68 && addr <= 0xFF6B) {
-        // FF68-FF6B (LCD color palettes, CGB-only)
+    if (addr >= 0xFF51 && addr <= 0xFF55) // FF51-FF55 (VRAM DMA, CGB-only)
         return 0xFF;
-    }
 
-    if (addr == 0xFF70) {
-        // FF70 (WRAM bank select, CGB-only)
+    if (addr >= 0xFF68 && addr <= 0xFF6B) // FF68-FF6B (LCD palettes, CGB-only)
         return 0xFF;
-    }
+
+    if (addr == 0xFF70) // FF70 (WRAM bank select, CGB-only)
+        return 0xFF;
 
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
 }
@@ -235,45 +209,29 @@ u8 GameBoy_read_mem(const void* const restrict ctx, const u16 addr) {
         return gb->rom[addr];
     }
 
-    if (addr <= 0x9FFF) {
-        // 8000-9FFF (VRAM)
+    if (addr <= 0x9FFF) // 8000-9FFF (VRAM)
         return gb->vram[addr - 0x8000];
-    }
 
-    if (addr <= 0xBFFF) {
-        // A000-BFFF (External RAM)
+    if (addr <= 0xBFFF) // A000-BFFF (External RAM)
         BAIL("TODO: GameBoy_read_mem (addr = $%04X)", addr);
-    }
 
-    if (addr <= 0xDFFF) {
-        // C000-DFFF (WRAM)
+    if (addr <= 0xDFFF) // C000-DFFF (WRAM)
         return gb->ram[addr - 0xC000];
-    }
 
-    if (addr <= 0xFDFF) {
-        // E000-FDFF (Echo RAM, mirror of C000-DDFF)
+    if (addr <= 0xFDFF) // E000-FDFF (Echo RAM, mirror of C000-DDFF)
         return gb->ram[addr - 0xE000];
-    }
 
-    if (addr <= 0xFE9F) {
-        // FE00-FE9F (OAM)
+    if (addr <= 0xFE9F) // FE00-FE9F (OAM)
         return gb->oam[addr - 0xFE00];
-    }
 
-    if (addr <= 0xFEFF) {
-        // FEA0-FEFF (Not usable)
+    if (addr <= 0xFEFF) // FEA0-FEFF (Not usable)
         BAIL("Tried to read unusable memory (addr = $%04X)", addr);
-    }
 
-    if (addr <= 0xFF7F) {
-        // FF00-FF7F (I/O registers)
+    if (addr <= 0xFF7F) // FF00-FF7F (I/O registers)
         return GameBoy_read_io(gb, addr);
-    }
 
-    if (addr <= 0xFFFE) {
-        // FF80-FFFE (High RAM)
+    if (addr <= 0xFFFE) // FF80-FFFE (High RAM)
         return gb->hram[addr - 0xFF80];
-    }
 
     // FFFF (Interrupt Enable Register)
     return gb->ie;
@@ -369,7 +327,7 @@ void GameBoy_write_io(
 void GameBoy_write_mem(
     void* const restrict ctx, const u16 addr, const u8 value
 ) {
-    GameBoy* const restrict gb = ctx;
+    GameBoy* const gb = ctx;
 
     log_trace("write mem (addr = $%04X, value = $%02X)", addr, value);
 
@@ -419,17 +377,15 @@ void GameBoy_service_interrupts(
     const u8 int_mask = gb->if_ & gb->ie;
 
     // Disable HALT on an interrupt
-    if (int_mask != 0 && gb->cpu.mode == CpuMode_Halted) {
+    if (int_mask != 0 && gb->cpu.mode == CpuMode_Halted)
         gb->cpu.mode = CpuMode_Running;
-    }
 
-    if (!gb->cpu.ime) {
+    if (!gb->cpu.ime)
         return;
-    }
 
-    for (u8 i = 0; i <= 4; ++i) {
+    for (size_t i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
-            log_debug("Servicing interrupt #%i", i);
+            log_debug("Servicing interrupt #%zu", i);
             gb->if_ &= ~(1 << i);
             Cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
             break;

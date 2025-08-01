@@ -25,18 +25,11 @@ stdenv.mkDerivation {
 
   cmakeFlags = [
     "-DCMAKE_BUILD_TYPE=Release"
-    "-DBUILD_TESTING=on"
+    "-DGEMU_BUILD_TESTING=On"
   ];
 
   enableParallelBuilding = true;
-
   doCheck = true;
-
-  installPhase = ''
-    runHook preInstall
-    install -Dm755 gemu -t "$out/bin"
-    runHook postInstall
-  '';
 
   meta = with lib; {
     description = "A Game Boy emulator written in C.";

@@ -37,6 +37,8 @@ target_link_libraries(gemu_lib PRIVATE argparse_static)
 add_executable(gemu src/main.c)
 target_link_libraries(gemu PRIVATE gemu_lib)
 
+install(TARGETS gemu RUNTIME DESTINATION bin)
+
 include(CTest)
 if(GEMU_BUILD_TESTING AND BUILD_TESTING)
   add_subdirectory(tests)

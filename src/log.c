@@ -1,6 +1,6 @@
 #include "log.h"
-#include "SDL3/SDL_mutex.h"
-#include "SDL3/SDL_thread.h"
+#include <SDL3/SDL_mutex.h>
+#include <SDL3/SDL_thread.h>
 #include "control.h"
 #include <errno.h>
 #include <limits.h>

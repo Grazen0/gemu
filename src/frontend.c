@@ -11,6 +11,7 @@
 #include "cpu.h"
 #include "game_boy.h"
 #include "sdl.h"
+#include "stdinc.h"
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -46,7 +47,7 @@ static constexpr size_t PALETTE_RGB_LEN = 4;
 /**
  * Color palette to display on-screen
  */
-static const uint8_t PALETTE_RGB[PALETTE_RGB_LEN][3] = {
+static const u8 PALETTE_RGB[PALETTE_RGB_LEN][3] = {
     {186, 218, 85},
     {130, 153, 59},
     { 74,  87, 34},
@@ -67,13 +68,13 @@ static const uint8_t PALETTE_RGB[PALETTE_RGB_LEN][3] = {
  *
  * \sa SDL_MapRGB
  */
-static uint32_t map_color_index(
+static u32 map_color_index(
     const size_t color_index, const SDL_PixelFormatDetails* const pixel_format
 ) {
     if (color_index >= PALETTE_RGB_LEN)
         BAIL("color index out of bounds: %zu", color_index);
 
-    const uint8_t* color_rgb = PALETTE_RGB[color_index];
+    const u8* color_rgb = PALETTE_RGB[color_index];
     return SDL_MapRGB(
         pixel_format, nullptr, color_rgb[0], color_rgb[1], color_rgb[2]
     );
@@ -162,8 +163,8 @@ static void update(State* const restrict state, const double delta) {
             progress -= 1.0;
         }
 
-        const uint8_t prev_ly = state->gb.ly;
-        state->gb.ly = (uint8_t)(progress * GB_LCD_MAX_LY);
+        const u8 prev_ly = state->gb.ly;
+        state->gb.ly = (u8)(progress * GB_LCD_MAX_LY);
 
         state->gb.stat |= (state->gb.ly == state->gb.lcy) << 2;
 
@@ -196,7 +197,7 @@ static void update(State* const restrict state, const double delta) {
 
         // TIMA is only incremented if TAC's bit 2 is set
         if (state->gb.tac & 0b100) {
-            const uint8_t clock_select = state->gb.tac & 0b11;
+            const u8 clock_select = state->gb.tac & 0b11;
             const int tac_delay_cycles =
                 clock_select == 0 ? 256 : 4 * clock_select;
 
@@ -233,36 +234,36 @@ static void draw_tiles(
     static constexpr size_t TILES_HORIZONTAL = 32;
     static constexpr size_t TILES_VERTICAL = 32;
 
-    uint32_t* const pixels = surface->pixels;
+    u32* const pixels = surface->pixels;
 
     const size_t tile_data_start =
         state->gb.lcdc & LcdControl_BgwTileArea ? 0 : 0x1000;
     const size_t tile_map_start =
         state->gb.lcdc & LcdControl_BgTileMap ? 0x1C00 : 0x1800;
 
-    const uint8_t* const tile_data = &state->gb.vram[tile_data_start];
-    const uint8_t* const tile_map = &state->gb.vram[tile_map_start];
+    const u8* const tile_data = &state->gb.vram[tile_data_start];
+    const u8* const tile_map = &state->gb.vram[tile_map_start];
 
     for (size_t tile_y = 0; tile_y < TILES_VERTICAL; ++tile_y) {
         for (size_t tile_x = 0; tile_x < TILES_HORIZONTAL; ++tile_x) {
-            const uint8_t tile_index =
+            const u8 tile_index =
                 tile_map[(tile_y * TILES_HORIZONTAL) + tile_x];
             const long tile_index_signed =
                 state->gb.lcdc & LcdControl_BgwTileArea ? tile_index
-                                                        : (int8_t)tile_index;
+                                                        : (i8)tile_index;
 
             for (size_t tile_row_index = 0; tile_row_index < 8;
                  ++tile_row_index) {
-                const uint8_t byte_1 =
+                const u8 byte_1 =
                     tile_data[(tile_index_signed * 16) + (2 * tile_row_index)];
-                const uint8_t byte_2 = tile_data
+                const u8 byte_2 = tile_data
                     [(tile_index_signed * 16) + (2 * tile_row_index) + 1];
 
                 for (size_t tile_col_index = 0; tile_col_index < 8;
                      ++tile_col_index) {
-                    const uint8_t bit_lo = (byte_1 >> tile_col_index) & 1;
-                    const uint8_t bit_hi = (byte_2 >> tile_col_index) & 1;
-                    const uint8_t palette_index = bit_lo | (bit_hi << 1);
+                    const u8 bit_lo = (byte_1 >> tile_col_index) & 1;
+                    const u8 bit_hi = (byte_2 >> tile_col_index) & 1;
+                    const u8 palette_index = bit_lo | (bit_hi << 1);
 
                     const size_t color =
                         (state->gb.bgp >> (2 * palette_index)) & 0b11;
@@ -282,34 +283,34 @@ static void draw_objects(
     const State* const state, const SDL_Surface* const surface,
     const SDL_PixelFormatDetails* const pixel_format
 ) {
-    uint32_t* const pixels = surface->pixels;
+    u32* const pixels = surface->pixels;
 
     for (size_t obj = 0; obj < 40; ++obj) {
-        const uint8_t* const obj_data = &state->gb.oam[obj * 4];
+        const u8* const obj_data = &state->gb.oam[obj * 4];
 
         const size_t y_pos = obj_data[0] - 16;
         const size_t x_pos = obj_data[1] - 8;
         const size_t tile_index = obj_data[2];
-        const uint8_t attrs = obj_data[3];
+        const u8 attrs = obj_data[3];
 
         // TODO: implement priority (background over object)
         // Will probably need two passes: low and normal priority objs
 
         const bool flip_x = (attrs & ObjAttrs_FlipX) != 0;
         const bool flip_y = (attrs & ObjAttrs_FlipY) != 0;
-        const uint8_t obp = (attrs & ObjAttrs_DmgPalette) != 0 ? state->gb.obp1
-                                                               : state->gb.obp0;
+        const u8 obp = (attrs & ObjAttrs_DmgPalette) != 0 ? state->gb.obp1
+                                                          : state->gb.obp0;
 
         for (size_t sprite_row = 0; sprite_row < 8; ++sprite_row) {
             // Objects always use the $8000 method
-            const uint8_t byte_1 =
+            const u8 byte_1 =
                 state->gb.vram[(tile_index * 0x10) + (2 * sprite_row)];
-            const uint8_t byte_2 =
+            const u8 byte_2 =
                 state->gb.vram[(tile_index * 0x10) + (2 * sprite_row) + 1];
 
             for (size_t sprite_col = 0; sprite_col < 8; ++sprite_col) {
-                const uint8_t bit_lo = (byte_1 >> sprite_col) & 1;
-                const uint8_t bit_hi = (byte_2 >> sprite_col) & 1;
+                const u8 bit_lo = (byte_1 >> sprite_col) & 1;
+                const u8 bit_hi = (byte_2 >> sprite_col) & 1;
                 const size_t palette_index = bit_lo | (bit_hi << 1);
                 const size_t color = (obp >> (palette_index * 2)) & 0b11;
 

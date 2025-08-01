@@ -2,8 +2,8 @@
 #define GEMU_INSTRUCTIONS_H
 
 #include "cpu.h"
-#include <stdint.h>
+#include "stdinc.h"
 
-void Cpu_execute(Cpu* restrict cpu, Memory* restrict mem, uint8_t opcode);
+void Cpu_execute(Cpu* restrict cpu, Memory* restrict mem, u8 opcode);
 
 #endif

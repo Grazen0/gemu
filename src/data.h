@@ -1,10 +1,11 @@
 #ifndef GEMU_DATA_H
 #define GEMU_DATA_H
 
+#include "stdinc.h"
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum RomHeader : uint16_t {
+typedef enum RomHeader : u16 {
     RomHeader_EntryPoint = 0x100,
     RomHeader_NintendoLogo = 0x104,
     RomHeader_Title = 0x134,
@@ -22,7 +23,7 @@ typedef enum RomHeader : uint16_t {
     RomHeader_GlobalChecksum = 0x14E,
 } RomHeader;
 
-typedef enum CartridgeType : uint8_t {
+typedef enum CartridgeType : u8 {
     CartridgeType_RomOnly = 0x00,
     CartridgeType_Mcb1 = 0x01,
     CartridgeType_Mcb1Ram = 0x02,

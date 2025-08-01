@@ -1,5 +1,5 @@
 #include "num.h"
-#include <stdint.h>
+#include "stdinc.h"
 #include <unity.h>
 
 void test_concat_u16(void) {
@@ -11,7 +11,7 @@ void test_concat_u16(void) {
 }
 
 void test_set_bits(void) {
-    uint8_t bits = 0;
+    u8 bits = 0;
 
     set_bits(&bits, 0x23, true);
     TEST_ASSERT_EQUAL_HEX(0x23, bits);

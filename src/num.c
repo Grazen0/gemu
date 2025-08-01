@@ -1,12 +1,12 @@
 #include "num.h"
 #include <stdint.h>
 
-uint16_t concat_u16(const uint8_t hi, const uint8_t lo) {
-    return ((uint16_t)hi << 8) | (uint16_t)lo;
+u16 concat_u16(const u8 hi, const u8 lo) {
+    return ((u16)hi << 8) | (u16)lo;
 }
 
 void set_bits(
-    uint8_t* const restrict dest, const uint8_t mask, const bool value
+    u8* const restrict dest, const u8 mask, const bool value
 ) {
     if (value) {
         *dest |= mask;

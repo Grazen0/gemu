@@ -1,15 +1,15 @@
 #ifndef GEMU_LOG_H
 #define GEMU_LOG_H
 
+#include "stdinc.h"
 #include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 
 static constexpr size_t LOG_MESSAGE_CAPACITY = 256;
 
-typedef enum LogLevel : uint8_t {
+typedef enum LogLevel : u8 {
     LogLevel_Trace = 4,
     LogLevel_Debug = 3,
     LogLevel_Info = 2,

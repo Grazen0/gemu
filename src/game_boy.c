@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 static void
-GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t value) {
+GameBoy_write_joyp(GameBoy* const restrict gb, const u8 value) {
     gb->joyp = value | 0x0F;
 
     if ((gb->joyp & Joypad_DPadSelect) == 0) {
@@ -42,13 +42,13 @@ GameBoy_write_joyp(GameBoy* const restrict gb, const uint8_t value) {
     }
 }
 
-static void verify_rom_checksum(const uint8_t* const rom) {
-    uint8_t checksum = 0;
-    for (uint16_t addr = 0x0134; addr <= 0x014C; ++addr) {
+static void verify_rom_checksum(const u8* const rom) {
+    u8 checksum = 0;
+    for (u16 addr = 0x0134; addr <= 0x014C; ++addr) {
         checksum = checksum - rom[addr] - 1;
     }
 
-    const uint8_t checksum_lo = checksum & 0x0F;
+    const u8 checksum_lo = checksum & 0x0F;
 
     if (checksum_lo != rom[RomHeader_HeaderChecksum]) {
         log_error(
@@ -79,7 +79,7 @@ static void GameBoy_simulate_boot(GameBoy* const gb) {
 }
 
 GameBoy
-GameBoy_new(uint8_t* const boot_rom, uint8_t* const rom, const size_t rom_len) {
+GameBoy_new(u8* const boot_rom, u8* const rom, const size_t rom_len) {
     GameBoy gb = (GameBoy){
         .cpu = Cpu_new(),
         .boot_rom = boot_rom,
@@ -123,7 +123,7 @@ void GameBoy_destroy(GameBoy* const restrict gb) {
     gb->rom_len = 0;
 }
 
-uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
+u8 GameBoy_read_io(const GameBoy* const restrict gb, const u16 addr) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
         return gb->joyp;
@@ -222,7 +222,7 @@ uint8_t GameBoy_read_io(const GameBoy* const restrict gb, const uint16_t addr) {
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
 }
 
-uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
+u8 GameBoy_read_mem(const void* const restrict ctx, const u16 addr) {
     const GameBoy* const gb = ctx;
 
     if (addr <= 0x7FFF) {
@@ -282,14 +282,14 @@ uint8_t GameBoy_read_mem(const void* const restrict ctx, const uint16_t addr) {
     return gb->ie;
 }
 
-uint16_t GameBoy_read_mem_u16(GameBoy* const restrict gb, uint16_t addr) {
-    const uint8_t lo = GameBoy_read_mem(gb, addr);
-    const uint8_t hi = GameBoy_read_mem(gb, addr + 1);
+u16 GameBoy_read_mem_u16(GameBoy* const restrict gb, u16 addr) {
+    const u8 lo = GameBoy_read_mem(gb, addr);
+    const u8 hi = GameBoy_read_mem(gb, addr + 1);
     return concat_u16(hi, lo);
 }
 
 void GameBoy_write_io(
-    GameBoy* const restrict gb, const uint16_t addr, const uint8_t value
+    GameBoy* const restrict gb, const u16 addr, const u8 value
 ) {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
@@ -323,7 +323,7 @@ void GameBoy_write_io(
         // TODO: I/O wave pattern write
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        const uint16_t src = (uint16_t)value << 8;
+        const u16 src = (u16)value << 8;
 
         // TODO: implement proper timing
         for (size_t i = 0; i < 0xA0; ++i) {
@@ -370,7 +370,7 @@ void GameBoy_write_io(
 }
 
 void GameBoy_write_mem(
-    void* const restrict ctx, const uint16_t addr, const uint8_t value
+    void* const restrict ctx, const u16 addr, const u8 value
 ) {
     GameBoy* const restrict gb = ctx;
 
@@ -419,7 +419,7 @@ void GameBoy_write_mem(
 void GameBoy_service_interrupts(
     GameBoy* const restrict gb, Memory* const restrict mem
 ) {
-    const uint8_t int_mask = gb->if_ & gb->ie;
+    const u8 int_mask = gb->if_ & gb->ie;
 
     // Disable HALT on an interrupt
     if (int_mask != 0 && gb->cpu.mode == CpuMode_Halted) {
@@ -430,7 +430,7 @@ void GameBoy_service_interrupts(
         return;
     }
 
-    for (uint8_t i = 0; i <= 4; ++i) {
+    for (u8 i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
             log_debug("Servicing interrupt #%i", i);
             gb->if_ &= ~(1 << i);

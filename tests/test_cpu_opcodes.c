@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "stdinc.h"
 #include <cjson/cJSON.h>
 #include <dirent.h>
 #include <stdint.h>
@@ -8,39 +9,43 @@
 
 typedef struct DumbRam {
     bool active[0x10000];
-    uint8_t data[0x10000];
+    u8 data[0x10000];
 } DumbRam;
 
 typedef struct RamEntry {
-    uint16_t address;
-    uint8_t value;
+    u16 address;
+    u8 value;
 } RamEntry;
 
 typedef struct CpuState {
-    uint16_t pc;
-    uint16_t sp;
-    uint8_t a;
-    uint8_t b;
-    uint8_t c;
-    uint8_t d;
-    uint8_t e;
-    uint8_t f;
-    uint8_t h;
-    uint8_t l;
-    uint8_t ime;
+    u16 pc;
+    u16 sp;
+    u8 a;
+    u8 b;
+    u8 c;
+    u8 d;
+    u8 e;
+    u8 f;
+    u8 h;
+    u8 l;
+    u8 ime;
     RamEntry* ram;
     int ram_len;
 } CpuState;
 
-static uint8_t read_mock_ram(const void* ctx, const uint16_t addr) {
+static u8 read_mock_ram(const void* ctx, const u16 addr) {
     const DumbRam* const ram = ctx;
-    TEST_ASSERT_TRUE_MESSAGE(ram->active[addr], "tried to read from inactive memory");
+    TEST_ASSERT_TRUE_MESSAGE(
+        ram->active[addr], "tried to read from inactive memory"
+    );
     return ram->data[addr];
 }
 
-static void write_mock_ram(void* ctx, const uint16_t addr, const uint8_t value) {
+static void write_mock_ram(void* ctx, const u16 addr, const u8 value) {
     DumbRam* const ram = ctx;
-    TEST_ASSERT_TRUE_MESSAGE(ram->active[addr], "tried to write into inactive memory");
+    TEST_ASSERT_TRUE_MESSAGE(
+        ram->active[addr], "tried to write into inactive memory"
+    );
     ram->data[addr] = value;
 }
 
@@ -98,7 +103,8 @@ static void CpuState_destroy(CpuState* const restrict state) {
 }
 
 static void run_cpu_tick_test(
-    const CpuState* const restrict initial_state, const CpuState* const restrict final_state,
+    const CpuState* const restrict initial_state,
+    const CpuState* const restrict final_state,
     const char* const restrict test_name
 ) {
     Cpu cpu = Cpu_new();
@@ -160,8 +166,16 @@ static void run_cpu_tick_test(
     for (int i = 0; i < final_state->ram_len; ++i) {
         const RamEntry* const entry = &final_state->ram[i];
 
-        snprintf(msg_buffer, sizeof(msg_buffer), "(%s, ram @ $%04X)", test_name, entry->address);
-        TEST_ASSERT_EQUAL_HEX8_MESSAGE(entry->value, dumb_ram.data[entry->address], msg_buffer);
+        snprintf(
+            msg_buffer,
+            sizeof(msg_buffer),
+            "(%s, ram @ $%04X)",
+            test_name,
+            entry->address
+        );
+        TEST_ASSERT_EQUAL_HEX8_MESSAGE(
+            entry->value, dumb_ram.data[entry->address], msg_buffer
+        );
     }
 }
 
@@ -174,7 +188,8 @@ static void run_opcode_test_file(const char* const restrict filepath) {
     fseek(file, 0, SEEK_SET);
 
     char* const file_content = malloc(file_len * sizeof(*file_content));
-    const size_t read_bytes = fread(file_content, sizeof(*file_content), file_len, file);
+    const size_t read_bytes =
+        fread(file_content, sizeof(*file_content), file_len, file);
     TEST_ASSERT_EQUAL_MESSAGE(file_len, read_bytes, "could not read JSON file");
     fclose(file);
 
@@ -182,11 +197,15 @@ static void run_opcode_test_file(const char* const restrict filepath) {
     TEST_ASSERT_NOT_NULL_MESSAGE(test_cases, "could not parse JSON");
     free(file_content);
 
-    for (cJSON* test_case = test_cases->child; test_case != nullptr; test_case = test_case->next) {
-        const cJSON* const name = cJSON_GetObjectItemCaseSensitive(test_case, "name");
+    for (cJSON* test_case = test_cases->child; test_case != nullptr;
+         test_case = test_case->next) {
+        const cJSON* const name =
+            cJSON_GetObjectItemCaseSensitive(test_case, "name");
 
-        const cJSON* const initial = cJSON_GetObjectItemCaseSensitive(test_case, "initial");
-        const cJSON* const final = cJSON_GetObjectItemCaseSensitive(test_case, "final");
+        const cJSON* const initial =
+            cJSON_GetObjectItemCaseSensitive(test_case, "initial");
+        const cJSON* const final =
+            cJSON_GetObjectItemCaseSensitive(test_case, "final");
 
         CpuState initial_state = CpuState_from_cjson(initial);
         CpuState final_state = CpuState_from_cjson(final);
@@ -209,14 +228,22 @@ static int dirent_filter(const struct dirent* const restrict entry) {
 
 void test_cpu_opcodes(void) {
     struct dirent** entries = nullptr;
-    const int entries_len = scandir("data/core/cpu_opcodes", &entries, dirent_filter, alphasort);
-    TEST_ASSERT_NOT_EQUAL_MESSAGE(-1, entries_len, "could not read data directory");
+    const int entries_len =
+        scandir("data/core/cpu_opcodes", &entries, dirent_filter, alphasort);
+    TEST_ASSERT_NOT_EQUAL_MESSAGE(
+        -1, entries_len, "could not read data directory"
+    );
 
     for (int i = 0; i < entries_len; ++i) {
         struct dirent* const entry = entries[i];
 
         char full_path[512];
-        snprintf(full_path, sizeof(full_path), "data/core/cpu_opcodes/%s", entry->d_name);
+        snprintf(
+            full_path,
+            sizeof(full_path),
+            "data/core/cpu_opcodes/%s",
+            entry->d_name
+        );
         free(entry);
 
         run_opcode_test_file(full_path);

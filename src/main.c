@@ -11,9 +11,9 @@
 #include "game_boy.h"
 #include "log.h"
 #include "sdl.h"
+#include "stdinc.h"
 #include "string.h"
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -69,7 +69,7 @@ int main(int argc, const char* argv[]) {
     }
 
     size_t rom_len = 0;
-    uint8_t* const rom = SDL_LoadFile(argv[0], &rom_len);
+    u8* const rom = SDL_LoadFile(argv[0], &rom_len);
 
     if (rom == nullptr) {
         log_error("Could not read ROM file.");
@@ -112,7 +112,7 @@ int main(int argc, const char* argv[]) {
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
-    uint8_t* boot_rom = nullptr;
+    u8* boot_rom = nullptr;
 
     if (boot_rom_path != nullptr) {
         size_t boot_rom_len = 0;

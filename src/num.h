@@ -1,10 +1,11 @@
 #ifndef GEMU_NUM_H
 #define GEMU_NUM_H
 
+#include "stdinc.h"
 #include <stdint.h>
 
-[[nodiscard]] uint16_t concat_u16(uint8_t hi, uint8_t lo);
+[[nodiscard]] u16 concat_u16(u8 hi, u8 lo);
 
-void set_bits(uint8_t* restrict dest, uint8_t mask, bool value);
+void set_bits(u8* restrict dest, u8 mask, bool value);
 
 #endif

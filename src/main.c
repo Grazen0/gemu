@@ -38,7 +38,6 @@ static void cleanup(void) {
 }
 
 int main(int argc, const char* argv[]) {
-    atexit(SDL_Quit);
     logger_init(LogLevel_Info);
 
     const char* boot_rom_path = nullptr;
@@ -84,6 +83,7 @@ int main(int argc, const char* argv[]) {
     log_info("Game title: %s", game_title);
 
     SDL_CHECKED(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
+    atexit(SDL_Quit);
 
     SDL_CHECKED(
         SDL_CreateWindowAndRenderer(

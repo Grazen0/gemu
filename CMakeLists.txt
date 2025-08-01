@@ -10,9 +10,6 @@ else()
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(argparse_static REQUIRED argparse)
-
 find_package(SDL3 REQUIRED CONFIG REQUIRED)
 
 # Set default build type to Debug
@@ -32,9 +29,11 @@ set(gemu_sources
     src/num.c
     src/sdl.c)
 
+add_library(argparse STATIC external/argparse/argparse.c)
+target_include_directories(argparse PUBLIC external/argparse)
+
 add_library(gemu_lib ${gemu_sources})
 target_include_directories(gemu_lib PUBLIC src)
-target_link_libraries(gemu_lib PRIVATE argparse_static)
 
 if(TARGET SDL3::SDL3-static)
   message(STATUS "Using static SDL3")
@@ -48,6 +47,7 @@ endif()
 
 add_executable(gemu src/main.c)
 target_link_libraries(gemu PRIVATE gemu_lib)
+target_link_libraries(gemu PRIVATE argparse)
 
 install(TARGETS gemu RUNTIME DESTINATION bin)
 

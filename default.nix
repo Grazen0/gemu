@@ -4,7 +4,6 @@
   cmake,
   pkg-config,
   sdl3,
-  argparse,
   unity-test,
   cjson,
   ruby,
@@ -18,7 +17,6 @@ stdenv.mkDerivation {
   nativeBuildInputs = [
     cmake
     pkg-config
-    argparse
     sdl3
     unity-test
     cjson

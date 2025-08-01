@@ -1,9 +1,9 @@
 #include "log.h"
+#include "SDL3/SDL_mutex.h"
+#include "SDL3/SDL_thread.h"
 #include "control.h"
 #include <errno.h>
 #include <limits.h>
-#include <pthread.h>
-#include <semaphore.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 
 static bool logger_ready = false;
 static LogLevel active_log_level = LogLevel_Info;
-static pthread_t logger_thread = 0;
+static SDL_Thread* logger_thread = nullptr;
 static LogQueue log_queue = {};
 
 static const char* log_level_label(const LogLevel level) {
@@ -42,26 +42,26 @@ static void print_log_message(const LogMessage* const restrict message) {
     fputc('\n', stream);
 }
 
-static void* logger_thread_fn([[maybe_unused]] void* _arg) {
+static int logger_thread_fn([[maybe_unused]] void* data) {
     while (true) {
-        pthread_mutex_lock(&log_queue.mtx);
+        SDL_LockMutex(log_queue.mtx);
 
         while (!log_queue.quit && log_queue.head == log_queue.tail)
-            pthread_cond_wait(&log_queue.cond, &log_queue.mtx);
+            SDL_WaitCondition(log_queue.cond, log_queue.mtx);
 
         if (log_queue.quit && log_queue.head == log_queue.tail) {
-            pthread_mutex_unlock(&log_queue.mtx);
+            SDL_UnlockMutex(log_queue.mtx);
             break;
         }
 
         const LogMessage message = log_queue.messages[log_queue.tail];
         log_queue.tail = (log_queue.tail + 1) % log_queue.capacity;
-        pthread_mutex_unlock(&log_queue.mtx);
+        SDL_UnlockMutex(log_queue.mtx);
 
         print_log_message(&message);
     }
 
-    return nullptr;
+    return 0;
 }
 
 void logger_init(const LogLevel log_level) {
@@ -72,15 +72,13 @@ void logger_init(const LogLevel log_level) {
         .messages = malloc(sizeof(log_queue.messages[0])),
         .head = 0,
         .tail = 0,
-        .mtx = {},
-        .cond = {},
+        .mtx = SDL_CreateMutex(),
+        .cond = SDL_CreateCondition(),
         .quit = false,
     };
 
-    pthread_mutex_init(&log_queue.mtx, nullptr);
-    pthread_cond_init(&log_queue.cond, nullptr);
-
-    pthread_create(&logger_thread, nullptr, logger_thread_fn, nullptr);
+    // NOLINTNEXTLINE
+    logger_thread = SDL_CreateThread(logger_thread_fn, "Logger", nullptr);
 
     atexit(logger_cleanup);
     logger_ready = true;
@@ -88,14 +86,21 @@ void logger_init(const LogLevel log_level) {
 
 void logger_cleanup(void) {
     logger_ready = false;
-    pthread_mutex_lock(&log_queue.mtx);
-    log_queue.quit = true;
-    pthread_cond_signal(&log_queue.cond);
-    pthread_mutex_unlock(&log_queue.mtx);
-    pthread_join(logger_thread, nullptr);
 
-    pthread_mutex_destroy(&log_queue.mtx);
-    pthread_cond_destroy(&log_queue.cond);
+    SDL_LockMutex(log_queue.mtx);
+    log_queue.quit = true;
+
+    SDL_SignalCondition(log_queue.cond);
+    SDL_UnlockMutex(log_queue.mtx);
+
+    SDL_WaitThread(logger_thread, nullptr);
+    logger_thread = nullptr;
+
+    SDL_DestroyMutex(log_queue.mtx);
+    log_queue.mtx = nullptr;
+
+    SDL_DestroyCondition(log_queue.cond);
+    log_queue.cond = nullptr;
 }
 
 static void grow_log_queue(void) {
@@ -129,7 +134,7 @@ vlog(const LogLevel level, const char* const restrict format, va_list args) {
     if (!logger_ready || level > active_log_level)
         return;
 
-    pthread_mutex_lock(&log_queue.mtx);
+    SDL_LockMutex(log_queue.mtx);
     if ((log_queue.head + 1) % log_queue.capacity == log_queue.tail) {
         grow_log_queue();
     }
@@ -142,8 +147,8 @@ vlog(const LogLevel level, const char* const restrict format, va_list args) {
     vsnprintf(next_message->text, sizeof(next_message->text), format, args);
 
     log_queue.head = (log_queue.head + 1) % log_queue.capacity;
-    pthread_cond_signal(&log_queue.cond);
-    pthread_mutex_unlock(&log_queue.mtx);
+    SDL_SignalCondition(log_queue.cond);
+    SDL_UnlockMutex(log_queue.mtx);
 }
 
 void log_trace(const char* const restrict format, ...) {

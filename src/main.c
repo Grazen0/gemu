@@ -35,10 +35,10 @@ static void cleanup(void) {
     SDL_DestroyTexture(state.screen_texture);
 
     GameBoy_destroy(&state.gb);
-    SDL_Quit();
 }
 
 int main(int argc, const char* argv[]) {
+    atexit(SDL_Quit);
     logger_init(LogLevel_Info);
 
     const char* boot_rom_path = nullptr;

@@ -1,8 +1,8 @@
 #ifndef GEMU_LOG_H
 #define GEMU_LOG_H
 
+#include "SDL3/SDL_mutex.h"
 #include "stdinc.h"
-#include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -27,8 +27,8 @@ typedef struct LogQueue {
     LogMessage* messages;
     size_t head;
     size_t tail;
-    pthread_mutex_t mtx;
-    pthread_cond_t cond;
+    SDL_Mutex* mtx;
+    SDL_Condition* cond;
     bool quit;
 } LogQueue;
 

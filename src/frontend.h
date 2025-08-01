@@ -4,7 +4,7 @@
 #include "game_boy.h"
 #include <SDL3/SDL_render.h>
 
-typedef struct State {
+typedef struct {
     GameBoy gb;
     int window_width;
     int window_height;

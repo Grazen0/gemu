@@ -3,14 +3,14 @@
 
 #include "stdinc.h"
 
-typedef enum CpuFlag : u8 {
+typedef enum : u8 {
     CpuFlag_C = 1 << 4,
     CpuFlag_H = 1 << 5,
     CpuFlag_N = 1 << 6,
     CpuFlag_Z = 1 << 7,
 } CpuFlag;
 
-typedef enum CpuTableR : u8 {
+typedef enum : u8 {
     CpuTableR_B = 0,
     CpuTableR_C = 1,
     CpuTableR_D = 2,
@@ -21,28 +21,28 @@ typedef enum CpuTableR : u8 {
     CpuTableR_A = 7,
 } CpuTableR;
 
-typedef enum CpuTableRp : u8 {
+typedef enum : u8 {
     CpuTableRp_BC = 0,
     CpuTableRp_DE = 1,
     CpuTableRp_HL = 2,
     CpuTableRp_SP = 3,
 } CpuTableRp;
 
-typedef enum CpuTableRp2 : u8 {
+typedef enum : u8 {
     CpuTableRp2_BC = 0,
     CpuTableRp2_DE = 1,
     CpuTableRp2_HL = 2,
     CpuTableRp2_AF = 3,
 } CpuTableRp2;
 
-typedef enum CpuTableCc : u8 {
+typedef enum : u8 {
     CpuTableCc_NZ = 0,
     CpuTableCc_Z = 1,
     CpuTableCc_NC = 2,
     CpuTableCc_C = 3,
 } CpuTableCc;
 
-typedef enum CpuTableAlu : u8 {
+typedef enum : u8 {
     CpuTableAlu_Add = 0,
     CpuTableAlu_Adc = 1,
     CpuTableAlu_Sub = 2,
@@ -53,19 +53,19 @@ typedef enum CpuTableAlu : u8 {
     CpuTableAlu_Cp = 7,
 } CpuTableAlu;
 
-typedef struct Memory {
+typedef struct {
     void *ctx;
     u8 (*read)(const void *ctx, u16 addr);
     void (*write)(void *ctx, u16 addr, u8 value);
 } Memory;
 
-typedef enum CpuMode : u8 {
+typedef enum : u8 {
     CpuMode_Running,
     CpuMode_Halted,
     CpuMode_Stopped,
 } CpuMode;
 
-typedef struct Cpu {
+typedef struct {
     u8 b;
     u8 c;
     u8 d;

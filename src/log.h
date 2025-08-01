@@ -9,7 +9,7 @@
 
 static constexpr size_t LOG_MESSAGE_CAPACITY = 256;
 
-typedef enum LogLevel : u8 {
+typedef enum : u8 {
     LogLevel_Trace = 4,
     LogLevel_Debug = 3,
     LogLevel_Info = 2,
@@ -17,12 +17,12 @@ typedef enum LogLevel : u8 {
     LogLevel_Error = 0,
 } LogLevel;
 
-typedef struct LogMessage {
+typedef struct {
     LogLevel level;
     char text[LOG_MESSAGE_CAPACITY];
 } LogMessage;
 
-typedef struct LogQueue {
+typedef struct {
     size_t capacity;
     LogMessage *messages;
     size_t head;

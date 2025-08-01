@@ -13,7 +13,7 @@ constexpr int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
 constexpr double GB_VBLANK_FREQ = 59.7;
 constexpr size_t GB_BOOT_ROM_LEN_EXPECTED = 0x100;
 
-typedef enum LcdControl : u8 {
+typedef enum : u8 {
     LcdControl_Enable = 1 << 7,
     LcdControl_WinTileMap = 1 << 6,
     LcdControl_WinEnable = 1 << 5,
@@ -24,7 +24,7 @@ typedef enum LcdControl : u8 {
     LcdControl_ObjBgwEnable = 1 << 0,
 } LcdControl;
 
-typedef enum InterruptFlag : u8 {
+typedef enum : u8 {
     InterruptFlag_VBlank = 1 << 0,
     InterruptFlag_Lcd = 1 << 1,
     InterruptFlag_Timer = 1 << 2,
@@ -32,7 +32,7 @@ typedef enum InterruptFlag : u8 {
     InterruptFlag_Joypad = 1 << 4,
 } InterruptFlag;
 
-typedef enum Joypad : u8 {
+typedef enum : u8 {
     Joypad_RightA = 1 << 0,
     Joypad_LeftB = 1 << 1,
     Joypad_UpSelect = 1 << 2,
@@ -41,14 +41,14 @@ typedef enum Joypad : u8 {
     Joypad_ButtonsSelect = 1 << 5,
 } Joypad;
 
-typedef enum StatSelect : u8 {
+typedef enum : u8 {
     StatSelect_Mode0 = 1 << 3,
     StatSelect_Mode1 = 1 << 4,
     StatSelect_Mode2 = 1 << 5,
     StatSelect_Lyc = 1 << 6,
 } StatSelect;
 
-typedef enum ObjAttrs : u8 {
+typedef enum : u8 {
     ObjAttrs_Priority = 1 << 7,
     ObjAttrs_FlipY = 1 << 6,
     ObjAttrs_FlipX = 1 << 5,
@@ -57,7 +57,7 @@ typedef enum ObjAttrs : u8 {
     ObjAttrs_CgbPalette = 0b111,
 } ObjAttrs;
 
-typedef struct JoypadState {
+typedef struct {
     bool up;
     bool down;
     bool right;
@@ -68,7 +68,7 @@ typedef struct JoypadState {
     bool select;
 } JoypadState;
 
-typedef struct GameBoy {
+typedef struct {
     JoypadState joypad;
     Cpu cpu;
     u8 ram[0x2000];

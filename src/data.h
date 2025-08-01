@@ -4,7 +4,7 @@
 #include "stdinc.h"
 #include <stddef.h>
 
-typedef enum RomHeader : u16 {
+typedef enum : u16 {
     RomHeader_EntryPoint = 0x100,
     RomHeader_NintendoLogo = 0x104,
     RomHeader_Title = 0x134,
@@ -22,7 +22,7 @@ typedef enum RomHeader : u16 {
     RomHeader_GlobalChecksum = 0x14E,
 } RomHeader;
 
-typedef enum CartridgeType : u8 {
+typedef enum : u8 {
     CartridgeType_RomOnly = 0x00,
     CartridgeType_Mcb1 = 0x01,
     CartridgeType_Mcb1Ram = 0x02,

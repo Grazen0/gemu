@@ -22,6 +22,7 @@ endif()
 set(gemu_sources
     src/control.c
     src/cpu.c
+    src/data.c
     src/frontend.c
     src/game_boy.c
     src/instructions.c

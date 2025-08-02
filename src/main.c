@@ -1,4 +1,3 @@
-#include "data.h"
 #include "frontend.h"
 #include "game_boy.h"
 #include "log.h"
@@ -65,20 +64,9 @@ int main(int argc, const char *argv[])
 
     size_t rom_len = 0;
     u8 *const rom = SDL_LoadFile(argv[0], &rom_len);
-    SDL_CHECKED(rom != nullptr, "Could not read ROM file.");
+    SDL_CHECKED(rom != nullptr, "Could not read ROM file");
 
-    if (rom_len != 0x8000 * ((size_t)1 << rom[RomHeader_RomSize])) {
-        log_error("ROM length does not match header info.");
-        return 1;
-    }
-
-    log_info("Cartridge type: $%02X", rom[RomHeader_CartridgeType]);
-
-    char game_title[17];
-    SDL_strlcpy(game_title, (char *)&rom[RomHeader_Title], sizeof(game_title));
-    log_info("Game title: %s", game_title);
-
-    SDL_CHECKED(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video\n");
+    SDL_CHECKED(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video");
 
     SDL_CHECKED(SDL_CreateWindowAndRenderer("gemu", WINDOW_WIDTH_INITIAL,
                                             WINDOW_HEIGHT_INITIAL, 0, &window,
@@ -108,7 +96,7 @@ int main(int argc, const char *argv[])
     }
 
     state = (State){
-        .gb = GameBoy_new(boot_rom, rom, rom_len),
+        .gb = GameBoy_new(boot_rom),
         .window_width = WINDOW_WIDTH_INITIAL,
         .window_height = WINDOW_HEIGHT_INITIAL,
         .cycle_accumulator = 0.0,
@@ -118,6 +106,9 @@ int main(int argc, const char *argv[])
         .quit = false,
         .screen_texture = texture,
     };
+
+    GameBoy_load_rom(&state.gb, rom, rom_len);
+    GameBoy_log_cartridge_info(&state.gb);
 
     SDL_RenderPresent(renderer);
     SDL_SetWindowResizable(window, true);

@@ -96,16 +96,16 @@ static CpuState CpuState_from_cjson(const cJSON *const src)
     };
 }
 
-static void CpuState_destroy(CpuState *const restrict state)
+static void CpuState_destroy(CpuState *const state)
 {
     free(state->ram);
     state->ram = nullptr;
     state->ram_len = 0;
 }
 
-static void run_cpu_tick_test(const CpuState *const restrict initial_state,
-                              const CpuState *const restrict final_state,
-                              const char *const restrict test_name)
+static void run_cpu_tick_test(const CpuState *const initial_state,
+                              const CpuState *const final_state,
+                              const char *const test_name)
 {
     Cpu cpu = Cpu_new();
 
@@ -173,7 +173,7 @@ static void run_cpu_tick_test(const CpuState *const restrict initial_state,
     }
 }
 
-static void run_opcode_test_file(const char *const restrict filepath)
+static void run_opcode_test_file(const char *const filepath)
 {
     FILE *const file = fopen(filepath, "r");
     TEST_ASSERT_NOT_NULL_MESSAGE(file, "could not open JSON file");
@@ -217,7 +217,7 @@ static void run_opcode_test_file(const char *const restrict filepath)
     cJSON_Delete(test_cases);
 }
 
-static int dirent_filter(const struct dirent *const restrict entry)
+static int dirent_filter(const struct dirent *const entry)
 {
     return entry->d_type == DT_REG && entry->d_name[0] != '.';
 }

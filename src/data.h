@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 typedef enum : u16 {
-    RomHeader_EntryPoint = 0x100,
     RomHeader_NintendoLogo = 0x104,
     RomHeader_Title = 0x134,
     RomHeader_ManufacturerCode = 0x13F,
@@ -52,5 +51,9 @@ typedef enum : u8 {
     CartridgeType_Huc3 = 0xFE,
     CartridgeType_Huc1RamBattery = 0xFF,
 } CartridgeType;
+
+void CartridgeType_log_info(CartridgeType self);
+
+bool CartridgeType_has_ram(CartridgeType self);
 
 #endif

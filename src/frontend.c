@@ -1,9 +1,12 @@
 #include "frontend.h"
+#include "SDL3/SDL_iostream.h"
 #include "control.h"
 #include "cpu.h"
 #include "game_boy.h"
+#include "log.h"
 #include "sdl.h"
 #include "stdinc.h"
+#include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_keycode.h>
@@ -77,7 +80,7 @@ static u32 map_color_index(const size_t color_index,
                       color_rgb[2]);
 }
 
-static bool *get_joypad_key(GameBoy *const restrict gb, const SDL_Keycode key)
+static bool *get_joypad_key(GameBoy *const gb, const SDL_Keycode key)
 {
     switch (key) {
     case SDLK_RETURN:
@@ -101,44 +104,69 @@ static bool *get_joypad_key(GameBoy *const restrict gb, const SDL_Keycode key)
     }
 }
 
-static void handle_event(State *const restrict state,
-                         const SDL_Event *const restrict event)
+static void file_callback(void *const data, const char *const *const files,
+                          [[maybe_unused]] const int filter)
+{
+    if (files == nullptr) {
+        log_error("Error selecting ROM file: %s", SDL_GetError());
+        return;
+    }
+
+    if (files[0] == nullptr)
+        return;
+
+    GameBoy *const gb = data;
+    const char *const rom_file = files[0];
+
+    log_info("Loading ROM at %s", rom_file);
+
+    size_t rom_len = 0;
+    u8 *const rom = SDL_LoadFile(rom_file, &rom_len);
+
+    if (rom == nullptr) {
+        log_error("Could not load ROM file: %s", SDL_GetError());
+        return;
+    }
+
+    GameBoy_load_rom(gb, rom, rom_len);
+    GameBoy_log_cartridge_info(gb);
+}
+
+static void handle_event(State *const state, const SDL_Event *const event)
 {
     switch (event->type) {
-    case SDL_EVENT_QUIT: {
+    case SDL_EVENT_QUIT:
         state->quit = true;
         break;
-    }
-    case SDL_EVENT_WINDOW_RESIZED: {
+    case SDL_EVENT_WINDOW_RESIZED:
         state->window_width = event->window.data1;
         state->window_height = event->window.data2;
         break;
-    }
     case SDL_EVENT_KEY_DOWN: {
         bool *const state_key = get_joypad_key(&state->gb, event->key.key);
-        if (state_key != nullptr)
+        if (state_key != nullptr) {
+            break;
             *state_key = true;
+        }
 
+        if (event->key.mod & SDL_KMOD_CTRL && event->key.key == SDLK_O) {
+            SDL_ShowOpenFileDialog(file_callback, &state->gb, nullptr, nullptr,
+                                   0, nullptr, false);
+        }
         break;
     }
     case SDL_EVENT_KEY_UP: {
-        if (event->key.mod == SDL_KMOD_CTRL && event->key.key == SDLK_O) {
-            // TODO: open new ROM
-            break;
-        }
-
         bool *const state_key = get_joypad_key(&state->gb, event->key.key);
         if (state_key != nullptr)
             *state_key = false;
 
         break;
     }
-    default: {
-    }
+    default:
     }
 }
 
-static void update(State *const restrict state, const double delta)
+static void update(State *const state, const double delta)
 {
     Memory memory = (Memory){
         .ctx = &state->gb,
@@ -330,7 +358,7 @@ static void draw_objects(const State *const state,
     }
 }
 
-static void update_texture(const State *const restrict state)
+static void update_texture(const State *const state)
 {
     SDL_Surface *surface = nullptr;
 
@@ -357,8 +385,7 @@ static void update_texture(const State *const restrict state)
     SDL_UnlockTexture(state->screen_texture);
 }
 
-static void render(const State *const restrict state,
-                   SDL_Renderer *const restrict renderer)
+static void render(const State *const state, SDL_Renderer *const renderer)
 {
     const float ASPECT_RATIO = (float)GB_LCD_WIDTH / GB_LCD_HEIGHT;
 
@@ -384,8 +411,7 @@ static void render(const State *const restrict state,
     SDL_RenderPresent(renderer);
 }
 
-void run_until_quit(State *const restrict state,
-                    SDL_Renderer *const restrict renderer)
+void run_until_quit(State *const state, SDL_Renderer *const renderer)
 {
     double last_time = sdl_get_performance_time();
     double time_accumulator = 0.0;

@@ -101,14 +101,18 @@ typedef struct {
     u8 joyp;
 } GameBoy;
 
-[[nodiscard]] GameBoy GameBoy_new(u8 *boot_rom, u8 *rom, size_t rom_len);
+[[nodiscard]] GameBoy GameBoy_new(u8 *boot_rom);
 
-void GameBoy_destroy(GameBoy *restrict self);
+void GameBoy_destroy(GameBoy * self);
 
-[[nodiscard]] u8 GameBoy_read_mem(const void *restrict ctx, u16 addr);
+void GameBoy_log_cartridge_info(const GameBoy * self);
 
-void GameBoy_write_mem(void *restrict ctx, u16 addr, u8 value);
+void GameBoy_load_rom(GameBoy * self, u8 *rom, size_t rom_len);
 
-void GameBoy_service_interrupts(GameBoy *restrict self, Memory *restrict mem);
+[[nodiscard]] u8 GameBoy_read_mem(const void * ctx, u16 addr);
+
+void GameBoy_write_mem(void * ctx, u16 addr, u8 value);
+
+void GameBoy_service_interrupts(GameBoy * self, Memory * mem);
 
 #endif

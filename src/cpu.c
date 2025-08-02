@@ -24,7 +24,7 @@ Cpu Cpu_new(void)
     };
 }
 
-bool Cpu_read_cc(const Cpu *const restrict self, const CpuTableCc cc)
+bool Cpu_read_cc(const Cpu *const self, const CpuTableCc cc)
 {
     switch (cc) {
     case CpuTableCc_NZ:
@@ -40,7 +40,7 @@ bool Cpu_read_cc(const Cpu *const restrict self, const CpuTableCc cc)
     }
 }
 
-u16 Cpu_read_rp(const Cpu *const restrict self, const CpuTableRp rp)
+u16 Cpu_read_rp(const Cpu *const self, const CpuTableRp rp)
 {
     switch (rp) {
     case CpuTableRp_BC:
@@ -56,7 +56,7 @@ u16 Cpu_read_rp(const Cpu *const restrict self, const CpuTableRp rp)
     }
 }
 
-void Cpu_write_rp(Cpu *const restrict self, const CpuTableRp rp,
+void Cpu_write_rp(Cpu *const self, const CpuTableRp rp,
                   const u16 value)
 {
     switch (rp) {
@@ -80,7 +80,7 @@ void Cpu_write_rp(Cpu *const restrict self, const CpuTableRp rp,
     }
 }
 
-u16 Cpu_read_rp2(const Cpu *const restrict self, const CpuTableRp rp)
+u16 Cpu_read_rp2(const Cpu *const self, const CpuTableRp rp)
 {
     switch (rp) {
     case CpuTableRp2_BC:
@@ -96,7 +96,7 @@ u16 Cpu_read_rp2(const Cpu *const restrict self, const CpuTableRp rp)
     }
 }
 
-void Cpu_write_rp2(Cpu *const restrict self, const CpuTableRp rp,
+void Cpu_write_rp2(Cpu *const self, const CpuTableRp rp,
                    const u16 value)
 {
     switch (rp) {
@@ -121,14 +121,14 @@ void Cpu_write_rp2(Cpu *const restrict self, const CpuTableRp rp,
     }
 }
 
-u8 Cpu_read_mem(Cpu *const restrict self, const Memory *const restrict mem,
+u8 Cpu_read_mem(Cpu *const self, const Memory *const mem,
                 const u16 addr)
 {
     self->cycle_count++;
     return mem->read(mem->ctx, addr);
 }
 
-u16 Cpu_read_mem_u16(Cpu *const restrict self, const Memory *const restrict mem,
+u16 Cpu_read_mem_u16(Cpu *const self, const Memory *const mem,
                      const u16 addr)
 {
     const u8 lo = Cpu_read_mem(self, mem, addr);
@@ -136,35 +136,35 @@ u16 Cpu_read_mem_u16(Cpu *const restrict self, const Memory *const restrict mem,
     return concat_u16(hi, lo);
 }
 
-void Cpu_write_mem(Cpu *const restrict self, Memory *const restrict mem,
+void Cpu_write_mem(Cpu *const self, Memory *const mem,
                    const u16 addr, const u8 value)
 {
     self->cycle_count++;
     mem->write(mem->ctx, addr, value);
 }
 
-void Cpu_write_mem_u16(Cpu *const restrict self, Memory *const restrict mem,
+void Cpu_write_mem_u16(Cpu *const self, Memory *const mem,
                        const u16 addr, const u16 value)
 {
     Cpu_write_mem(self, mem, addr, value & 0xFF);
     Cpu_write_mem(self, mem, addr + 1, value >> 8);
 }
 
-u8 Cpu_read_pc(Cpu *const restrict self, const Memory *const restrict mem)
+u8 Cpu_read_pc(Cpu *const self, const Memory *const mem)
 {
     const u8 value = Cpu_read_mem(self, mem, self->pc);
     self->pc++;
     return value;
 }
 
-u16 Cpu_read_pc_u16(Cpu *const restrict self, const Memory *const restrict mem)
+u16 Cpu_read_pc_u16(Cpu *const self, const Memory *const mem)
 {
     const u16 value = Cpu_read_mem_u16(self, mem, self->pc);
     self->pc += 2;
     return value;
 }
 
-void Cpu_stack_push_u16(Cpu *const restrict self, Memory *const restrict mem,
+void Cpu_stack_push_u16(Cpu *const self, Memory *const mem,
                         const u16 value)
 {
     self->sp -= 2;
@@ -172,14 +172,14 @@ void Cpu_stack_push_u16(Cpu *const restrict self, Memory *const restrict mem,
     self->cycle_count++;
 }
 
-u16 Cpu_stack_pop_u16(Cpu *const restrict self, const Memory *restrict mem)
+u16 Cpu_stack_pop_u16(Cpu *const self, const Memory * mem)
 {
     const u16 value = Cpu_read_mem_u16(self, mem, self->sp);
     self->sp += 2;
     return value;
 }
 
-u8 Cpu_read_r(Cpu *const restrict self, const Memory *const restrict mem,
+u8 Cpu_read_r(Cpu *const self, const Memory *const mem,
               const CpuTableR r)
 {
     switch (r) {
@@ -206,7 +206,7 @@ u8 Cpu_read_r(Cpu *const restrict self, const Memory *const restrict mem,
     }
 }
 
-void Cpu_write_r(Cpu *const restrict self, Memory *const restrict mem,
+void Cpu_write_r(Cpu *const self, Memory *const mem,
                  const CpuTableR r, const u8 value)
 {
     switch (r) {
@@ -241,7 +241,7 @@ void Cpu_write_r(Cpu *const restrict self, Memory *const restrict mem,
     }
 }
 
-void Cpu_tick(Cpu *const restrict self, Memory *const restrict mem)
+void Cpu_tick(Cpu *const self, Memory *const mem)
 {
     if (self->mode != CpuMode_Running) {
         self->cycle_count++; // Makes the frontend work lmao
@@ -257,7 +257,7 @@ void Cpu_tick(Cpu *const restrict self, Memory *const restrict mem)
     Cpu_execute(self, mem, opcode);
 }
 
-void Cpu_interrupt(Cpu *const restrict self, Memory *const restrict mem,
+void Cpu_interrupt(Cpu *const self, Memory *const mem,
                    const u8 handler_location)
 {
     Cpu_stack_push_u16(self, mem, self->pc);

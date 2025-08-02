@@ -32,7 +32,7 @@ typedef struct {
     bool quit;
 } LogQueue;
 
-LogLevel LogLevel_from_str(const char *restrict str);
+LogLevel LogLevel_from_str(const char * str);
 
 /**
  * \brief Initializes logging.
@@ -55,14 +55,14 @@ void logger_init(LogLevel log_level);
  */
 void logger_cleanup(void);
 
-void log_trace(const char *restrict format, ...);
+void log_trace(const char * format, ...);
 
-void log_debug(const char *restrict format, ...);
+void log_debug(const char * format, ...);
 
-void log_info(const char *restrict format, ...);
+void log_info(const char * format, ...);
 
-void log_warn(const char *restrict format, ...);
+void log_warn(const char * format, ...);
 
-void log_error(const char *restrict format, ...);
+void log_error(const char * format, ...);
 
 #endif

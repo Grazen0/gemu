@@ -33,7 +33,7 @@ static const char *log_level_label(const LogLevel level)
     }
 }
 
-static void print_log_message(const LogMessage *const restrict message)
+static void print_log_message(const LogMessage *const message)
 {
     const char *const label = log_level_label(message->level);
     FILE *const stream = message->level == LogLevel_Error ? stderr : stdout;
@@ -43,7 +43,7 @@ static void print_log_message(const LogMessage *const restrict message)
     fputc('\n', stream);
 }
 
-static int logger_thread_fn([[maybe_unused]] void *data)
+static int logger_thread_fn([[maybe_unused]] void *const data)
 {
     while (true) {
         SDL_LockMutex(log_queue.mtx);
@@ -134,7 +134,7 @@ static void grow_log_queue(void)
     log_queue.messages = new_messages;
 }
 
-static void vlog(const LogLevel level, const char *const restrict format,
+static void vlog(const LogLevel level, const char *const format,
                  va_list args)
 {
     if (!logger_ready || level > active_log_level)
@@ -157,7 +157,7 @@ static void vlog(const LogLevel level, const char *const restrict format,
     SDL_UnlockMutex(log_queue.mtx);
 }
 
-void log_trace(const char *const restrict format, ...)
+void log_trace(const char *const format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -165,7 +165,7 @@ void log_trace(const char *const restrict format, ...)
     va_end(args);
 }
 
-void log_debug(const char *const restrict format, ...)
+void log_debug(const char *const format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -173,7 +173,7 @@ void log_debug(const char *const restrict format, ...)
     va_end(args);
 }
 
-void log_info(const char *const restrict format, ...)
+void log_info(const char *const format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -181,7 +181,7 @@ void log_info(const char *const restrict format, ...)
     va_end(args);
 }
 
-void log_warn(const char *const restrict format, ...)
+void log_warn(const char *const format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -189,7 +189,7 @@ void log_warn(const char *const restrict format, ...)
     va_end(args);
 }
 
-void log_error(const char *const restrict format, ...)
+void log_error(const char *const format, ...)
 {
     va_list args;
     va_start(args, format);

@@ -18,6 +18,8 @@ cmake --build build
 build/gemu path/to/rom.gb
 ```
 
+As per usual, you may install Gemu on your system by selecting the `install` CMake target.
+
 ## Credits
 
 - **[Raddad772's sm83 instruction tests](https://github.com/raddad772/jsmoo/tree/b3807b55f03cdad2191810b2a770781d73c41870/misc/tests/GeneratedTests/sm83)**, which are used in this project.

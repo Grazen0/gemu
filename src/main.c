@@ -4,13 +4,7 @@
 #include "sdl.h"
 #include "stdinc.h"
 #include "string.h"
-#include <SDL3/SDL_init.h>
-#include <SDL3/SDL_iostream.h>
-#include <SDL3/SDL_pixels.h>
-#include <SDL3/SDL_render.h>
-#include <SDL3/SDL_stdinc.h>
-#include <SDL3/SDL_surface.h>
-#include <SDL3/SDL_video.h>
+#include <SDL3/SDL.h>
 #include <argparse.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -87,9 +81,9 @@ int main(int argc, const char *argv[])
         boot_rom = SDL_LoadFile(boot_rom_path, &boot_rom_len);
         SDL_CHECKED(boot_rom != nullptr, "Could not read boot ROM file.");
 
-        if (boot_rom_len != GB_BOOT_ROM_LEN_EXPECTED) {
+        if (boot_rom_len != GB_BOOT_ROM_LEN) {
             log_error("Boot ROM must be exactly %zu bytes long (was %zu)",
-                      GB_BOOT_ROM_LEN_EXPECTED, boot_rom_len);
+                      GB_BOOT_ROM_LEN, boot_rom_len);
             SDL_free(boot_rom);
             return 1;
         }
@@ -108,6 +102,10 @@ int main(int argc, const char *argv[])
     };
 
     GameBoy_load_rom(&state.gb, rom, rom_len);
+
+    SDL_free(boot_rom);
+    SDL_free(rom);
+
     GameBoy_log_cartridge_info(&state.gb);
 
     SDL_RenderPresent(renderer);

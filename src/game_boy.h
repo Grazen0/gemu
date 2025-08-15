@@ -11,7 +11,7 @@ constexpr int GB_BG_HEIGHT = 256;
 constexpr int GB_LCD_MAX_LY = 154;
 constexpr int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
 constexpr double GB_VBLANK_FREQ = 59.7;
-constexpr size_t GB_BOOT_ROM_LEN_EXPECTED = 0x100;
+constexpr size_t GB_BOOT_ROM_LEN = 0x100;
 
 typedef enum : u8 {
     LcdControl_Enable = 1 << 7,
@@ -71,14 +71,15 @@ typedef struct {
 typedef struct {
     JoypadState joypad;
     Cpu cpu;
+    bool boot_rom_exists;
+    bool boot_rom_enable;
     u8 ram[0x2000];
     u8 vram[0x2000];
     u8 hram[0x7F];
     u8 oam[0xA0];
-    u8 *boot_rom;
+    u8 boot_rom[GB_BOOT_ROM_LEN];
     u8 *rom;
     size_t rom_len;
-    bool boot_rom_enable;
     u8 lcdc;
     u8 stat;
     u8 ly;
@@ -101,18 +102,58 @@ typedef struct {
     u8 joyp;
 } GameBoy;
 
-[[nodiscard]] GameBoy GameBoy_new(u8 *boot_rom);
+/**
+ * \brief Constructs a GameBoy object with the given boot ROM.
+ *
+ * Constructs a GameBoy with the given boot ROM (which may be NULL). The created
+ * GameBoy must eventually be destroyed with GameBoy_destroy.
+ *
+ * The data at boot_rom is copied, so ownership of boot_rom is not taken.
+ *
+ * \param boot_rom the boot ROM to use. **Must** be either NULL or exactly 256
+ * bytes long.
+ *
+ * \return the constructed GameBoy.
+ *
+ * \sa GameBoy_destroy
+ */
+[[nodiscard]] GameBoy GameBoy_new(const u8 *boot_rom);
 
-void GameBoy_destroy(GameBoy * self);
+/**
+ * \brief Frees a previously-created GameBoy.
+ *
+ * \param self the GameBoy to destruct.
+ *
+ * \sa GameBoy_new
+ */
+void GameBoy_destroy(GameBoy *self);
 
-void GameBoy_log_cartridge_info(const GameBoy * self);
+/**
+ * \brief Logs information about the currently loaded ROM.
+ *
+ * If no ROM is currently loaded, this will be a no-op.
+ *
+ * \param self the GameBoy to log information about.
+ *
+ * \sa GameBoy_load_rom
+ */
+void GameBoy_log_cartridge_info(const GameBoy *self);
 
-void GameBoy_load_rom(GameBoy * self, u8 *rom, size_t rom_len);
+/**
+ * \brief Loads ROM data into a GameBoy.
+ *
+ * This method copies rom, so it does not take ownership of it.
+ *
+ * \param self the GameBoy to load the ROM to.
+ * \param rom the ROM data to load.
+ * \param rom_len the length of rom.
+ */
+void GameBoy_load_rom(GameBoy *self, const u8 *rom, size_t rom_len);
 
-[[nodiscard]] u8 GameBoy_read_mem(const void * ctx, u16 addr);
+[[nodiscard]] u8 GameBoy_read_mem(const void *ctx, u16 addr);
 
-void GameBoy_write_mem(void * ctx, u16 addr, u8 value);
+void GameBoy_write_mem(void *ctx, u16 addr, u8 value);
 
-void GameBoy_service_interrupts(GameBoy * self, Memory * mem);
+void GameBoy_service_interrupts(GameBoy *self, Memory *mem);
 
 #endif

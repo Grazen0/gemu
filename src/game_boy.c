@@ -98,13 +98,13 @@ static void GameBoy_validate_rom(const GameBoy *const self)
         self->rom[RomHeader_RomSize], self->rom_len);
 }
 
-GameBoy GameBoy_new(u8 *const boot_rom)
+GameBoy GameBoy_new(const u8 *const boot_rom)
 {
-    return (GameBoy){
+    GameBoy gb = {
         .cpu = Cpu_new(),
-        .boot_rom = boot_rom,
         .rom = nullptr,
         .rom_len = 0,
+        .boot_rom_exists = boot_rom != nullptr,
         .boot_rom_enable = true,
         .lcdc = 0,
         .stat = 0,
@@ -127,12 +127,16 @@ GameBoy GameBoy_new(u8 *const boot_rom)
         .tac = 0,
         .joyp = 0x0F,
     };
+
+    if (boot_rom != nullptr)
+        memcpy(gb.boot_rom, boot_rom, sizeof(gb.boot_rom));
+
+    return gb;
 }
 
 void GameBoy_destroy(GameBoy *const self)
 {
     free(self->rom);
-    free(self->boot_rom);
 
     self->rom = nullptr;
     self->rom_len = 0;
@@ -140,6 +144,9 @@ void GameBoy_destroy(GameBoy *const self)
 
 void GameBoy_log_cartridge_info(const GameBoy *const self)
 {
+    if (self->rom == nullptr)
+        return;
+
     log_info("Cartridge type: $%02X", self->rom[RomHeader_CartridgeType]);
     log_info("RAM size: $%02X", self->rom[RomHeader_RamSize]);
     log_info("ROM size: $%02X", self->rom[RomHeader_RomSize]);
@@ -150,20 +157,24 @@ void GameBoy_log_cartridge_info(const GameBoy *const self)
     log_info("Game title: %s", game_title);
 }
 
-void GameBoy_load_rom(GameBoy * self, u8 *rom, size_t rom_len)
+void GameBoy_load_rom(GameBoy *const self, const u8 *const rom,
+                      const size_t rom_len)
 {
-    if (rom == nullptr)
-        BAIL("Cannot load null ROM");
+    BAIL_IF(rom_len < 0x8000,
+            "ROM data cannot be less than 32768 bytes long (was %zu)", rom_len);
 
     free(self->rom);
 
-    self->rom = rom;
+    self->rom = malloc(rom_len * sizeof(self->rom[0]));
+    BAIL_IF(self->rom == nullptr, "Could not allocate memory for new ROM");
+
+    memcpy(self->rom, rom, rom_len * sizeof(self->rom[0]));
     self->rom_len = rom_len;
 
-    GameBoy_reset(self);
     GameBoy_validate_rom(self);
+    GameBoy_reset(self);
 
-    if (self->boot_rom == nullptr)
+    if (!self->boot_rom_exists)
         GameBoy_simulate_boot(self);
 }
 
@@ -251,7 +262,7 @@ u8 GameBoy_read_mem(const void *const ctx, const u16 addr)
     if (addr <= 0x7FFF) {
         if (self->boot_rom_enable && addr <= 0x100) {
             // 0000-0100 (Boot ROM)
-            if (self->boot_rom == nullptr)
+            if (!self->boot_rom_exists)
                 BAIL("Tried to read non-existing boot ROM");
 
             return self->boot_rom[addr];
@@ -299,8 +310,8 @@ u16 GameBoy_read_mem_u16(GameBoy *const self, u16 addr)
     return concat_u16(hi, lo);
 }
 
-void GameBoy_write_io(GameBoy *const self, const u16 addr,
-                      const u8 value)
+// NOLINTNEXTLINE
+void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
 {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
@@ -422,8 +433,7 @@ void GameBoy_write_mem(void *const ctx, const u16 addr, const u8 value)
     }
 }
 
-void GameBoy_service_interrupts(GameBoy *const self,
-                                Memory *const mem)
+void GameBoy_service_interrupts(GameBoy *const self, Memory *const mem)
 {
     const u8 int_mask = self->if_ & self->ie;
 

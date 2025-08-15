@@ -110,8 +110,7 @@ static inline void Cpu_instr_nop()
     log_trace("nop");
 }
 
-static inline void Cpu_instr_ld_n16_sp(Cpu *const cpu,
-                                       Memory *const mem)
+static inline void Cpu_instr_ld_n16_sp(Cpu *const cpu, Memory *const mem)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
     log_trace("ld [$%04X], SP", addr);
@@ -127,8 +126,7 @@ static inline void Cpu_instr_stop(Cpu *const cpu)
     log_debug("TODO: implement STOP instruction properly");
 }
 
-static inline void Cpu_instr_jr_e8(Cpu *const cpu,
-                                   const Memory *const mem)
+static inline void Cpu_instr_jr_e8(Cpu *const cpu, const Memory *const mem)
 {
     const i8 offset = (i8)Cpu_read_pc(cpu, mem);
     log_trace("jr %i", offset);
@@ -137,8 +135,7 @@ static inline void Cpu_instr_jr_e8(Cpu *const cpu,
     cpu->cycle_count++;
 }
 
-static inline void Cpu_instr_jr_cc_e8(Cpu *const cpu,
-                                      const Memory *const mem,
+static inline void Cpu_instr_jr_cc_e8(Cpu *const cpu, const Memory *const mem,
                                       const u8 y)
 {
     const u8 cc = y - 4;
@@ -151,8 +148,7 @@ static inline void Cpu_instr_jr_cc_e8(Cpu *const cpu,
     }
 }
 
-static inline void Cpu_instr_ld_r16_n16(Cpu *const cpu,
-                                        const Memory *const mem,
+static inline void Cpu_instr_ld_r16_n16(Cpu *const cpu, const Memory *const mem,
                                         const u8 p)
 {
     const u16 value = Cpu_read_pc_u16(cpu, mem);
@@ -177,8 +173,7 @@ static inline void Cpu_instr_add_hl_r16(Cpu *const cpu, const u8 p)
     cpu->cycle_count++;
 }
 
-static inline void Cpu_instr_ld_bc_a(Cpu *const cpu,
-                                     Memory *const mem)
+static inline void Cpu_instr_ld_bc_a(Cpu *const cpu, Memory *const mem)
 {
     log_trace("ld [bc], a");
 
@@ -186,8 +181,7 @@ static inline void Cpu_instr_ld_bc_a(Cpu *const cpu,
     Cpu_write_mem(cpu, mem, bc, cpu->a);
 }
 
-static inline void Cpu_instr_ld_de_a(Cpu *const cpu,
-                                     Memory *const mem)
+static inline void Cpu_instr_ld_de_a(Cpu *const cpu, Memory *const mem)
 {
     log_trace("ld [de], a");
 
@@ -195,8 +189,7 @@ static inline void Cpu_instr_ld_de_a(Cpu *const cpu,
     Cpu_write_mem(cpu, mem, de, cpu->a);
 }
 
-static inline void Cpu_instr_ld_hli_a(Cpu *const cpu,
-                                      Memory *const mem)
+static inline void Cpu_instr_ld_hli_a(Cpu *const cpu, Memory *const mem)
 {
     log_trace("ld [hl+], a");
 
@@ -205,8 +198,7 @@ static inline void Cpu_instr_ld_hli_a(Cpu *const cpu,
     Cpu_write_rp(cpu, CpuTableRp_HL, hl + 1);
 }
 
-static inline void Cpu_instr_ld_hld_a(Cpu *const cpu,
-                                      Memory *const mem)
+static inline void Cpu_instr_ld_hld_a(Cpu *const cpu, Memory *const mem)
 {
     log_trace("ld [hl-], a");
 
@@ -215,16 +207,14 @@ static inline void Cpu_instr_ld_hld_a(Cpu *const cpu,
     Cpu_write_rp(cpu, CpuTableRp_HL, hl - 1);
 }
 
-static inline void Cpu_instr_ld_a_bc(Cpu *const cpu,
-                                     const Memory *const mem)
+static inline void Cpu_instr_ld_a_bc(Cpu *const cpu, const Memory *const mem)
 {
     log_trace("ld a, [bc]");
     const u16 bc = Cpu_read_rp(cpu, CpuTableRp_BC);
     cpu->a = Cpu_read_mem(cpu, mem, bc);
 }
 
-static inline void Cpu_instr_ld_a_de(Cpu *const cpu,
-                                     const Memory *const mem)
+static inline void Cpu_instr_ld_a_de(Cpu *const cpu, const Memory *const mem)
 {
     log_trace("ld a, [de]");
 
@@ -232,8 +222,7 @@ static inline void Cpu_instr_ld_a_de(Cpu *const cpu,
     cpu->a = Cpu_read_mem(cpu, mem, de);
 }
 
-static inline void Cpu_instr_ld_a_hli(Cpu *const cpu,
-                                      const Memory *const mem)
+static inline void Cpu_instr_ld_a_hli(Cpu *const cpu, const Memory *const mem)
 {
     log_trace("ld a, [hl+]");
 
@@ -242,8 +231,7 @@ static inline void Cpu_instr_ld_a_hli(Cpu *const cpu,
     Cpu_write_rp(cpu, CpuTableRp_HL, hl + 1);
 }
 
-static inline void Cpu_instr_ld_a_hld(Cpu *const cpu,
-                                      const Memory *const mem)
+static inline void Cpu_instr_ld_a_hld(Cpu *const cpu, const Memory *const mem)
 {
     log_trace("ld a, [hl-]");
 
@@ -270,8 +258,8 @@ static inline void Cpu_instr_dec_r16(Cpu *const cpu, const u8 p)
     cpu->cycle_count++;
 }
 
-static inline void Cpu_instr_inc_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 y)
+static inline void Cpu_instr_inc_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 y)
 {
     log_trace("inc r(%d)", y);
 
@@ -284,8 +272,8 @@ static inline void Cpu_instr_inc_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_H, (new_value & 0xF) == 0);
 }
 
-static inline void Cpu_instr_dec_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 y)
+static inline void Cpu_instr_dec_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 y)
 {
     log_trace("dec r(%d)", y);
 
@@ -298,8 +286,8 @@ static inline void Cpu_instr_dec_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_H, (new_value & 0xF) == 0xF);
 }
 
-static inline void Cpu_instr_ld_r8_n(Cpu *const cpu,
-                                     Memory *const mem, const u8 y)
+static inline void Cpu_instr_ld_r8_n(Cpu *const cpu, Memory *const mem,
+                                     const u8 y)
 {
     const u8 value = Cpu_read_pc(cpu, mem);
     log_trace("ld r(%d), $%02X", y, value);
@@ -427,9 +415,8 @@ static inline void Cpu_instr_halt(Cpu *const cpu)
     cpu->mode = CpuMode_Halted;
 }
 
-static inline void Cpu_instr_ld_r8_r8(Cpu *const cpu,
-                                      Memory *const mem, const u8 y,
-                                      const u8 z)
+static inline void Cpu_instr_ld_r8_r8(Cpu *const cpu, Memory *const mem,
+                                      const u8 y, const u8 z)
 {
     const u8 value = Cpu_read_r(cpu, mem, z);
     log_trace("ld r(%d), r(%d)", y, z);
@@ -437,9 +424,8 @@ static inline void Cpu_instr_ld_r8_r8(Cpu *const cpu,
     Cpu_write_r(cpu, mem, y, value);
 }
 
-static inline void Cpu_instr_alu_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 y,
-                                    const u8 z)
+static inline void Cpu_instr_alu_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 y, const u8 z)
 {
 
     log_trace("{alu} a, r(%d)", z);
@@ -448,8 +434,7 @@ static inline void Cpu_instr_alu_r8(Cpu *const cpu,
     Cpu_instr_alu(cpu, y, rhs);
 }
 
-static inline void Cpu_instr_ldh_n16_a(Cpu *const cpu,
-                                       Memory *const mem)
+static inline void Cpu_instr_ldh_n16_a(Cpu *const cpu, Memory *const mem)
 {
     const u8 offset = Cpu_read_pc(cpu, mem);
     log_trace("ldh [$%02X], a", offset);
@@ -458,8 +443,7 @@ static inline void Cpu_instr_ldh_n16_a(Cpu *const cpu,
     Cpu_write_mem(cpu, mem, addr, cpu->a);
 }
 
-static inline void Cpu_instr_add_sp_e8(Cpu *const cpu,
-                                       Memory *const mem)
+static inline void Cpu_instr_add_sp_e8(Cpu *const cpu, Memory *const mem)
 {
     const u8 offset_u8 = (i8)Cpu_read_pc(cpu, mem);
     const i8 offset = (i8)offset_u8;
@@ -474,8 +458,7 @@ static inline void Cpu_instr_add_sp_e8(Cpu *const cpu,
     cpu->cycle_count += 2;
 }
 
-static inline void Cpu_instr_ldh_a_n16(Cpu *const cpu,
-                                       const Memory *const mem)
+static inline void Cpu_instr_ldh_a_n16(Cpu *const cpu, const Memory *const mem)
 {
     const u8 offset = Cpu_read_pc(cpu, mem);
     log_trace("ldh a, [$%02X]", offset);
@@ -500,8 +483,8 @@ static inline void Cpu_instr_ld_hl_sp_plus_e8(Cpu *const cpu,
     cpu->cycle_count++;
 }
 
-static inline void Cpu_instr_ret_cc(Cpu *const cpu,
-                                    Memory *const mem, const u8 y)
+static inline void Cpu_instr_ret_cc(Cpu *const cpu, Memory *const mem,
+                                    const u8 y)
 {
     log_trace("ret cc(%d)", y);
 
@@ -512,8 +495,8 @@ static inline void Cpu_instr_ret_cc(Cpu *const cpu,
     }
 }
 
-static inline void Cpu_instr_pop_r16(Cpu *const cpu,
-                                     Memory *const mem, const u8 p)
+static inline void Cpu_instr_pop_r16(Cpu *const cpu, Memory *const mem,
+                                     const u8 p)
 {
     log_trace("pop rp2(%d)", p);
 
@@ -521,8 +504,7 @@ static inline void Cpu_instr_pop_r16(Cpu *const cpu,
     Cpu_write_rp2(cpu, p, value);
 }
 
-static inline void Cpu_instr_ret(Cpu *const cpu,
-                                 Memory *const mem)
+static inline void Cpu_instr_ret(Cpu *const cpu, Memory *const mem)
 {
     log_trace("ret");
 
@@ -530,8 +512,7 @@ static inline void Cpu_instr_ret(Cpu *const cpu,
     cpu->cycle_count++;
 }
 
-static inline void Cpu_instr_reti(Cpu *const cpu,
-                                  Memory *const mem)
+static inline void Cpu_instr_reti(Cpu *const cpu, Memory *const mem)
 {
     log_trace("reti");
 
@@ -555,8 +536,7 @@ static inline void Cpu_instr_ld_sp_hl(Cpu *const cpu)
     cpu->cycle_count++;
 }
 
-static inline void Cpu_instr_ldh_c_a(Cpu *const cpu,
-                                     Memory *const mem)
+static inline void Cpu_instr_ldh_c_a(Cpu *const cpu, Memory *const mem)
 {
     log_trace("ldh [c], a");
 
@@ -564,8 +544,7 @@ static inline void Cpu_instr_ldh_c_a(Cpu *const cpu,
     Cpu_write_mem(cpu, mem, addr, cpu->a);
 }
 
-static inline void Cpu_instr_ld_a16_a(Cpu *const cpu,
-                                      Memory *const mem)
+static inline void Cpu_instr_ld_a16_a(Cpu *const cpu, Memory *const mem)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
     log_trace("ld [$%04X], a", addr);
@@ -573,8 +552,7 @@ static inline void Cpu_instr_ld_a16_a(Cpu *const cpu,
     Cpu_write_mem(cpu, mem, addr, cpu->a);
 }
 
-static inline void Cpu_instr_ldh_a_c(Cpu *const cpu,
-                                     const Memory *const mem)
+static inline void Cpu_instr_ldh_a_c(Cpu *const cpu, const Memory *const mem)
 {
     const u16 addr = 0xFF00 + cpu->c;
     log_trace("ld a, [c]");
@@ -582,8 +560,7 @@ static inline void Cpu_instr_ldh_a_c(Cpu *const cpu,
     cpu->a = Cpu_read_mem(cpu, mem, addr);
 }
 
-static inline void Cpu_instr_ld_a_a16(Cpu *const cpu,
-                                      const Memory *const mem)
+static inline void Cpu_instr_ld_a_a16(Cpu *const cpu, const Memory *const mem)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
     log_trace("ld a, [$%04X]", addr);
@@ -591,8 +568,7 @@ static inline void Cpu_instr_ld_a_a16(Cpu *const cpu,
     cpu->a = Cpu_read_mem(cpu, mem, addr);
 }
 
-static inline void Cpu_instr_jp_cc_a16(Cpu *const cpu,
-                                       const Memory *const mem,
+static inline void Cpu_instr_jp_cc_a16(Cpu *const cpu, const Memory *const mem,
                                        const u8 y)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
@@ -604,8 +580,7 @@ static inline void Cpu_instr_jp_cc_a16(Cpu *const cpu,
     }
 }
 
-static inline void Cpu_instr_jp_a16(Cpu *const cpu,
-                                    const Memory *const mem)
+static inline void Cpu_instr_jp_a16(Cpu *const cpu, const Memory *const mem)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
     log_trace("jp $%04X", addr);
@@ -629,8 +604,8 @@ static inline void Cpu_instr_ei(Cpu *const cpu)
     cpu->queued_ime = true;
 }
 
-static inline void Cpu_instr_call_cc_n16(Cpu *const cpu,
-                                         Memory *const mem, const u8 y)
+static inline void Cpu_instr_call_cc_n16(Cpu *const cpu, Memory *const mem,
+                                         const u8 y)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
     log_trace("call cc(%d), $%04X", y, addr);
@@ -641,8 +616,8 @@ static inline void Cpu_instr_call_cc_n16(Cpu *const cpu,
     }
 }
 
-static inline void Cpu_instr_push_r16(Cpu *const cpu,
-                                      Memory *const mem, const u8 p)
+static inline void Cpu_instr_push_r16(Cpu *const cpu, Memory *const mem,
+                                      const u8 p)
 {
     log_trace("push rp2(%d)", p);
 
@@ -650,8 +625,7 @@ static inline void Cpu_instr_push_r16(Cpu *const cpu,
     Cpu_stack_push_u16(cpu, mem, value);
 }
 
-static inline void Cpu_instr_call_n16(Cpu *const cpu,
-                                      Memory *const mem)
+static inline void Cpu_instr_call_n16(Cpu *const cpu, Memory *const mem)
 {
     const u16 addr = Cpu_read_pc_u16(cpu, mem);
     log_trace("call $%04X", addr);
@@ -660,8 +634,8 @@ static inline void Cpu_instr_call_n16(Cpu *const cpu,
     cpu->pc = addr;
 }
 
-static inline void Cpu_instr_alu_a_a8(Cpu *const cpu,
-                                      Memory *const mem, const u8 y)
+static inline void Cpu_instr_alu_a_a8(Cpu *const cpu, Memory *const mem,
+                                      const u8 y)
 {
     const u8 rhs = Cpu_read_pc(cpu, mem);
     log_trace("{alu} a, $%02X", rhs);
@@ -669,8 +643,8 @@ static inline void Cpu_instr_alu_a_a8(Cpu *const cpu,
     Cpu_instr_alu(cpu, y, rhs);
 }
 
-static inline void Cpu_instr_rst_vec(Cpu *const cpu,
-                                     Memory *const mem, const u8 y)
+static inline void Cpu_instr_rst_vec(Cpu *const cpu, Memory *const mem,
+                                     const u8 y)
 {
     log_trace("rst $%02X", y * 8);
 
@@ -678,8 +652,8 @@ static inline void Cpu_instr_rst_vec(Cpu *const cpu,
     cpu->pc = y * 8;
 }
 
-static inline void Cpu_instr_rlc_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 z)
+static inline void Cpu_instr_rlc_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 z)
 {
     log_trace("rlc r(%d)", z);
 
@@ -694,8 +668,8 @@ static inline void Cpu_instr_rlc_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, bit_7);
 }
 
-static inline void Cpu_instr_rrc_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 z)
+static inline void Cpu_instr_rrc_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 z)
 {
     log_trace("rrc r(%d)", z);
 
@@ -710,8 +684,8 @@ static inline void Cpu_instr_rrc_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, bit_0);
 }
 
-static inline void Cpu_instr_rl_r8(Cpu *const cpu,
-                                   Memory *const mem, const u8 z)
+static inline void Cpu_instr_rl_r8(Cpu *const cpu, Memory *const mem,
+                                   const u8 z)
 {
     log_trace("rl r(%d)", z);
 
@@ -728,8 +702,8 @@ static inline void Cpu_instr_rl_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, new_carry);
 }
 
-static inline void Cpu_instr_rr_r8(Cpu *const cpu,
-                                   Memory *const mem, const u8 z)
+static inline void Cpu_instr_rr_r8(Cpu *const cpu, Memory *const mem,
+                                   const u8 z)
 {
     log_trace("rr r(%d)", z);
 
@@ -746,8 +720,8 @@ static inline void Cpu_instr_rr_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, new_carry);
 }
 
-static inline void Cpu_instr_sla_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 z)
+static inline void Cpu_instr_sla_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 z)
 {
     log_trace("sla r(%d)", z);
 
@@ -762,8 +736,8 @@ static inline void Cpu_instr_sla_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, bit_7);
 }
 
-static inline void Cpu_instr_sra_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 z)
+static inline void Cpu_instr_sra_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 z)
 {
     log_trace("sra r(%d)", z);
 
@@ -779,8 +753,8 @@ static inline void Cpu_instr_sra_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, bit_0);
 }
 
-static inline void Cpu_instr_swap_r8(Cpu *const cpu,
-                                     Memory *const mem, const u8 z)
+static inline void Cpu_instr_swap_r8(Cpu *const cpu, Memory *const mem,
+                                     const u8 z)
 {
     log_trace("swap r(%d)", z);
 
@@ -796,8 +770,8 @@ static inline void Cpu_instr_swap_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, false);
 }
 
-static inline void Cpu_instr_srl_r8(Cpu *const cpu,
-                                    Memory *const mem, const u8 z)
+static inline void Cpu_instr_srl_r8(Cpu *const cpu, Memory *const mem,
+                                    const u8 z)
 {
     log_trace("srl r(%d)", z);
 
@@ -812,9 +786,8 @@ static inline void Cpu_instr_srl_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_C, bit_0);
 }
 
-static inline void Cpu_instr_bit_u3_r8(Cpu *const cpu,
-                                       Memory *const mem, const u8 y,
-                                       const u8 z)
+static inline void Cpu_instr_bit_u3_r8(Cpu *const cpu, Memory *const mem,
+                                       const u8 y, const u8 z)
 {
     log_trace("bit %d,r(%d)", y, z);
 
@@ -824,9 +797,8 @@ static inline void Cpu_instr_bit_u3_r8(Cpu *const cpu,
     set_bits(&cpu->f, CpuFlag_H, true);
 }
 
-static inline void Cpu_instr_res_u3_r8(Cpu *const cpu,
-                                       Memory *const mem, const u8 y,
-                                       const u8 z)
+static inline void Cpu_instr_res_u3_r8(Cpu *const cpu, Memory *const mem,
+                                       const u8 y, const u8 z)
 {
     log_trace("res %d,r(%d)", y, z);
 
@@ -834,9 +806,8 @@ static inline void Cpu_instr_res_u3_r8(Cpu *const cpu,
     Cpu_write_r(cpu, mem, z, value & ~(1 << y));
 }
 
-static inline void Cpu_instr_set_u3_r8(Cpu *const cpu,
-                                       Memory *const mem, const u8 y,
-                                       const u8 z)
+static inline void Cpu_instr_set_u3_r8(Cpu *const cpu, Memory *const mem,
+                                       const u8 y, const u8 z)
 {
     log_trace("set %d,r(%d)", y, z);
 
@@ -844,8 +815,7 @@ static inline void Cpu_instr_set_u3_r8(Cpu *const cpu,
     Cpu_write_r(cpu, mem, z, value | (1 << y));
 }
 
-static inline void Cpu_instr_prefix(Cpu *const cpu,
-                                    Memory *const mem)
+static inline void Cpu_instr_prefix(Cpu *const cpu, Memory *const mem)
 {
     const u8 opcode = Cpu_read_pc(cpu, mem);
     log_trace("{prefix} $%02X", opcode);
@@ -879,8 +849,7 @@ static inline void Cpu_instr_prefix(Cpu *const cpu,
 }
 
 // NOLINTNEXTLINE
-void Cpu_execute(Cpu *const cpu, Memory *const mem,
-                 const u8 opcode)
+void Cpu_execute(Cpu *const cpu, Memory *const mem, const u8 opcode)
 {
     // Credit:
     // https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html

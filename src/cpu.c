@@ -56,8 +56,7 @@ u16 Cpu_read_rp(const Cpu *const self, const CpuTableRp rp)
     }
 }
 
-void Cpu_write_rp(Cpu *const self, const CpuTableRp rp,
-                  const u16 value)
+void Cpu_write_rp(Cpu *const self, const CpuTableRp rp, const u16 value)
 {
     switch (rp) {
     case CpuTableRp_BC:
@@ -96,8 +95,7 @@ u16 Cpu_read_rp2(const Cpu *const self, const CpuTableRp rp)
     }
 }
 
-void Cpu_write_rp2(Cpu *const self, const CpuTableRp rp,
-                   const u16 value)
+void Cpu_write_rp2(Cpu *const self, const CpuTableRp rp, const u16 value)
 {
     switch (rp) {
     case CpuTableRp2_BC:
@@ -121,30 +119,28 @@ void Cpu_write_rp2(Cpu *const self, const CpuTableRp rp,
     }
 }
 
-u8 Cpu_read_mem(Cpu *const self, const Memory *const mem,
-                const u16 addr)
+u8 Cpu_read_mem(Cpu *const self, const Memory *const mem, const u16 addr)
 {
     self->cycle_count++;
     return mem->read(mem->ctx, addr);
 }
 
-u16 Cpu_read_mem_u16(Cpu *const self, const Memory *const mem,
-                     const u16 addr)
+u16 Cpu_read_mem_u16(Cpu *const self, const Memory *const mem, const u16 addr)
 {
     const u8 lo = Cpu_read_mem(self, mem, addr);
     const u8 hi = Cpu_read_mem(self, mem, addr + 1);
     return concat_u16(hi, lo);
 }
 
-void Cpu_write_mem(Cpu *const self, Memory *const mem,
-                   const u16 addr, const u8 value)
+void Cpu_write_mem(Cpu *const self, Memory *const mem, const u16 addr,
+                   const u8 value)
 {
     self->cycle_count++;
     mem->write(mem->ctx, addr, value);
 }
 
-void Cpu_write_mem_u16(Cpu *const self, Memory *const mem,
-                       const u16 addr, const u16 value)
+void Cpu_write_mem_u16(Cpu *const self, Memory *const mem, const u16 addr,
+                       const u16 value)
 {
     Cpu_write_mem(self, mem, addr, value & 0xFF);
     Cpu_write_mem(self, mem, addr + 1, value >> 8);
@@ -164,23 +160,21 @@ u16 Cpu_read_pc_u16(Cpu *const self, const Memory *const mem)
     return value;
 }
 
-void Cpu_stack_push_u16(Cpu *const self, Memory *const mem,
-                        const u16 value)
+void Cpu_stack_push_u16(Cpu *const self, Memory *const mem, const u16 value)
 {
     self->sp -= 2;
     Cpu_write_mem_u16(self, mem, self->sp, value);
     self->cycle_count++;
 }
 
-u16 Cpu_stack_pop_u16(Cpu *const self, const Memory * mem)
+u16 Cpu_stack_pop_u16(Cpu *const self, const Memory *mem)
 {
     const u16 value = Cpu_read_mem_u16(self, mem, self->sp);
     self->sp += 2;
     return value;
 }
 
-u8 Cpu_read_r(Cpu *const self, const Memory *const mem,
-              const CpuTableR r)
+u8 Cpu_read_r(Cpu *const self, const Memory *const mem, const CpuTableR r)
 {
     switch (r) {
     case CpuTableR_B:
@@ -206,8 +200,8 @@ u8 Cpu_read_r(Cpu *const self, const Memory *const mem,
     }
 }
 
-void Cpu_write_r(Cpu *const self, Memory *const mem,
-                 const CpuTableR r, const u8 value)
+void Cpu_write_r(Cpu *const self, Memory *const mem, const CpuTableR r,
+                 const u8 value)
 {
     switch (r) {
     case CpuTableR_B:

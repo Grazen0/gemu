@@ -4,6 +4,6 @@
 #include "cpu.h"
 #include "stdinc.h"
 
-void Cpu_execute(Cpu * cpu, Memory * mem, u8 opcode);
+void Cpu_execute(Cpu *cpu, Memory *mem, u8 opcode);
 
 #endif

@@ -1,20 +1,11 @@
 #include "frontend.h"
-#include "SDL3/SDL_iostream.h"
 #include "control.h"
 #include "cpu.h"
 #include "game_boy.h"
 #include "log.h"
 #include "sdl.h"
 #include "stdinc.h"
-#include <SDL3/SDL_dialog.h>
-#include <SDL3/SDL_error.h>
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_keycode.h>
-#include <SDL3/SDL_pixels.h>
-#include <SDL3/SDL_rect.h>
-#include <SDL3/SDL_render.h>
-#include <SDL3/SDL_surface.h>
-#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +50,7 @@ static const u8 PALETTE_RGB[PALETTE_RGB_LEN][3] = {
  * \brief Maps an index in the range 0-3 (inclusive) to its corresponding RGB
  * color.
  *
- * Will bail if color_index > 3.
+ * Will bail if color_index >= PALETTE_RGB_LEN.
  *
  * \param color_index the index of the desired color (must be in the range 0-3
  * inclusive).
@@ -80,32 +71,51 @@ static u32 map_color_index(const size_t color_index,
                       color_rgb[2]);
 }
 
-static bool *get_joypad_key(GameBoy *const gb, const SDL_Keycode key)
+/**
+ * \brief Maps a combination of SDL_Keycode and SDL_Keymod to their
+ * corresponding bool flag in a JoypadState.
+ *
+ * Will return NULL if key+mod combination does not map to a valid button.
+ *
+ * \param joypad the JoypadState whose joypad the key will be mapped onto.
+ * \param key the key to be mapped.
+ * \param mod the key to be mapped.
+ *
+ * \return a pointer to the bool flag of the button that corresponds to key.
+ *
+ * \sa SDL_Keycode
+ */
+static bool *map_joypad_btn(JoypadState *const joypad, const SDL_Keycode key,
+                            const SDL_Keymod mod)
 {
+    if (mod != SDL_KMOD_NONE)
+        return nullptr;
+
     switch (key) {
     case SDLK_RETURN:
-        return &gb->joypad.start;
+        return &joypad->start;
     case SDLK_SPACE:
-        return &gb->joypad.select;
+        return &joypad->select;
     case SDLK_UP:
-        return &gb->joypad.up;
+        return &joypad->up;
     case SDLK_DOWN:
-        return &gb->joypad.down;
+        return &joypad->down;
     case SDLK_RIGHT:
-        return &gb->joypad.right;
+        return &joypad->right;
     case SDLK_LEFT:
-        return &gb->joypad.left;
+        return &joypad->left;
     case SDLK_X:
-        return &gb->joypad.a;
+        return &joypad->a;
     case SDLK_Z:
-        return &gb->joypad.b;
+        return &joypad->b;
     default:
         return nullptr;
     }
 }
 
-static void file_callback(void *const data, const char *const *const files,
-                          [[maybe_unused]] const int filter)
+static void rom_select_callback(void *const data,
+                                const char *const *const files,
+                                [[maybe_unused]] const int filter)
 {
     if (files == nullptr) {
         log_error("Error selecting ROM file: %s", SDL_GetError());
@@ -130,6 +140,14 @@ static void file_callback(void *const data, const char *const *const files,
 
     GameBoy_load_rom(gb, rom, rom_len);
     GameBoy_log_cartridge_info(gb);
+
+    SDL_free(rom);
+}
+
+static inline SDL_Keymod mask_relevant_mod(const SDL_Keymod mod)
+{
+    return mod &
+           (SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_ALT | SDL_KMOD_CAPS);
 }
 
 static void handle_event(State *const state, const SDL_Event *const event)
@@ -143,22 +161,29 @@ static void handle_event(State *const state, const SDL_Event *const event)
         state->window_height = event->window.data2;
         break;
     case SDL_EVENT_KEY_DOWN: {
-        bool *const state_key = get_joypad_key(&state->gb, event->key.key);
-        if (state_key != nullptr) {
+        const SDL_Keymod relevant_mod = mask_relevant_mod(event->key.mod);
+        bool *const joypad_btn =
+            map_joypad_btn(&state->gb.joypad, event->key.key, relevant_mod);
+
+        if (joypad_btn != nullptr) {
+            *joypad_btn = true;
             break;
-            *state_key = true;
         }
 
-        if (event->key.mod & SDL_KMOD_CTRL && event->key.key == SDLK_O) {
-            SDL_ShowOpenFileDialog(file_callback, &state->gb, nullptr, nullptr,
-                                   0, nullptr, false);
+        // <C-o> to select ROM
+        if (relevant_mod & SDL_KMOD_CTRL && event->key.key == SDLK_O) {
+            SDL_ShowOpenFileDialog(rom_select_callback, &state->gb, nullptr,
+                                   nullptr, 0, nullptr, false);
         }
         break;
     }
     case SDL_EVENT_KEY_UP: {
-        bool *const state_key = get_joypad_key(&state->gb, event->key.key);
-        if (state_key != nullptr)
-            *state_key = false;
+        const SDL_Keymod relevant_mod = mask_relevant_mod(event->key.mod);
+        bool *const joypad_btn =
+            map_joypad_btn(&state->gb.joypad, event->key.key, relevant_mod);
+
+        if (joypad_btn != nullptr)
+            *joypad_btn = false;
 
         break;
     }
@@ -178,8 +203,9 @@ static void update(State *const state, const double delta)
 
     const double total_frame_cycles = GB_CPU_FREQUENCY_HZ * delta;
 
-    const double VFRAME_DURATION = 1.0 / GB_VBLANK_FREQ;
-    const int DIV_FREQUENCY_CYCLES = GB_CPU_FREQUENCY_HZ / DIV_FREQUENCY_HZ;
+    static constexpr double VFRAME_DURATION = 1.0 / GB_VBLANK_FREQ;
+    static constexpr int DIV_FREQUENCY_CYCLES =
+        GB_CPU_FREQUENCY_HZ / DIV_FREQUENCY_HZ;
 
     while (state->cycle_accumulator < total_frame_cycles) {
         const double actual_vframe_time =

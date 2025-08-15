@@ -1,7 +1,6 @@
 #include "log.h"
 #include "control.h"
-#include <SDL3/SDL_mutex.h>
-#include <SDL3/SDL_thread.h>
+#include <SDL3/SDL.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -134,8 +133,7 @@ static void grow_log_queue(void)
     log_queue.messages = new_messages;
 }
 
-static void vlog(const LogLevel level, const char *const format,
-                 va_list args)
+static void vlog(const LogLevel level, const char *const format, va_list args)
 {
     if (!logger_ready || level > active_log_level)
         return;

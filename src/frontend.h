@@ -2,7 +2,7 @@
 #define GEMU_FRONTEND_H
 
 #include "game_boy.h"
-#include <SDL3/SDL_render.h>
+#include <SDL3/SDL.h>
 
 typedef struct {
     GameBoy gb;
@@ -13,9 +13,9 @@ typedef struct {
     int div_cycle_counter;
     int tima_cycle_counter;
     bool quit;
-    SDL_Texture * screen_texture;
+    SDL_Texture *screen_texture;
 } State;
 
-void run_until_quit(State * state, SDL_Renderer * renderer);
+void run_until_quit(State *state, SDL_Renderer *renderer);
 
 #endif

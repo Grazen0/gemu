@@ -2,7 +2,7 @@
 #define GEMU_SDL_H
 
 #include "control.h"
-#include <SDL3/SDL_rect.h>
+#include <SDL3/SDL.h>
 
 #define SDL_CHECKED(result, message) \
     BAIL_IF(!(result), "%s: %s", message, SDL_GetError())

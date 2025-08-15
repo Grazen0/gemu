@@ -84,41 +84,38 @@ typedef struct {
 
 [[nodiscard]] Cpu Cpu_new(void);
 
-[[nodiscard]] bool Cpu_read_cc(const Cpu * self, CpuTableCc cc);
+[[nodiscard]] bool Cpu_read_cc(const Cpu *self, CpuTableCc cc);
 
-[[nodiscard]] u16 Cpu_read_rp(const Cpu * self, CpuTableRp rp);
+[[nodiscard]] u16 Cpu_read_rp(const Cpu *self, CpuTableRp rp);
 
-void Cpu_write_rp(Cpu * self, CpuTableRp rp, u16 value);
+void Cpu_write_rp(Cpu *self, CpuTableRp rp, u16 value);
 
-[[nodiscard]] u16 Cpu_read_rp2(const Cpu * self, CpuTableRp rp);
+[[nodiscard]] u16 Cpu_read_rp2(const Cpu *self, CpuTableRp rp);
 
-void Cpu_write_rp2(Cpu * self, CpuTableRp rp, u16 value);
+void Cpu_write_rp2(Cpu *self, CpuTableRp rp, u16 value);
 
-u8 Cpu_read_mem(Cpu * self, const Memory * mem, u16 addr);
+u8 Cpu_read_mem(Cpu *self, const Memory *mem, u16 addr);
 
-u16 Cpu_read_mem_u16(Cpu * self, const Memory * mem, u16 addr);
+u16 Cpu_read_mem_u16(Cpu *self, const Memory *mem, u16 addr);
 
-void Cpu_write_mem(Cpu * self, Memory * mem, u16 addr,
-                   u8 value);
+void Cpu_write_mem(Cpu *self, Memory *mem, u16 addr, u8 value);
 
-void Cpu_write_mem_u16(Cpu * self, Memory * mem, u16 addr,
-                       u16 value);
+void Cpu_write_mem_u16(Cpu *self, Memory *mem, u16 addr, u16 value);
 
-u8 Cpu_read_pc(Cpu * self, const Memory * mem);
+u8 Cpu_read_pc(Cpu *self, const Memory *mem);
 
-u16 Cpu_read_pc_u16(Cpu * self, const Memory * mem);
+u16 Cpu_read_pc_u16(Cpu *self, const Memory *mem);
 
-u8 Cpu_read_r(Cpu * self, const Memory * mem, CpuTableR r);
+u8 Cpu_read_r(Cpu *self, const Memory *mem, CpuTableR r);
 
-void Cpu_write_r(Cpu * self, Memory *mem, CpuTableR r, u8 value);
+void Cpu_write_r(Cpu *self, Memory *mem, CpuTableR r, u8 value);
 
-void Cpu_stack_push_u16(Cpu * self, Memory * mem, u16 value);
+void Cpu_stack_push_u16(Cpu *self, Memory *mem, u16 value);
 
-u16 Cpu_stack_pop_u16(Cpu * self, const Memory * mem);
+u16 Cpu_stack_pop_u16(Cpu *self, const Memory *mem);
 
-void Cpu_tick(Cpu * self, Memory * mem);
+void Cpu_tick(Cpu *self, Memory *mem);
 
-void Cpu_interrupt(Cpu * self, Memory * mem,
-                   u8 handler_location);
+void Cpu_interrupt(Cpu *self, Memory *mem, u8 handler_location);
 
 #endif

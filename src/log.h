@@ -2,7 +2,7 @@
 #define GEMU_LOG_H
 
 #include "stdinc.h"
-#include <SDL3/SDL_mutex.h>
+#include <SDL3/SDL.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -32,7 +32,7 @@ typedef struct {
     bool quit;
 } LogQueue;
 
-LogLevel LogLevel_from_str(const char * str);
+LogLevel LogLevel_from_str(const char *str);
 
 /**
  * \brief Initializes logging.
@@ -55,14 +55,14 @@ void logger_init(LogLevel log_level);
  */
 void logger_cleanup(void);
 
-void log_trace(const char * format, ...);
+void log_trace(const char *format, ...);
 
-void log_debug(const char * format, ...);
+void log_debug(const char *format, ...);
 
-void log_info(const char * format, ...);
+void log_info(const char *format, ...);
 
-void log_warn(const char * format, ...);
+void log_warn(const char *format, ...);
 
-void log_error(const char * format, ...);
+void log_error(const char *format, ...);
 
 #endif

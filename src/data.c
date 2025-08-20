@@ -2,8 +2,8 @@
 
 bool CartridgeType_has_ram(const CartridgeType self)
 {
-    return self == CartridgeType_Mcb1Ram ||
-           self == CartridgeType_Mcb1RamBattery || self == CartridgeType_Mbc2 ||
+    return self == CartridgeType_Mbc1Ram ||
+           self == CartridgeType_Mbc1RamBattery || self == CartridgeType_Mbc2 ||
            self == CartridgeType_Mbc2Battery || self == CartridgeType_RomRam ||
            self == CartridgeType_RomRamBattery ||
            self == CartridgeType_Mmm01Ram ||

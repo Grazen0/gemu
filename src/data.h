@@ -23,9 +23,9 @@ typedef enum : u16 {
 
 typedef enum : u8 {
     CartridgeType_RomOnly = 0x00,
-    CartridgeType_Mcb1 = 0x01,
-    CartridgeType_Mcb1Ram = 0x02,
-    CartridgeType_Mcb1RamBattery = 0x03,
+    CartridgeType_Mbc1 = 0x01,
+    CartridgeType_Mbc1Ram = 0x02,
+    CartridgeType_Mbc1RamBattery = 0x03,
     CartridgeType_Mbc2 = 0x05,
     CartridgeType_Mbc2Battery = 0x06,
     CartridgeType_RomRam = 0x08,

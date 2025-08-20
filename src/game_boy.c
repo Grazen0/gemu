@@ -52,8 +52,8 @@ static void verify_rom_checksum(const u8 *const rom)
     const u8 checksum_lo = checksum & 0x0F;
 
     BAIL_IF(
-        checksum_lo != rom[RomHeader_HeaderChecksum],
-        "Lower 8 bits of ROM checksum do not match expected valuein header (expected $%02X, was $%02X)",
+        checksum_lo != (rom[RomHeader_HeaderChecksum] & 0x0F),
+        "Lower 8 bits of ROM checksum do not match expected value in header (expected $%02X, was $%02X)",
         rom[RomHeader_HeaderChecksum], checksum_lo);
 }
 

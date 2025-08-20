@@ -20,13 +20,13 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(gemu_sources
-    src/control.c
     src/cpu.c
     src/data.c
     src/frontend.c
     src/game_boy.c
     src/instructions.c
     src/log.c
+    src/macros.c
     src/num.c
     src/sdl.c)
 

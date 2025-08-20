@@ -1,5 +1,5 @@
 #include "instructions.h"
-#include "control.h"
+#include "macros.h"
 #include "cpu.h"
 #include "log.h"
 #include "num.h"

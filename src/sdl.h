@@ -1,7 +1,7 @@
 #ifndef GEMU_SDL_H
 #define GEMU_SDL_H
 
-#include "control.h"
+#include "macros.h"
 #include <SDL3/SDL.h>
 
 #define SDL_CHECKED(result, message) \

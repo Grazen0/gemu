@@ -1,5 +1,5 @@
 #include "log.h"
-#include "control.h"
+#include "macros.h"
 #include <SDL3/SDL.h>
 #include <errno.h>
 #include <limits.h>

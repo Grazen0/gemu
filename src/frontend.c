@@ -1,8 +1,8 @@
 #include "frontend.h"
-#include "control.h"
 #include "cpu.h"
 #include "game_boy.h"
 #include "log.h"
+#include "macros.h"
 #include "sdl.h"
 #include "stdinc.h"
 #include <SDL3/SDL.h>

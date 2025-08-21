@@ -27,6 +27,7 @@ set(gemu_sources
     src/instructions.c
     src/log.c
     src/macros.c
+    src/mapper.c
     src/num.c
     src/sdl.c)
 

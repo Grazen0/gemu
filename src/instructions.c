@@ -1,7 +1,7 @@
 #include "instructions.h"
-#include "macros.h"
 #include "cpu.h"
 #include "log.h"
+#include "macros.h"
 #include "num.h"
 #include "stdinc.h"
 
@@ -848,7 +848,6 @@ static inline void Cpu_instr_prefix(Cpu *const cpu, Memory *const mem)
     // clang-format on
 }
 
-// NOLINTNEXTLINE
 void Cpu_execute(Cpu *const cpu, Memory *const mem, const u8 opcode)
 {
     // Credit:

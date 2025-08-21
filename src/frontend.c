@@ -394,8 +394,8 @@ static void update_texture(const State *const state)
 
     const SDL_PixelFormatDetails *const pixel_format =
         SDL_GetPixelFormatDetails(surface->format);
-    BAIL_IF(pixel_format == nullptr, "Could not get pixel format: %s",
-            SDL_GetError());
+    BAIL_IF_NULL(pixel_format, "Could not get pixel format: %s",
+                 SDL_GetError());
 
     SDL_FillSurfaceRect(surface, nullptr,
                         SDL_MapRGB(pixel_format, nullptr, 0, 0, 0));

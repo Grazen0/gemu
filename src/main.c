@@ -34,13 +34,16 @@ static void cleanup(void)
 int main(int argc, const char *argv[])
 {
     atexit(SDL_Quit);
-    logger_init(LogLevel_Info);
 
     const char *boot_rom_path = nullptr;
+    const char *log_level_str = nullptr;
 
     struct argparse_option options[] = {
         OPT_HELP(),
         OPT_STRING('b', "boot-rom", (void *)&boot_rom_path, "path to boot ROM",
+                   nullptr, 0, 0),
+        OPT_STRING('l', "log-level", (void *)&log_level_str,
+                   "log level (one of trace, debug, info, warn, error)",
                    nullptr, 0, 0),
         OPT_END(),
     };
@@ -55,6 +58,16 @@ int main(int argc, const char *argv[])
         argparse_usage(&argparse);
         return 1;
     }
+
+    LogLevel log_level = LogLevel_Info;
+
+    if (log_level_str != nullptr &&
+        !LogLevel_from_str(log_level_str, &log_level)) {
+        argparse_usage(&argparse);
+        return 1;
+    }
+
+    logger_init(log_level);
 
     size_t rom_len = 0;
     u8 *const rom = SDL_LoadFile(argv[0], &rom_len);

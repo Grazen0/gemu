@@ -9,6 +9,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+static constexpr size_t LOG_MESSAGE_CAPACITY = 256;
+
+typedef struct {
+    LogLevel level;
+    char text[LOG_MESSAGE_CAPACITY];
+} LogMessage;
+
+typedef struct {
+    size_t capacity;
+    LogMessage *messages;
+    size_t head;
+    size_t tail;
+    SDL_Mutex *mtx;
+    SDL_Condition *cond;
+    bool quit;
+} LogQueue;
+
 static bool logger_ready = false;
 static LogLevel active_log_level = LogLevel_Info;
 static SDL_Thread *logger_thread = nullptr;
@@ -63,6 +80,24 @@ static int logger_thread_fn([[maybe_unused]] void *const data)
     }
 
     return 0;
+}
+
+bool LogLevel_from_str(const char *const str, LogLevel *const out)
+{
+    if (strcmp(str, "trace") == 0)
+        *out = LogLevel_Trace;
+    else if (strcmp(str, "debug") == 0)
+        *out = LogLevel_Debug;
+    else if (strcmp(str, "info") == 0)
+        *out = LogLevel_Info;
+    else if (strcmp(str, "warn") == 0)
+        *out = LogLevel_Warn;
+    else if (strcmp(str, "error") == 0)
+        *out = LogLevel_Error;
+    else
+        return false;
+
+    return true;
 }
 
 void logger_init(const LogLevel log_level)

@@ -5,9 +5,6 @@
 #include <SDL3/SDL.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdio.h>
-
-static constexpr size_t LOG_MESSAGE_CAPACITY = 256;
 
 typedef enum : u8 {
     LogLevel_Trace = 4,
@@ -17,22 +14,19 @@ typedef enum : u8 {
     LogLevel_Error = 0,
 } LogLevel;
 
-typedef struct {
-    LogLevel level;
-    char text[LOG_MESSAGE_CAPACITY];
-} LogMessage;
-
-typedef struct {
-    size_t capacity;
-    LogMessage *messages;
-    size_t head;
-    size_t tail;
-    SDL_Mutex *mtx;
-    SDL_Condition *cond;
-    bool quit;
-} LogQueue;
-
-LogLevel LogLevel_from_str(const char *str);
+/**
+ * \brief Converts a human-readable log level string into a LogLevel variant.
+ *
+ * For example, "debug" is converted to LogLevel_Debug.
+ *
+ * \param str a non-null string to convert into a LogLevel variant.
+ * \param out the place to store the result at.
+ *
+ * \return whether the conversion was successful or not.
+ *
+ * \sa LogLevel
+ */
+bool LogLevel_from_str(const char *str, LogLevel *out);
 
 /**
  * \brief Initializes logging.

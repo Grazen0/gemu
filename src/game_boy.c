@@ -3,6 +3,7 @@
 #include "data.h"
 #include "log.h"
 #include "macros.h"
+#include "mapper.h"
 #include "num.h"
 #include "stdinc.h"
 #include "string.h"
@@ -82,16 +83,6 @@ static void GameBoy_reset(GameBoy *const self)
 
 static void GameBoy_validate_rom(const GameBoy *const self)
 {
-    BAIL_IF(self->rom[RomHeader_CartridgeType] != 0x00,
-            "Unsupported cartridge type (ctype: $%02X)",
-            self->rom[RomHeader_CartridgeType]);
-
-    BAIL_IF(
-        !CartridgeType_has_ram(self->rom[RomHeader_CartridgeType]) &&
-            self->rom[RomHeader_RamSize] != 0,
-        "Cartridge type does not have RAM, but header indicates otherwise (ctype: $%02, RAM size: $%02X)",
-        self->rom[RomHeader_CartridgeType], self->rom[RomHeader_RamSize]);
-
     BAIL_IF(
         self->rom_len != 0x8000 * ((size_t)1 << self->rom[RomHeader_RomSize]),
         "Actual ROM size does not match header-specified size. (specified: $%02X, was: $%02X)",
@@ -137,9 +128,11 @@ GameBoy GameBoy_new(const u8 *const boot_rom)
 void GameBoy_destroy(GameBoy *const self)
 {
     free(self->rom);
-
     self->rom = nullptr;
     self->rom_len = 0;
+
+    Mapper_destroy(self->mapper);
+    self->mapper = nullptr;
 }
 
 void GameBoy_log_cartridge_info(const GameBoy *const self)
@@ -166,19 +159,22 @@ void GameBoy_load_rom(GameBoy *const self, const u8 *const rom,
     free(self->rom);
 
     self->rom = malloc(rom_len * sizeof(self->rom[0]));
-    BAIL_IF(self->rom == nullptr, "Could not allocate memory for new ROM");
+    BAIL_IF_NULL(self->rom);
 
     memcpy(self->rom, rom, rom_len * sizeof(self->rom[0]));
     self->rom_len = rom_len;
 
     GameBoy_validate_rom(self);
+
+    Mapper_destroy(self->mapper);
+    self->mapper = Mapper_from_rom(self->rom, self->rom_len);
+
     GameBoy_reset(self);
 
     if (!self->boot_rom_exists)
         GameBoy_simulate_boot(self);
 }
 
-// NOLINTNEXTLINE
 u8 GameBoy_read_io(const GameBoy *const self, const u16 addr)
 {
     if (addr == 0xFF00) // FF00 (joypad input)
@@ -271,15 +267,15 @@ u8 GameBoy_read_mem(const void *const ctx, const u16 addr)
         if (self->rom == nullptr)
             BAIL("Tried to read non-existing ROM");
 
-        // 0000-7FFF (ROM bank)
-        return self->rom[addr];
+        // 0000-8FFF (from cartridge)
+        return Mapper_read(self->mapper, self->rom, self->rom_len, addr);
     }
 
     if (addr <= 0x9FFF) // 8000-9FFF (VRAM)
         return self->vram[addr - 0x8000];
 
-    if (addr <= 0xBFFF) // A000-BFFF (External RAM)
-        BAIL("TODO: GameBoy_read_mem (addr = $%04X)", addr);
+    if (addr <= 0xBFFF) // A000-BFFF (from cartridge)
+        return Mapper_read(self->mapper, self->rom, self->rom_len, addr);
 
     if (addr <= 0xDFFF) // C000-DFFF (WRAM)
         return self->ram[addr - 0xC000];
@@ -310,7 +306,6 @@ u16 GameBoy_read_mem_u16(GameBoy *const self, u16 addr)
     return concat_u16(hi, lo);
 }
 
-// NOLINTNEXTLINE
 void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
 {
     if (addr == 0xFF00) {
@@ -368,12 +363,12 @@ void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
             case 0xFF47: self->bgp = value; break;
             case 0xFF48: self->obp0 = value; break;
             case 0xFF49: self->obp1 = value; break;
-            default: BAIL("Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value);
+            default: log_warn("Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value);
         }
         // clang-format on
     } else if (addr == 0xFF4F) {
         // FF4F
-        BAIL("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
+        log_warn("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
         if (value != 0)
@@ -384,10 +379,9 @@ void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
         // FF68-FF6B (LCD color palettes, CGB-only)
     } else if (addr == 0xFF70) {
         // FF70 (WRAM bank select, CGB-only)
-    } else if (addr == 0xFF7F) {
-        // Tetris tries to write here. Probably a no-op.
     } else {
-        BAIL("Unexpected I/O write (addr = $%04X, value = $%02X)", addr, value);
+        log_warn("Unexpected I/O write (addr = $%04X, value = $%02X)", addr,
+                 value);
     }
 }
 
@@ -399,14 +393,13 @@ void GameBoy_write_mem(void *const ctx, const u16 addr, const u8 value)
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
-        log_debug("TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr,
-                  value);
+        Mapper_write(self->mapper, addr, value);
     } else if (addr <= 0x9FFF) {
         // 8000-9FFF (VRAM)
         self->vram[addr - 0x8000] = value;
     } else if (addr <= 0xBFFF) {
         // A000-BFFF (External RAM)
-        BAIL("TODO: GameBoy_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
+        Mapper_write(self->mapper, addr, value);
     } else if (addr <= 0xDFFF) {
         // C000-DFFF (WRAM)
         self->ram[addr - 0xC000] = value;

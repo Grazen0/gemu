@@ -2,6 +2,7 @@
 #define GEMU_GAME_BOY_H
 
 #include "cpu.h"
+#include "mapper.h"
 #include <stddef.h>
 
 constexpr int GB_LCD_WIDTH = 160;
@@ -71,6 +72,7 @@ typedef struct {
 typedef struct {
     JoypadState joypad;
     Cpu cpu;
+    Mapper *mapper;
     bool boot_rom_exists;
     bool boot_rom_enable;
     u8 ram[0x2000];
@@ -120,7 +122,7 @@ typedef struct {
 [[nodiscard]] GameBoy GameBoy_new(const u8 *boot_rom);
 
 /**
- * \brief Frees a previously-created GameBoy.
+ * \brief Cleans up a previously-created GameBoy.
  *
  * \param self the GameBoy to destruct.
  *

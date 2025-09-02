@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(gemu C)
+project(gemu LANGUAGES C VERSION 0.1.0)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -52,7 +52,9 @@ target_link_libraries(gemu PRIVATE argparse)
 
 install(TARGETS gemu RUNTIME DESTINATION bin)
 
-include(CTest)
-if(GEMU_BUILD_TESTING AND BUILD_TESTING)
-  add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+    if(BUILD_TESTING)
+        add_subdirectory(tests)
+    endif()
 endif()

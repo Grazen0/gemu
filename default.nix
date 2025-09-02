@@ -8,9 +8,9 @@
   cjson,
   ruby,
 }:
-stdenv.mkDerivation {
+stdenv.mkDerivation (finalAttrs: {
   pname = "gemu";
-  version = "0.1.0";
+  version = "main";
 
   src = lib.cleanSource ./.;
 
@@ -24,8 +24,7 @@ stdenv.mkDerivation {
   ];
 
   cmakeFlags = [
-    "-DCMAKE_BUILD_TYPE=Release"
-    "-DGEMU_BUILD_TESTING=On"
+    (lib.cmakeBool "BUILD_TESTING" finalAttrs.doCheck)
   ];
 
   enableParallelBuilding = true;
@@ -36,4 +35,4 @@ stdenv.mkDerivation {
     homepage = "https://github.com/Grazen0/gemu";
     license = licenses.gpl3;
   };
-}
+})

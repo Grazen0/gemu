@@ -2,7 +2,6 @@
   stdenv,
   lib,
   cmake,
-  pkg-config,
   sdl3,
   unity-test,
   cjson,
@@ -16,7 +15,6 @@ stdenv.mkDerivation (finalAttrs: {
 
   nativeBuildInputs = [
     cmake
-    pkg-config
     sdl3
     unity-test
     cjson

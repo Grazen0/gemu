@@ -2,7 +2,7 @@
 #include "stdinc.h"
 #include <unity.h>
 
-void test_concat_u16(void)
+void test_concat_u16()
 {
     TEST_ASSERT_EQUAL_HEX(0x1234, concat_u16(0x12, 0x34));
     TEST_ASSERT_EQUAL_HEX(0x2618, concat_u16(0x26, 0x18));
@@ -11,7 +11,7 @@ void test_concat_u16(void)
     TEST_ASSERT_EQUAL_HEX(0x00FF, concat_u16(0x00, 0xFF));
 }
 
-void test_set_bits(void)
+void test_set_bits()
 {
     u8 bits = 0;
 

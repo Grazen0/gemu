@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <unity.h>
 
-void test_cpu_new(void)
+void test_cpu_new()
 {
     Cpu cpu = Cpu_new();
 

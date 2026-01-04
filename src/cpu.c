@@ -1,10 +1,10 @@
 #include "cpu.h"
-#include "macros.h"
 #include "instructions.h"
+#include "macros.h"
 #include "num.h"
 #include "stdinc.h"
 
-Cpu Cpu_new(void)
+Cpu Cpu_new()
 {
     return (Cpu){
         .b = 0,

@@ -22,7 +22,7 @@ static SDL_Window *window = nullptr;
 static SDL_Renderer *renderer = nullptr;
 static State state;
 
-static void cleanup(void)
+static void cleanup()
 {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

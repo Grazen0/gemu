@@ -121,7 +121,7 @@ void logger_init(const LogLevel log_level)
     logger_ready = true;
 }
 
-void logger_cleanup(void)
+void logger_cleanup()
 {
     logger_ready = false;
 
@@ -141,7 +141,7 @@ void logger_cleanup(void)
     log_queue.cond = nullptr;
 }
 
-static void grow_log_queue(void)
+static void grow_log_queue()
 {
     const size_t new_capacity = log_queue.capacity * 2;
 

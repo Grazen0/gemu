@@ -222,7 +222,7 @@ static int dirent_filter(const struct dirent *const entry)
     return entry->d_type == DT_REG && entry->d_name[0] != '.';
 }
 
-void test_cpu_opcodes(void)
+void test_cpu_opcodes()
 {
     struct dirent **entries = nullptr;
     const int entries_len =

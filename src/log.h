@@ -47,7 +47,7 @@ void logger_init(LogLevel log_level);
  *
  * \sa logger_init
  */
-void logger_cleanup(void);
+void logger_cleanup();
 
 void log_trace(const char *format, ...);
 

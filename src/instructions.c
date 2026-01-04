@@ -1,7 +1,7 @@
 #include "instructions.h"
-#include "macros.h"
 #include "cpu.h"
 #include "log.h"
+#include "macros.h"
 #include "num.h"
 #include "stdinc.h"
 

@@ -82,7 +82,7 @@ typedef struct {
     int cycle_count;
 } Cpu;
 
-[[nodiscard]] Cpu Cpu_new(void);
+[[nodiscard]] Cpu Cpu_new();
 
 [[nodiscard]] bool Cpu_read_cc(const Cpu *self, CpuTableCc cc);
 

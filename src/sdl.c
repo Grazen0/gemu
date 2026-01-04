@@ -1,7 +1,7 @@
 #include "sdl.h"
 #include <SDL3/SDL.h>
 
-double sdl_get_performance_time(void)
+double sdl_get_performance_time()
 {
     return (double)SDL_GetPerformanceCounter() /
            (double)SDL_GetPerformanceFrequency();

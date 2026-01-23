@@ -1,6 +1,6 @@
 # Gemu
 
-Gemu is a neat little **G**ame Boy **emu**lator written in C as a personal exercise to learn the language.
+Gemu is a little **G**ame Boy **emu**lator written in C as a personal exercise to learn the language.
 
 Name idea blatantly ~~stolen~~ inspired by [QEMU](https://www.qemu.org/).
 

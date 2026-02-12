@@ -152,9 +152,8 @@ void GameBoy_log_cartridge_info(const GameBoy *const self)
     log_info("ROM size: $%02X", self->rom[RomHeader_RomSize]);
 
     char game_title[17];
-    strlcpy(game_title, (char *)&self->rom[RomHeader_Title],
-            sizeof(game_title));
-    log_info("Game title: %s", game_title);
+    memcpy(game_title, (char *)&self->rom[RomHeader_Title], sizeof(game_title));
+    log_info("Game title: %.17s", game_title);
 }
 
 void GameBoy_load_rom(GameBoy *const self, const u8 *const rom,

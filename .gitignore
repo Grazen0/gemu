@@ -4,3 +4,7 @@ build/
 /result
 Testing/
 .local/
+
+.zig-cache/
+zig-out/
+*.o

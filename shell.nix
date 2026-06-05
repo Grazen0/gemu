@@ -7,4 +7,6 @@ mkShell {
   inputsFrom = [ gemu ];
 
   packages = [ clang-tools ];
+
+  hardeningDisable = [ "fortify" ];
 }

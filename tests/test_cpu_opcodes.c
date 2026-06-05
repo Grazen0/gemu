@@ -222,11 +222,13 @@ static int dirent_filter(const struct dirent *const entry)
     return entry->d_type == DT_REG && entry->d_name[0] != '.';
 }
 
+#define OPCODES_DIR "tests/data/core/cpu_opcodes"
+
 void test_cpu_opcodes()
 {
     struct dirent **entries = nullptr;
     const int entries_len =
-        scandir("data/core/cpu_opcodes", &entries, dirent_filter, alphasort);
+        scandir(OPCODES_DIR, &entries, dirent_filter, alphasort);
     TEST_ASSERT_NOT_EQUAL_MESSAGE(-1, entries_len,
                                   "could not read data directory");
 
@@ -234,7 +236,7 @@ void test_cpu_opcodes()
         struct dirent *const entry = entries[i];
 
         char full_path[512];
-        snprintf(full_path, sizeof(full_path), "data/core/cpu_opcodes/%s",
+        snprintf(full_path, sizeof(full_path), OPCODES_DIR "/%s",
                  entry->d_name);
         free(entry);
 

@@ -23,14 +23,43 @@
           system,
           ...
         }:
+        let
+          inherit (pkgs) lib;
+        in
         {
           packages = {
-            gemu = pkgs.callPackage ./default.nix { };
+            gemu = pkgs.stdenv.mkDerivation (finalAttrs: {
+              pname = "gemu";
+              version = "main";
+
+              src = lib.cleanSource ./.;
+
+              nativeBuildInputs = with pkgs; [
+                meson
+                ninja
+                pkg-config
+                sdl3
+                unity-test
+                cjson
+                ruby
+              ];
+
+              doCheck = true;
+
+              meta = with lib; {
+                description = "A Game Boy emulator written in C.";
+                homepage = "https://codeberg.org/Grazen0/gemu";
+                license = licenses.gpl3;
+              };
+            });
+
             default = self'.packages.gemu;
           };
 
-          devShells.default = pkgs.callPackage ./shell.nix {
-            inherit (self'.packages) gemu;
+          devShells.default = pkgs.mkShell {
+            inputsFrom = [ self'.packages.gemu ];
+            packages = with pkgs; [ clang-tools ];
+            hardeningDisable = [ "fortify" ];
           };
         };
     };

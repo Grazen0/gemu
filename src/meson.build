@@ -19,7 +19,7 @@ dependencies = [
 
 gemu_inc = include_directories('.')
 
-gemu_lib = library(
+gemu_lib = static_library(
   'gemu_lib',
   sources,
   include_directories: gemu_inc,

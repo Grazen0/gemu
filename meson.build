@@ -16,7 +16,7 @@ subdir('tests')
 
 argparse_inc = include_directories('external/argparse')
 
-argparse = library(
+argparse = static_library(
   'argparse',
   'external/argparse/argparse.c',
   include_directories : argparse_inc,

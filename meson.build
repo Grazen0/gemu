@@ -3,7 +3,13 @@ project(
   'c',
   meson_version : '>= 1.3.0',
   version : '0.1.0',
-  default_options : ['warning_level=3', 'c_std=c23'],
+  default_options : [
+    'warning_level=3',
+    'c_std=c23',
+    'b_lundef=false',
+    'b_sanitize=address,undefined',
+    'default_library=static',
+  ],
 )
 
 add_project_arguments(
@@ -16,7 +22,7 @@ subdir('tests')
 
 argparse_inc = include_directories('external/argparse')
 
-argparse = static_library(
+argparse = library(
   'argparse',
   'external/argparse/argparse.c',
   include_directories : argparse_inc,

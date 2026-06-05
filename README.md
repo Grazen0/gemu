@@ -10,7 +10,7 @@ If you have [Nix](https://nixos.org/), you already know what to do.
 
 Otherwise, you'll need the following dependencies:
 
-- [CMake](https://cmake.org)
+- [Meson](https://mesonbuild.com)
 - [SDL3](https://libsdl.org)
 
 If you **don't** explicitly disable testing (via setting `BUILD_TESTING=OFF`), you'll also need these:
@@ -22,14 +22,12 @@ If you **don't** explicitly disable testing (via setting `BUILD_TESTING=OFF`), y
 You can clone, compile and run the project with these commands:
 
 ```bash
-git clone https://github.com/Grazen0/gemu.git
+git clone https://codeberg.org/Grazen0/gemu
 cd gemu
-cmake . -B build
-cmake --build build
+meson setup build
+meson compile -C build
 build/gemu path/to/rom.gb
 ```
-
-You can install Gemu on your system by choosing the `install` CMake target.
 
 ## Progress
 

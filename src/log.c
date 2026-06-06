@@ -160,10 +160,10 @@ static int log_thread_fn(void *data)
     return 0;
 }
 
-static LoggerContext log_ctx_init(LogLevel level)
+static LoggerContext log_ctx_create()
 {
     return (LoggerContext){
-        .level = level,
+        .level = LOG_INFO,
         .thread = nullptr,
         .queue = queue_init(),
         .queue_mtx = SDL_CreateMutex(),
@@ -185,14 +185,24 @@ static void log_ctx_deinit(LoggerContext *ctx)
     }
 }
 
-static void log_ctx_spawn_thread(LoggerContext *ctx)
+static bool log_ctx_is_started(const LoggerContext *ctx)
 {
-    assert(ctx->thread == nullptr);
+    return ctx->thread != nullptr;
+}
+
+static void log_ctx_start(LoggerContext *ctx)
+{
+    if (log_ctx_is_started(ctx))
+        return;
+
     ctx->thread = SDL_CreateThread(log_thread_fn, "Logger", ctx);
 }
 
-static void log_ctx_clean_thread(LoggerContext *ctx)
+static void log_ctx_stop(LoggerContext *ctx)
 {
+    if (!log_ctx_is_started(ctx))
+        return;
+
     SDL_LockMutex(ctx->queue_mtx);
     ctx->quit = true;
     SDL_SignalCondition(ctx->cond);
@@ -238,31 +248,45 @@ bool log_level_from_str(const char *str, LogLevel *out)
 static LoggerContext global_ctx;
 static bool global_ctx_inited = false;
 
-void logger_init(LogLevel level)
+static void ensure_logger_inited()
 {
-    assert(!global_ctx_inited);
+    if (global_ctx_inited)
+        return;
 
-    global_ctx = log_ctx_init(level);
+    global_ctx = log_ctx_create();
     global_ctx_inited = true;
-
-    log_ctx_spawn_thread(&global_ctx);
-    atexit(logger_cleanup);
 }
 
-void logger_cleanup()
+static void logger_cleanup()
 {
-    assert(global_ctx_inited);
+    if (!global_ctx_inited)
+        return;
 
-    log_ctx_clean_thread(&global_ctx);
-
+    log_ctx_stop(&global_ctx);
     log_ctx_deinit(&global_ctx);
     global_ctx_inited = false;
 }
 
+static void ensure_logger_started()
+{
+    ensure_logger_inited();
+
+    if (!log_ctx_is_started(&global_ctx)) {
+        log_ctx_start(&global_ctx);
+        atexit(logger_cleanup);
+    }
+}
+
 static void vlog(LogLevel level, const char *format, va_list args)
 {
-    assert(global_ctx_inited);
+    ensure_logger_started();
     log_ctx_vlog(&global_ctx, level, format, args);
+}
+
+void logger_set_level(LogLevel level)
+{
+    ensure_logger_started();
+    global_ctx.level = level;
 }
 
 void log_trace(const char *format, ...)

@@ -39,16 +39,7 @@ typedef enum : u8 {
  *
  * \sa logger_cleanup
  */
-void logger_init(LogLevel log_level);
-
-/**
- * \brief Cleans up logging resources.
- *
- * This function must be called after logger_init.
- *
- * \sa logger_init
- */
-void logger_cleanup();
+void logger_set_level(LogLevel log_level);
 
 [[gnu::format(printf, 1, 2)]] void log_trace(const char *format, ...);
 

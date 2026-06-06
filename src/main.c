@@ -5,6 +5,7 @@
 #include "string.h"
 #include <SDL3/SDL.h>
 #include <assert.h>
+#include <getopt.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,12 +17,18 @@ static constexpr int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
 #define EXE_NAME "gemu"
 
 static constexpr char USAGE[] =
-    "Usage: " EXE_NAME " [options] [--] [file]                  \n"
-    "A Game Boy emulator written in C.                          \n"
-    "                                                           \n"
-    "  -h            show this help message                     \n"
-    "  -b=FILE       boot ROM to use                            \n"
-    "  -l=LOG_LEVEL  log level (error, warn, info, debug, trace)\n";
+    "Usage: " EXE_NAME " [options] [--] [file]                               \n"
+    "A Game Boy emulator written in C.                                       \n"
+    "                                                                        \n"
+    "  -h, --help                 show this help message                     \n"
+    "  -b, --boot-rom=FILE        boot ROM to use for startup                \n"
+    "  -l, --log-level=LOG_LEVEL  log level (error, warn, info, debug, trace)\n";
+
+static const struct option OPTIONS[] = {
+    {     "help",       no_argument, nullptr, 'h'},
+    { "boot-rom", required_argument, nullptr, 'b'},
+    {"log-level", required_argument, nullptr, 'l'},
+};
 
 typedef struct {
     bool help;
@@ -47,11 +54,8 @@ static bool parse_args(int argc, char **argv, Args *out_args)
     const char *log_level_str = nullptr;
     int opt = -1;
 
-    while ((opt = getopt(argc, argv, "hb:l:")) != -1) {
+    while ((opt = getopt_long(argc, argv, "hb:l:", OPTIONS, nullptr)) != -1) {
         switch (opt) {
-        case '?':
-        case ':':
-            return false;
         case 'h':
             out_args->help = true;
             return true;
@@ -62,7 +66,7 @@ static bool parse_args(int argc, char **argv, Args *out_args)
             log_level_str = optarg;
             break;
         default:
-            unreachable();
+            return false;
         }
     }
 
@@ -92,7 +96,7 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
-    logger_init(args.log_level);
+    logger_set_level(args.log_level);
 
     int retval = EXIT_SUCCESS;
 

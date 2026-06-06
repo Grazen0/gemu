@@ -8,3 +8,4 @@ Testing/
 .zig-cache/
 zig-out/
 *.o
+vgcore.*

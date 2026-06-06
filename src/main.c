@@ -6,6 +6,7 @@
 #include "string.h"
 #include <SDL3/SDL.h>
 #include <argparse.h>
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,19 +18,6 @@ static const char *const usages[] = {
     "gemu [options] [--] <path-to-rom>",
     nullptr,
 };
-
-static SDL_Window *window = nullptr;
-static SDL_Renderer *renderer = nullptr;
-static State state;
-
-static void cleanup()
-{
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_DestroyTexture(state.screen_texture);
-
-    GameBoy_destroy(&state.gb);
-}
 
 int main(int argc, const char *argv[])
 {
@@ -59,7 +47,7 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    LogLevel log_level = LogLevel_Info;
+    LogLevel log_level = LOG_INFO;
 
     if (log_level_str != nullptr &&
         !LogLevel_from_str(log_level_str, &log_level)) {
@@ -70,19 +58,29 @@ int main(int argc, const char *argv[])
     logger_init(log_level);
 
     size_t rom_len = 0;
-    u8 *const rom = SDL_LoadFile(argv[0], &rom_len);
+    u8 *rom = SDL_LoadFile(argv[0], &rom_len);
     SDL_CHECKED(rom != nullptr, "Could not read ROM file");
 
     SDL_CHECKED(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video");
 
-    SDL_CHECKED(SDL_CreateWindowAndRenderer("gemu", WINDOW_WIDTH_INITIAL,
-                                            WINDOW_HEIGHT_INITIAL, 0, &window,
-                                            &renderer),
-                "Could not create window or renderer");
+    SDL_Window *window = SDL_CreateWindow("gemu", WINDOW_WIDTH_INITIAL,
+                                          WINDOW_HEIGHT_INITIAL, 0);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
 
-    SDL_Texture *const texture = SDL_CreateTexture(
-        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
-        GB_BG_WIDTH, GB_BG_HEIGHT);
+    assert(window);
+    assert(renderer);
+
+    SDL_PropertiesID props = SDL_GetRendererProperties(renderer);
+
+    const char *name =
+        SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
+
+    printf("renderer: %s\n", name);
+    return 0;
+
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                             SDL_TEXTUREACCESS_STREAMING,
+                                             GB_BG_WIDTH, GB_BG_HEIGHT);
     SDL_CHECKED(texture != nullptr, "Could not create texture");
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
@@ -102,7 +100,7 @@ int main(int argc, const char *argv[])
         }
     }
 
-    state = (State){
+    State state = {
         .gb = GameBoy_new(boot_rom),
         .window_width = WINDOW_WIDTH_INITIAL,
         .window_height = WINDOW_HEIGHT_INITIAL,
@@ -124,8 +122,13 @@ int main(int argc, const char *argv[])
     SDL_RenderPresent(renderer);
     SDL_SetWindowResizable(window, true);
 
-    atexit(cleanup);
     run_until_quit(&state, renderer);
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_DestroyTexture(state.screen_texture);
+
+    GameBoy_destroy(&state.gb);
 
     return 0;
 }

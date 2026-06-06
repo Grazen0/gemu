@@ -38,10 +38,13 @@
                 meson
                 ninja
                 pkg-config
-                sdl3
                 unity-test
                 cjson
                 ruby
+              ];
+
+              buildInputs = with pkgs; [
+                sdl3
               ];
 
               doCheck = true;

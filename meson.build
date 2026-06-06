@@ -6,8 +6,6 @@ project(
   default_options : [
     'warning_level=3',
     'c_std=c23',
-    'b_lundef=false',
-    'b_sanitize=address,undefined',
     'default_library=static',
   ],
 )

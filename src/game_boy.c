@@ -89,12 +89,12 @@ static void GameBoy_validate_rom(const GameBoy *const self)
     BAIL_IF(
         !CartridgeType_has_ram(self->rom[RomHeader_CartridgeType]) &&
             self->rom[RomHeader_RamSize] != 0,
-        "Cartridge type does not have RAM, but header indicates otherwise (ctype: $%02, RAM size: $%02X)",
+        "Cartridge type does not have RAM, but header indicates otherwise (ctype: $%02X, RAM size: $%02X)",
         self->rom[RomHeader_CartridgeType], self->rom[RomHeader_RamSize]);
 
     BAIL_IF(
         self->rom_len != 0x8000 * ((size_t)1 << self->rom[RomHeader_RomSize]),
-        "Actual ROM size does not match header-specified size. (specified: $%02X, was: $%02X)",
+        "Actual ROM size does not match header-specified size. (specified: %u, was: %zu)",
         self->rom[RomHeader_RomSize], self->rom_len);
 }
 

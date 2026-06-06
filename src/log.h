@@ -7,11 +7,13 @@
 #include <stddef.h>
 
 typedef enum : u8 {
-    LogLevel_Trace = 4,
-    LogLevel_Debug = 3,
-    LogLevel_Info = 2,
-    LogLevel_Warn = 1,
-    LogLevel_Error = 0,
+    LOG_ERROR,
+    LOG_WARN,
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_TRACE,
+
+    LOG_LEVEL_COUNT,
 } LogLevel;
 
 /**
@@ -26,13 +28,12 @@ typedef enum : u8 {
  *
  * \sa LogLevel
  */
-bool LogLevel_from_str(const char *str, LogLevel *out);
+[[nodiscard]] bool log_level_from_str(const char *str, LogLevel *out);
 
 /**
  * \brief Initializes logging.
  *
  * This function must be called before using any other log-related functions.
- * Otherwise, no logging will take effect.
  *
  * \param log_level LogLevel to use.
  *

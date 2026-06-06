@@ -1,102 +1,170 @@
 #include "frontend.h"
 #include "game_boy.h"
 #include "log.h"
-#include "sdl.h"
 #include "stdinc.h"
 #include "string.h"
 #include <SDL3/SDL.h>
-#include <argparse.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 static constexpr int WINDOW_WIDTH_INITIAL = GB_LCD_WIDTH * 4;
 static constexpr int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
 
-static const char *const usages[] = {
-    "gemu [options] [--] <path-to-rom>",
-    nullptr,
-};
+#define EXE_NAME "gemu"
 
-int main(int argc, const char *argv[])
+static constexpr char USAGE[] =
+    "Usage: " EXE_NAME " [options] [--] [file]                  \n"
+    "A Game Boy emulator written in C.                          \n"
+    "                                                           \n"
+    "  -h            show this help message                     \n"
+    "  -b=FILE       boot ROM to use                            \n"
+    "  -l=LOG_LEVEL  log level (error, warn, info, debug, trace)\n";
+
+typedef struct {
+    bool help;
+    const char *rom_path;
+    const char *boot_rom_path;
+    LogLevel log_level;
+} Args;
+
+static Args args_init()
 {
-    atexit(SDL_Quit);
-
-    const char *boot_rom_path = nullptr;
-    const char *log_level_str = nullptr;
-
-    struct argparse_option options[] = {
-        OPT_HELP(),
-        OPT_STRING('b', "boot-rom", (void *)&boot_rom_path, "path to boot ROM",
-                   nullptr, 0, 0),
-        OPT_STRING('l', "log-level", (void *)&log_level_str,
-                   "log level (one of trace, debug, info, warn, error)",
-                   nullptr, 0, 0),
-        OPT_END(),
+    return (Args){
+        .help = false,
+        .rom_path = nullptr,
+        .boot_rom_path = nullptr,
+        .log_level = LOG_INFO,
     };
+}
 
-    struct argparse argparse;
-    argparse_init(&argparse, options, usages, 0);
-    argparse_describe(&argparse, "A Game Boy emulator written in C.", nullptr);
+static bool parse_args(int argc, char **argv, Args *out_args)
+{
+    *out_args = args_init();
 
-    argc = argparse_parse(&argparse, argc, argv);
+    const char *log_level_str = nullptr;
+    int opt = -1;
 
-    if (argc < 1) {
-        argparse_usage(&argparse);
-        return 1;
+    while ((opt = getopt(argc, argv, "hb:l:")) != -1) {
+        switch (opt) {
+        case '?':
+        case ':':
+            return false;
+        case 'h':
+            out_args->help = true;
+            return true;
+        case 'b':
+            out_args->boot_rom_path = optarg;
+            break;
+        case 'l':
+            log_level_str = optarg;
+            break;
+        default:
+            unreachable();
+        }
     }
-
-    LogLevel log_level = LOG_INFO;
 
     if (log_level_str != nullptr &&
-        !LogLevel_from_str(log_level_str, &log_level)) {
-        argparse_usage(&argparse);
-        return 1;
+        !log_level_from_str(log_level_str, &out_args->log_level))
+        return false;
+
+    if (optind >= argc)
+        return false;
+
+    out_args->rom_path = argv[optind];
+    return true;
+}
+
+int main(int argc, char *argv[])
+{
+    Args args = {};
+
+    if (!parse_args(argc, argv, &args)) {
+        fputs(USAGE, stderr);
+        printf("Try '" EXE_NAME " -h' for more information.\n");
+        return EXIT_FAILURE;
     }
 
-    logger_init(log_level);
+    if (args.help) {
+        fputs(USAGE, stdout);
+        return EXIT_SUCCESS;
+    }
+
+    logger_init(args.log_level);
+
+    int retval = EXIT_SUCCESS;
 
     size_t rom_len = 0;
-    u8 *rom = SDL_LoadFile(argv[0], &rom_len);
-    SDL_CHECKED(rom != nullptr, "Could not read ROM file");
+    u8 *rom = SDL_LoadFile(args.rom_path, &rom_len);
 
-    SDL_CHECKED(SDL_Init(SDL_INIT_VIDEO), "Could not initialize video");
+    if (rom == nullptr) {
+        fprintf(stderr, "%s\n", SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup_1;
+    }
+
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        fprintf(stderr, "Could not read initialize video: %s\n",
+                SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup_1;
+    }
 
     SDL_Window *window = SDL_CreateWindow("gemu", WINDOW_WIDTH_INITIAL,
                                           WINDOW_HEIGHT_INITIAL, 0);
+
+    if (window == nullptr) {
+        fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup_2;
+    }
+
     SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
 
-    assert(window);
-    assert(renderer);
+    if (renderer == nullptr) {
+        fprintf(stderr, "Could not create renderer: %s\n", SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup_3;
+    }
 
     SDL_PropertiesID props = SDL_GetRendererProperties(renderer);
 
     const char *name =
         SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
-
-    printf("renderer: %s\n", name);
-    return 0;
+    log_info("Renderer: %s", name);
 
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                                              SDL_TEXTUREACCESS_STREAMING,
                                              GB_BG_WIDTH, GB_BG_HEIGHT);
-    SDL_CHECKED(texture != nullptr, "Could not create texture");
+
+    if (texture == nullptr) {
+        fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup_4;
+    }
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
     u8 *boot_rom = nullptr;
 
-    if (boot_rom_path != nullptr) {
+    if (args.boot_rom_path != nullptr) {
         size_t boot_rom_len = 0;
-        boot_rom = SDL_LoadFile(boot_rom_path, &boot_rom_len);
-        SDL_CHECKED(boot_rom != nullptr, "Could not read boot ROM file.");
+        boot_rom = SDL_LoadFile(args.boot_rom_path, &boot_rom_len);
+
+        if (boot_rom == nullptr) {
+            fprintf(stderr, "Could not read boot ROM file.\n");
+            retval = EXIT_FAILURE;
+            goto cleanup_5;
+        }
 
         if (boot_rom_len != GB_BOOT_ROM_LEN) {
-            log_error("Boot ROM must be exactly %zu bytes long (was %zu)",
-                      GB_BOOT_ROM_LEN, boot_rom_len);
-            SDL_free(boot_rom);
-            return 1;
+            fprintf(stderr,
+                    "Boot ROM must be exactly %zu bytes long (was %zu)\n",
+                    GB_BOOT_ROM_LEN, boot_rom_len);
+            retval = EXIT_FAILURE;
+            goto cleanup_6;
         }
     }
 
@@ -114,9 +182,6 @@ int main(int argc, const char *argv[])
 
     GameBoy_load_rom(&state.gb, rom, rom_len);
 
-    SDL_free(boot_rom);
-    SDL_free(rom);
-
     GameBoy_log_cartridge_info(&state.gb);
 
     SDL_RenderPresent(renderer);
@@ -124,11 +189,20 @@ int main(int argc, const char *argv[])
 
     run_until_quit(&state, renderer);
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_DestroyTexture(state.screen_texture);
-
     GameBoy_destroy(&state.gb);
 
-    return 0;
+cleanup_6:
+    SDL_free(boot_rom);
+cleanup_5:
+    SDL_DestroyTexture(texture);
+cleanup_4:
+    SDL_DestroyRenderer(renderer);
+cleanup_3:
+    SDL_DestroyWindow(window);
+cleanup_2:
+    SDL_Quit();
+cleanup_1:
+    SDL_free(rom);
+
+    return retval;
 }

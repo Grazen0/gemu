@@ -18,23 +18,9 @@ add_project_arguments(
 subdir('src')
 subdir('tests')
 
-argparse_inc = include_directories('external/argparse')
-
-argparse = library(
-  'argparse',
-  'external/argparse/argparse.c',
-  include_directories : argparse_inc,
-)
-
-argparse_dep = declare_dependency(
-  link_with: argparse,
-  include_directories : argparse_inc,
-)
-
 sdl3_dep = dependency('sdl3')
 
 dependencies = [
-  argparse_dep,
   sdl3_dep,
   gemu_lib_dep,
 ]

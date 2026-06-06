@@ -50,14 +50,14 @@ void logger_init(LogLevel log_level);
  */
 void logger_cleanup();
 
-void log_trace(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_trace(const char *format, ...);
 
-void log_debug(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_debug(const char *format, ...);
 
-void log_info(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_info(const char *format, ...);
 
-void log_warn(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_warn(const char *format, ...);
 
-void log_error(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_error(const char *format, ...);
 
 #endif

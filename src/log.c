@@ -26,7 +26,7 @@ typedef struct {
     LogLevel level;
     SDL_Thread *thread;
     LogQueue queue;
-    SDL_Mutex *queue_mtx;
+    SDL_Mutex *quit_queue_mtx;
     SDL_Condition *cond;
     bool quit;
 } LoggerContext;
@@ -139,50 +139,36 @@ static void print_log_message(const LogMessage *message)
 static int log_thread_fn(void *data)
 {
     LoggerContext *ctx = data;
+    bool quit = false;
 
-    while (true) {
-        SDL_LockMutex(ctx->queue_mtx);
+    while (!quit) {
+        SDL_LockMutex(ctx->quit_queue_mtx);
 
         while (!ctx->quit && queue_is_empty(&ctx->queue))
-            SDL_WaitCondition(ctx->cond, ctx->queue_mtx);
+            SDL_WaitCondition(ctx->cond, ctx->quit_queue_mtx);
 
-        if (ctx->quit && queue_is_empty(&ctx->queue)) {
-            SDL_UnlockMutex(ctx->queue_mtx);
-            break;
+        while (!queue_is_empty(&ctx->queue)) {
+            LogMessage message = queue_dequeue(&ctx->queue);
+            print_log_message(&message);
         }
 
-        LogMessage message = queue_dequeue(&ctx->queue);
-        SDL_UnlockMutex(ctx->queue_mtx);
-
-        print_log_message(&message);
+        quit = ctx->quit;
+        SDL_UnlockMutex(ctx->quit_queue_mtx);
     }
 
     return 0;
 }
 
-static LoggerContext log_ctx_create()
+static LoggerContext log_ctx_init()
 {
     return (LoggerContext){
         .level = LOG_INFO,
         .thread = nullptr,
         .queue = queue_init(),
-        .queue_mtx = SDL_CreateMutex(),
+        .quit_queue_mtx = SDL_CreateMutex(),
         .cond = SDL_CreateCondition(),
         .quit = false,
     };
-}
-
-static void log_ctx_deinit(LoggerContext *ctx)
-{
-    if (ctx != nullptr) {
-        queue_deinit(&ctx->queue);
-
-        SDL_DestroyMutex(ctx->queue_mtx);
-        ctx->queue_mtx = nullptr;
-
-        SDL_DestroyCondition(ctx->cond);
-        ctx->cond = nullptr;
-    }
 }
 
 static bool log_ctx_is_started(const LoggerContext *ctx)
@@ -190,26 +176,45 @@ static bool log_ctx_is_started(const LoggerContext *ctx)
     return ctx->thread != nullptr;
 }
 
-static void log_ctx_start(LoggerContext *ctx)
-{
-    if (log_ctx_is_started(ctx))
-        return;
-
-    ctx->thread = SDL_CreateThread(log_thread_fn, "Logger", ctx);
-}
-
 static void log_ctx_stop(LoggerContext *ctx)
 {
     if (!log_ctx_is_started(ctx))
         return;
 
-    SDL_LockMutex(ctx->queue_mtx);
+    log_debug("Logger stopped.");
+
+    SDL_LockMutex(ctx->quit_queue_mtx);
     ctx->quit = true;
     SDL_SignalCondition(ctx->cond);
-    SDL_UnlockMutex(ctx->queue_mtx);
+    SDL_UnlockMutex(ctx->quit_queue_mtx);
 
     SDL_WaitThread(ctx->thread, nullptr);
     ctx->thread = nullptr;
+}
+
+static void log_ctx_deinit(LoggerContext *ctx)
+{
+    if (ctx == nullptr)
+        return;
+
+    log_ctx_stop(ctx);
+
+    SDL_LockMutex(ctx->quit_queue_mtx);
+    SDL_DestroyMutex(ctx->quit_queue_mtx);
+    ctx->quit_queue_mtx = nullptr;
+
+    SDL_DestroyCondition(ctx->cond);
+    ctx->cond = nullptr;
+
+    queue_deinit(&ctx->queue);
+}
+
+static void log_ctx_start(LoggerContext *ctx)
+{
+    if (log_ctx_is_started(ctx))
+        return;
+
+    ctx->thread = SDL_CreateThread(log_thread_fn, "logger", ctx);
 }
 
 static void log_ctx_vlog(LoggerContext *ctx, LogLevel level, const char *format,
@@ -221,28 +226,36 @@ static void log_ctx_vlog(LoggerContext *ctx, LogLevel level, const char *format,
     LogMessage message = {.text = {}, .level = level};
     vsnprintf(message.text, sizeof(message.text), format, args);
 
-    SDL_LockMutex(ctx->queue_mtx);
+    SDL_LockMutex(ctx->quit_queue_mtx);
     queue_enqueue(&ctx->queue, message);
     SDL_SignalCondition(ctx->cond);
-    SDL_UnlockMutex(ctx->queue_mtx);
+    SDL_UnlockMutex(ctx->quit_queue_mtx);
 }
 
 bool log_level_from_str(const char *str, LogLevel *out)
 {
-    if (strcmp(str, "trace") == 0)
-        *out = LOG_TRACE;
-    else if (strcmp(str, "debug") == 0)
-        *out = LOG_DEBUG;
-    else if (strcmp(str, "info") == 0)
-        *out = LOG_INFO;
-    else if (strcmp(str, "warn") == 0)
-        *out = LOG_WARN;
-    else if (strcmp(str, "error") == 0)
-        *out = LOG_ERROR;
-    else
-        return false;
+    static const struct {
+        const char *name;
+        LogLevel level;
+    } ALTERNATIVES[] = {
+        {"trace", LOG_TRACE},
+        {"debug", LOG_DEBUG},
+        { "info",  LOG_INFO},
+        { "warn",  LOG_WARN},
+        {"error", LOG_ERROR},
+    };
 
-    return true;
+    static constexpr size_t ALTERNATIVES_LEN =
+        sizeof(ALTERNATIVES) / sizeof(ALTERNATIVES[0]);
+
+    for (size_t i = 0; i < ALTERNATIVES_LEN; ++i) {
+        if (strcmp(str, ALTERNATIVES[i].name) == 0) {
+            *out = ALTERNATIVES[i].level;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static LoggerContext global_ctx;
@@ -253,7 +266,7 @@ static void ensure_logger_inited()
     if (global_ctx_inited)
         return;
 
-    global_ctx = log_ctx_create();
+    global_ctx = log_ctx_init();
     global_ctx_inited = true;
 }
 

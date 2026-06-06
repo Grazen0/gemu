@@ -96,8 +96,6 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
-    logger_set_level(args.log_level);
-
     int retval = EXIT_SUCCESS;
 
     size_t rom_len = 0;
@@ -116,6 +114,9 @@ int main(int argc, char *argv[])
         goto cleanup_1;
     }
 
+    atexit(SDL_Quit);
+    logger_set_level(args.log_level);
+
     SDL_Window *window = SDL_CreateWindow("gemu", WINDOW_WIDTH_INITIAL,
                                           WINDOW_HEIGHT_INITIAL, 0);
 
@@ -130,14 +131,14 @@ int main(int argc, char *argv[])
     if (renderer == nullptr) {
         fprintf(stderr, "Could not create renderer: %s\n", SDL_GetError());
         retval = EXIT_FAILURE;
-        goto cleanup_3;
+        goto cleanup_2;
     }
 
     SDL_PropertiesID props = SDL_GetRendererProperties(renderer);
 
-    const char *name =
+    const char *renderer_name =
         SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
-    log_info("Renderer: %s", name);
+    log_info("Using renderer \"%s\"", renderer_name);
 
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                                              SDL_TEXTUREACCESS_STREAMING,
@@ -146,7 +147,7 @@ int main(int argc, char *argv[])
     if (texture == nullptr) {
         fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
         retval = EXIT_FAILURE;
-        goto cleanup_4;
+        goto cleanup_3;
     }
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
@@ -160,7 +161,7 @@ int main(int argc, char *argv[])
         if (boot_rom == nullptr) {
             fprintf(stderr, "Could not read boot ROM file.\n");
             retval = EXIT_FAILURE;
-            goto cleanup_5;
+            goto cleanup_4;
         }
 
         if (boot_rom_len != GB_BOOT_ROM_LEN) {
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
                     "Boot ROM must be exactly %zu bytes long (was %zu)\n",
                     GB_BOOT_ROM_LEN, boot_rom_len);
             retval = EXIT_FAILURE;
-            goto cleanup_6;
+            goto cleanup_5;
         }
     }
 
@@ -195,16 +196,14 @@ int main(int argc, char *argv[])
 
     GameBoy_destroy(&state.gb);
 
-cleanup_6:
-    SDL_free(boot_rom);
 cleanup_5:
-    SDL_DestroyTexture(texture);
+    SDL_free(boot_rom);
 cleanup_4:
-    SDL_DestroyRenderer(renderer);
+    SDL_DestroyTexture(texture);
 cleanup_3:
-    SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);
 cleanup_2:
-    SDL_Quit();
+    SDL_DestroyWindow(window);
 cleanup_1:
     SDL_free(rom);
 

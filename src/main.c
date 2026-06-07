@@ -17,12 +17,12 @@ static constexpr int WINDOW_INIT_HEIGHT = GB_LCD_HEIGHT * 4;
 #define EXE_NAME "gemu"
 
 static constexpr char USAGE[] =
-    "Usage: " EXE_NAME " [options] [--] [file]                               \n"
+    "Usage: " EXE_NAME " [options] [rom_file]                                \n"
     "A Game Boy emulator written in C.                                       \n"
     "                                                                        \n"
     "  -h, --help                 show this help message                     \n"
-    "  -b, --boot-rom=FILE        boot ROM to use for startup                \n"
-    "  -l, --log-level=LOG_LEVEL  log level (error, warn, info, debug, trace)\n";
+    "  -b, --boot-rom FILE        boot ROM to use for startup                \n"
+    "  -l, --log-level LOG_LEVEL  log level (error, warn, info, debug, trace)\n";
 
 static const struct option OPTIONS[] = {
     {     "help",       no_argument, nullptr, 'h'},

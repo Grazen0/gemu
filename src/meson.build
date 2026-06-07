@@ -3,11 +3,10 @@ sources = [
   'data.c',
   'frontend.c',
   'game_boy.c',
-  'instructions.c',
   'log.c',
   'macros.c',
   'num.c',
-  'sdl.c',
+  'scheduler.c',
 ]
 
 sdl3_dep = dependency('sdl3')

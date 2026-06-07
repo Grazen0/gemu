@@ -2,59 +2,60 @@
 #define GEMU_GAME_BOY_H
 
 #include "cpu.h"
+#include "data.h"
 #include <stddef.h>
 
-constexpr int GB_LCD_WIDTH = 160;
-constexpr int GB_LCD_HEIGHT = 144;
-constexpr int GB_BG_WIDTH = 256;
-constexpr int GB_BG_HEIGHT = 256;
-constexpr int GB_LCD_MAX_LY = 154;
-constexpr int GB_CPU_FREQUENCY_HZ = 4194304 / 4;
-constexpr double GB_VBLANK_FREQ = 59.7;
-constexpr size_t GB_BOOT_ROM_LEN = 0x100;
+static constexpr int GB_LCD_WIDTH = 160;
+static constexpr int GB_LCD_HEIGHT = 144;
+static constexpr int GB_BG_WIDTH = 256;
+static constexpr int GB_BG_HEIGHT = 256;
+static constexpr int GB_CLK_FREQ_HZ = 4'194'304;
+static constexpr size_t GB_BOOT_ROM_LEN = 0x100;
 
 typedef enum : u8 {
-    LcdControl_Enable = 1 << 7,
-    LcdControl_WinTileMap = 1 << 6,
-    LcdControl_WinEnable = 1 << 5,
-    LcdControl_BgwTileArea = 1 << 4,
-    LcdControl_BgTileMap = 1 << 3,
-    LcdControl_ObjSize = 1 << 2,
-    LcdControl_ObjEnable = 1 << 1,
+    LCDC_ENABLE = 1 << 7,
+    LCDC_WIN_TILE_MAP = 1 << 6,
+    LCDC_WIN_ENABLE = 1 << 5,
+    LCDC_BG_WIN_TILES = 1 << 4,
+    LCDC_BG_TILE_MAP = 1 << 3,
+    LCDC_OBJ_SIZE = 1 << 2,
+    LCDC_OBJ_ENABLE = 1 << 1,
     LcdControl_ObjBgwEnable = 1 << 0,
 } LcdControl;
 
 typedef enum : u8 {
-    InterruptFlag_VBlank = 1 << 0,
-    InterruptFlag_Lcd = 1 << 1,
-    InterruptFlag_Timer = 1 << 2,
-    InterruptFlag_Serial = 1 << 3,
-    InterruptFlag_Joypad = 1 << 4,
+    INT_VBLANK = 1 << 0,
+    INT_LCD = 1 << 1,
+    INT_TIMER = 1 << 2,
+    INT_SERIAL = 1 << 3,
+    INT_JOYPAd = 1 << 4,
 } InterruptFlag;
 
 typedef enum : u8 {
-    Joypad_RightA = 1 << 0,
-    Joypad_LeftB = 1 << 1,
-    Joypad_UpSelect = 1 << 2,
-    Joypad_DownStart = 1 << 3,
-    Joypad_DPadSelect = 1 << 4,
-    Joypad_ButtonsSelect = 1 << 5,
+    JOYP_RIGHT_A = 1 << 0,
+    JOPY_LEFT_B = 1 << 1,
+    JOYP_UP_SELECT = 1 << 2,
+    JOYP_DOWN_START = 1 << 3,
+    JOYP_SELECT_DPAD = 1 << 4,
+    JOYP_SELECT_BUTTONS = 1 << 5,
 } Joypad;
 
 typedef enum : u8 {
-    StatSelect_Mode0 = 1 << 3,
-    StatSelect_Mode1 = 1 << 4,
-    StatSelect_Mode2 = 1 << 5,
-    StatSelect_Lyc = 1 << 6,
+    STAT_PPU_MODE = 0b11,
+    STAT_LCY_EQ_LY = 1 << 2,
+    STAT_MODE0_INT = 1 << 3,
+    STAT_MODE1_INT = 1 << 4,
+    STAT_MODE2_INT = 1 << 5,
+    STAT_LYC_INT = 1 << 6,
 } StatSelect;
 
 typedef enum : u8 {
-    ObjAttrs_Priority = 1 << 7,
-    ObjAttrs_FlipY = 1 << 6,
-    ObjAttrs_FlipX = 1 << 5,
-    ObjAttrs_DmgPalette = 1 << 4,
-    ObjAttrs_Bank = 1 << 3,
-    ObjAttrs_CgbPalette = 0b111,
+    OBJ_ATTRS_CGB_PALETTE = 0b111,
+    OBJ_ATTRS_ANK = 1 << 3,
+    OBJ_ATTRS_DMG_PALETTE = 1 << 4,
+    OBJ_ATTRS_FLIP_X = 1 << 5,
+    OBJ_ATTRS_FLIP_Y = 1 << 6,
+    OBJ_ATTRS_PRIORITY = 1 << 7,
 } ObjAttrs;
 
 typedef struct {
@@ -66,23 +67,23 @@ typedef struct {
     bool b;
     bool start;
     bool select;
-} JoypadState;
+} JoypadButtons;
 
 typedef struct {
-    JoypadState joypad;
     Cpu cpu;
-    bool boot_rom_exists;
-    bool boot_rom_enable;
-    u8 ram[0x2000];
-    u8 vram[0x2000];
     u8 hram[0x7F];
     u8 oam[0xA0];
-    u8 boot_rom[GB_BOOT_ROM_LEN];
+    JoypadButtons btns;
+    u8 *ram;
+    u8 *vram;
     u8 *rom;
     size_t rom_len;
+    u8 *boot_rom;
+    bool boot_rom_enable;
     u8 lcdc;
     u8 stat;
     u8 ly;
+    u16 lx;
     u8 lcy;
     u8 scx;
     u8 scy;
@@ -100,60 +101,47 @@ typedef struct {
     u8 tma;
     u8 tac;
     u8 joyp;
+    u8 render_buf[GB_BG_HEIGHT][GB_BG_WIDTH];
+    u8 scanout_buf[GB_LCD_HEIGHT][GB_LCD_WIDTH];
+    bool video_dirty;
 } GameBoy;
 
-/**
- * \brief Constructs a GameBoy object with the given boot ROM.
- *
- * Constructs a GameBoy with the given boot ROM (which may be NULL). The created
- * GameBoy must eventually be destroyed with GameBoy_destroy.
- *
- * The data at boot_rom is copied, so ownership of boot_rom is not taken.
- *
- * \param boot_rom the boot ROM to use. **Must** be either NULL or exactly 256
- * bytes long.
- *
- * \return the constructed GameBoy.
- *
- * \sa GameBoy_destroy
- */
-[[nodiscard]] GameBoy GameBoy_new(const u8 *boot_rom);
+typedef struct {
+    char title[17];
+    CartridgeType cart_type;
+    u8 ram_size;
+    u8 rom_size;
+} GameInfo;
 
-/**
- * \brief Frees a previously-created GameBoy.
- *
- * \param self the GameBoy to destruct.
- *
- * \sa GameBoy_new
- */
-void GameBoy_destroy(GameBoy *self);
+[[nodiscard]] GameBoy gb_init(const u8 *boot_rom);
 
-/**
- * \brief Logs information about the currently loaded ROM.
- *
- * If no ROM is currently loaded, this will be a no-op.
- *
- * \param self the GameBoy to log information about.
- *
- * \sa GameBoy_load_rom
- */
-void GameBoy_log_cartridge_info(const GameBoy *self);
+void gb_deinit(GameBoy *gb);
+
+[[nodiscard]] GameInfo gb_cartridge_info(const u8 *rom);
 
 /**
  * \brief Loads ROM data into a GameBoy.
  *
  * This method copies rom, so it does not take ownership of it.
  *
- * \param self the GameBoy to load the ROM to.
+ * \param gb the GameBoy to load the ROM to.
  * \param rom the ROM data to load.
  * \param rom_len the length of rom.
  */
-void GameBoy_load_rom(GameBoy *self, const u8 *rom, size_t rom_len);
+void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len);
 
-[[nodiscard]] u8 GameBoy_read_mem(const void *ctx, u16 addr);
+[[nodiscard]] u8 gb_read_mem(const GameBoy *gbx, u16 addr);
 
-void GameBoy_write_mem(void *ctx, u16 addr, u8 value);
+void gb_write_mem(GameBoy *gb, u16 addr, u8 value);
 
-void GameBoy_service_interrupts(GameBoy *self, Memory *mem);
+void gb_service_interrupts(GameBoy *gb, Memory *mem);
+
+u64 gb_dispatch_instr(GameBoy *gb);
+
+u64 gb_dispatch_pixel(GameBoy *gb);
+
+u64 gb_dispatch_div(GameBoy *gb);
+
+u64 gb_dispatch_tima(GameBoy *gb);
 
 #endif

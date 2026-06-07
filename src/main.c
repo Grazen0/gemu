@@ -11,8 +11,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static constexpr int WINDOW_WIDTH_INITIAL = GB_LCD_WIDTH * 4;
-static constexpr int WINDOW_HEIGHT_INITIAL = GB_LCD_HEIGHT * 4;
+static constexpr int WINDOW_INIT_WIDTH = GB_LCD_WIDTH * 4;
+static constexpr int WINDOW_INIT_HEIGHT = GB_LCD_HEIGHT * 4;
 
 #define EXE_NAME "gemu"
 
@@ -56,17 +56,17 @@ static bool parse_args(int argc, char **argv, Args *out_args)
 
     while ((opt = getopt_long(argc, argv, "hb:l:", OPTIONS, nullptr)) != -1) {
         switch (opt) {
-        case 'h':
-            out_args->help = true;
-            return true;
-        case 'b':
-            out_args->boot_rom_path = optarg;
-            break;
-        case 'l':
-            log_level_str = optarg;
-            break;
-        default:
-            return false;
+            case 'h':
+                out_args->help = true;
+                return true;
+            case 'b':
+                out_args->boot_rom_path = optarg;
+                break;
+            case 'l':
+                log_level_str = optarg;
+                break;
+            default:
+                return false;
         }
     }
 
@@ -117,8 +117,8 @@ int main(int argc, char *argv[])
     atexit(SDL_Quit);
     logger_set_level(args.log_level);
 
-    SDL_Window *window = SDL_CreateWindow("gemu", WINDOW_WIDTH_INITIAL,
-                                          WINDOW_HEIGHT_INITIAL, 0);
+    SDL_Window *window =
+        SDL_CreateWindow("gemu", WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, 0);
 
     if (window == nullptr) {
         fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
@@ -140,18 +140,6 @@ int main(int argc, char *argv[])
         SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
     log_info("Using renderer \"%s\"", renderer_name);
 
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-                                             SDL_TEXTUREACCESS_STREAMING,
-                                             GB_BG_WIDTH, GB_BG_HEIGHT);
-
-    if (texture == nullptr) {
-        fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
-        retval = EXIT_FAILURE;
-        goto cleanup_3;
-    }
-
-    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-
     u8 *boot_rom = nullptr;
 
     if (args.boot_rom_path != nullptr) {
@@ -161,7 +149,7 @@ int main(int argc, char *argv[])
         if (boot_rom == nullptr) {
             fprintf(stderr, "Could not read boot ROM file.\n");
             retval = EXIT_FAILURE;
-            goto cleanup_4;
+            goto cleanup_3;
         }
 
         if (boot_rom_len != GB_BOOT_ROM_LEN) {
@@ -169,37 +157,26 @@ int main(int argc, char *argv[])
                     "Boot ROM must be exactly %zu bytes long (was %zu)\n",
                     GB_BOOT_ROM_LEN, boot_rom_len);
             retval = EXIT_FAILURE;
-            goto cleanup_5;
+            goto cleanup_4;
         }
     }
 
-    State state = {
-        .gb = GameBoy_new(boot_rom),
-        .window_width = WINDOW_WIDTH_INITIAL,
-        .window_height = WINDOW_HEIGHT_INITIAL,
-        .cycle_accumulator = 0.0,
-        .vframe_time = 0.0,
-        .div_cycle_counter = 0,
-        .tima_cycle_counter = 0,
-        .quit = false,
-        .screen_texture = texture,
-    };
+    GameInfo info = gb_cartridge_info(rom);
+    log_info("Cartridge type: $%02X", info.cart_type);
+    log_info("RAM size: $%02X", info.ram_size);
+    log_info("ROM size: $%02X", info.rom_size);
+    log_info("Game title: %s", info.title);
 
-    GameBoy_load_rom(&state.gb, rom, rom_len);
-
-    GameBoy_log_cartridge_info(&state.gb);
+    State state = state_init(boot_rom, window);
+    gb_load_rom(&state.gb, rom, rom_len);
 
     SDL_RenderPresent(renderer);
     SDL_SetWindowResizable(window, true);
-
     run_until_quit(&state, renderer);
 
-    GameBoy_destroy(&state.gb);
-
-cleanup_5:
-    SDL_free(boot_rom);
+    state_deinit(&state);
 cleanup_4:
-    SDL_DestroyTexture(texture);
+    SDL_free(boot_rom);
 cleanup_3:
     SDL_DestroyRenderer(renderer);
 cleanup_2:

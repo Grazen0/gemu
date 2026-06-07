@@ -6,109 +6,133 @@
 #include "num.h"
 #include "stdinc.h"
 #include "string.h"
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-static void GameBoy_write_joyp(GameBoy *const self, const u8 value)
+static constexpr size_t RAM_SIZE = 0x2000;
+static constexpr size_t VRAM_SIZE = 0x2000;
+
+static void gb_write_joyp(GameBoy *gb, u8 value)
 {
-    self->joyp = value | 0x0F;
+    gb->joyp = value | 0x0F;
 
-    if ((self->joyp & Joypad_DPadSelect) == 0) {
-        if (self->joypad.right)
-            self->joyp &= ~Joypad_RightA;
+    if ((gb->joyp & JOYP_SELECT_DPAD) == 0) {
+        if (gb->btns.right)
+            gb->joyp &= ~JOYP_RIGHT_A;
 
-        if (self->joypad.left)
-            self->joyp &= ~Joypad_LeftB;
+        if (gb->btns.left)
+            gb->joyp &= ~JOPY_LEFT_B;
 
-        if (self->joypad.up)
-            self->joyp &= ~Joypad_UpSelect;
+        if (gb->btns.up)
+            gb->joyp &= ~JOYP_UP_SELECT;
 
-        if (self->joypad.down)
-            self->joyp &= ~Joypad_DownStart;
+        if (gb->btns.down)
+            gb->joyp &= ~JOYP_DOWN_START;
     }
 
-    if ((self->joyp & Joypad_ButtonsSelect) == 0) {
-        if (self->joypad.a)
-            self->joyp &= ~Joypad_RightA;
+    if ((gb->joyp & JOYP_SELECT_BUTTONS) == 0) {
+        if (gb->btns.a)
+            gb->joyp &= ~JOYP_RIGHT_A;
 
-        if (self->joypad.b)
-            self->joyp &= ~Joypad_LeftB;
+        if (gb->btns.b)
+            gb->joyp &= ~JOPY_LEFT_B;
 
-        if (self->joypad.select)
-            self->joyp &= ~Joypad_UpSelect;
+        if (gb->btns.select)
+            gb->joyp &= ~JOYP_UP_SELECT;
 
-        if (self->joypad.start)
-            self->joyp &= ~Joypad_DownStart;
+        if (gb->btns.start)
+            gb->joyp &= ~JOYP_DOWN_START;
     }
 }
 
-static void verify_rom_checksum(const u8 *const rom)
+static void verify_rom_checksum(const u8 *rom)
 {
-    u8 checksum = 0;
+    u8 chksm = 0;
     for (u16 addr = 0x0134; addr <= 0x014C; ++addr)
-        checksum = checksum - rom[addr] - 1;
+        chksm = chksm - rom[addr] - 1;
 
-    const u8 checksum_lo = checksum & 0x0F;
+    u8 chksm_lo = chksm & 0x0F;
 
     BAIL_IF(
-        checksum_lo != (rom[RomHeader_HeaderChecksum] & 0x0F),
+        chksm_lo != rom[ROM_HEADER_CHECKSUM],
         "Lower 8 bits of ROM checksum do not match expected value in header (expected $%02X, was $%02X)",
-        rom[RomHeader_HeaderChecksum], checksum_lo);
+        rom[ROM_HEADER_CHECKSUM], chksm_lo);
 }
 
-static void GameBoy_simulate_boot(GameBoy *const self)
+static void gb_mock_boot(GameBoy *gb)
 {
-    verify_rom_checksum(self->rom);
+    verify_rom_checksum(gb->rom);
 
-    self->cpu.a = 0x01;
-    self->cpu.b = 0x00;
-    self->cpu.c = 0x13;
-    self->cpu.d = 0x00;
-    self->cpu.e = 0xD8;
-    self->cpu.h = 0x01;
-    self->cpu.l = 0x4D;
-    self->cpu.sp = 0xFFFE;
-    self->cpu.pc = 0x0100;
+    gb->cpu.a = 0x01;
+    gb->cpu.b = 0x00;
+    gb->cpu.c = 0x13;
+    gb->cpu.d = 0x00;
+    gb->cpu.e = 0xD8;
+    gb->cpu.h = 0x01;
+    gb->cpu.l = 0x4D;
+    gb->cpu.sp = 0xFFFE;
+    gb->cpu.pc = 0x0100;
 
-    self->boot_rom_enable = false;
+    gb->boot_rom_enable = false;
 }
 
-static void GameBoy_reset(GameBoy *const self)
+static void gb_reset(GameBoy *gb)
 {
-    self->cpu.pc = 0;
-    self->boot_rom_enable = true;
+    gb->cpu.pc = 0;
+    gb->boot_rom_enable = true;
 }
 
-static void GameBoy_validate_rom(const GameBoy *const self)
+static void gb_validate_rom(const GameBoy *gb)
 {
-    BAIL_IF(self->rom[RomHeader_CartridgeType] != 0x00,
-            "Unsupported cartridge type (ctype: $%02X)",
-            self->rom[RomHeader_CartridgeType]);
+    BAIL_IF(gb->rom[ROM_HEADER_CART_TYPE] != 0x00,
+            "Unsupported cartridge type ($%02X)",
+            gb->rom[ROM_HEADER_CART_TYPE]);
 
     BAIL_IF(
-        !CartridgeType_has_ram(self->rom[RomHeader_CartridgeType]) &&
-            self->rom[RomHeader_RamSize] != 0,
-        "Cartridge type does not have RAM, but header indicates otherwise (ctype: $%02X, RAM size: $%02X)",
-        self->rom[RomHeader_CartridgeType], self->rom[RomHeader_RamSize]);
+        !CartridgeType_has_ram(gb->rom[ROM_HEADER_CART_TYPE]) &&
+            gb->rom[ROM_HEADER_RAM_SIZE] != 0,
+        "Cartridge type does not have RAM, but header indicates otherwise (cartridge type: $%02X, RAM size: $%02X)",
+        gb->rom[ROM_HEADER_CART_TYPE], gb->rom[ROM_HEADER_RAM_SIZE]);
 
     BAIL_IF(
-        self->rom_len != 0x8000 * ((size_t)1 << self->rom[RomHeader_RomSize]),
+        gb->rom_len != 0x8000 * ((size_t)1 << gb->rom[ROM_HEADER_ROM_SIZE]),
         "Actual ROM size does not match header-specified size. (specified: %u, was: %zu)",
-        self->rom[RomHeader_RomSize], self->rom_len);
+        gb->rom[ROM_HEADER_ROM_SIZE], gb->rom_len);
 }
 
-GameBoy GameBoy_new(const u8 *const boot_rom)
+static JoypadButtons joypad_btns_init()
+{
+    return (JoypadButtons){
+        .up = false,
+        .down = false,
+        .right = false,
+        .left = false,
+        .a = false,
+        .b = false,
+        .start = false,
+        .select = false,
+    };
+}
+
+GameBoy gb_init(const u8 *boot_rom)
 {
     GameBoy gb = {
-        .cpu = Cpu_new(),
+        .cpu = cpu_init(),
+        .ram = nullptr,
+        .vram = nullptr,
+        .boot_rom = nullptr,
+        .hram = {},
+        .oam = {},
+        .btns = joypad_btns_init(),
         .rom = nullptr,
         .rom_len = 0,
-        .boot_rom_exists = boot_rom != nullptr,
         .boot_rom_enable = true,
         .lcdc = 0,
         .stat = 0,
         .ly = 0,
+        .lx = 0,
         .lcy = 0,
         .scx = 0,
         .scy = 0,
@@ -128,84 +152,100 @@ GameBoy GameBoy_new(const u8 *const boot_rom)
         .joyp = 0x0F,
     };
 
-    if (boot_rom != nullptr)
-        memcpy(gb.boot_rom, boot_rom, sizeof(gb.boot_rom));
+    gb.ram = calloc(RAM_SIZE, sizeof(*gb.ram));
+    assert(gb.ram != nullptr);
+
+    gb.vram = calloc(VRAM_SIZE, sizeof(*gb.vram));
+    assert(gb.vram != nullptr);
+
+    if (boot_rom != nullptr) {
+        gb.boot_rom = calloc(GB_BOOT_ROM_LEN, sizeof(*gb.boot_rom));
+        assert(gb.boot_rom != nullptr);
+
+        memcpy(gb.boot_rom, boot_rom, GB_BOOT_ROM_LEN * sizeof(*gb.boot_rom));
+    }
 
     return gb;
 }
 
-void GameBoy_destroy(GameBoy *const self)
+void gb_deinit(GameBoy *gb)
 {
-    free(self->rom);
+    free(gb->rom);
+    gb->rom = nullptr;
+    gb->rom_len = 0;
 
-    self->rom = nullptr;
-    self->rom_len = 0;
+    free(gb->boot_rom);
+    gb->boot_rom = nullptr;
+
+    free(gb->ram);
+    gb->ram = nullptr;
+
+    free(gb->vram);
+    gb->vram = nullptr;
 }
 
-void GameBoy_log_cartridge_info(const GameBoy *const self)
+GameInfo gb_cartridge_info(const u8 *rom)
 {
-    if (self->rom == nullptr)
-        return;
+    GameInfo out = {
+        .title = {},
+        .cart_type = rom[ROM_HEADER_CART_TYPE],
+        .ram_size = rom[ROM_HEADER_RAM_SIZE],
+        .rom_size = rom[ROM_HEADER_ROM_SIZE],
+    };
 
-    log_info("Cartridge type: $%02X", self->rom[RomHeader_CartridgeType]);
-    log_info("RAM size: $%02X", self->rom[RomHeader_RamSize]);
-    log_info("ROM size: $%02X", self->rom[RomHeader_RomSize]);
-
-    char game_title[17];
-    memcpy(game_title, (char *)&self->rom[RomHeader_Title], sizeof(game_title));
-    log_info("Game title: %.17s", game_title);
+    memcpy(out.title, (char *)&rom[ROM_HEADER_TITLE], sizeof(out.title));
+    return out;
 }
 
-void GameBoy_load_rom(GameBoy *const self, const u8 *const rom,
-                      const size_t rom_len)
+void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 {
     BAIL_IF(rom_len < 0x8000,
             "ROM data cannot be less than 32768 bytes long (was %zu)", rom_len);
 
-    free(self->rom);
+    free(gb->rom);
 
-    self->rom = malloc(rom_len * sizeof(self->rom[0]));
-    BAIL_IF(self->rom == nullptr, "Could not allocate memory for new ROM");
+    gb->rom = malloc(rom_len * sizeof(gb->rom[0]));
+    BAIL_IF(gb->rom == nullptr, "Could not allocate memory for new ROM");
 
-    memcpy(self->rom, rom, rom_len * sizeof(self->rom[0]));
-    self->rom_len = rom_len;
+    memcpy(gb->rom, rom, rom_len * sizeof(gb->rom[0]));
+    gb->rom_len = rom_len;
 
-    GameBoy_validate_rom(self);
-    GameBoy_reset(self);
+    gb_validate_rom(gb);
+    gb_reset(gb);
 
-    if (!self->boot_rom_exists)
-        GameBoy_simulate_boot(self);
+    if (gb->boot_rom == nullptr)
+        gb_mock_boot(gb);
 }
 
 // NOLINTNEXTLINE
-u8 GameBoy_read_io(const GameBoy *const self, const u16 addr)
+u8 gb_read_io(const GameBoy *gb, u16 addr)
 {
     if (addr == 0xFF00) // FF00 (joypad input)
-        return self->joyp;
+        return gb->joyp;
 
     // TODO: implement serial transfer
     if (addr == 0xFF01) // FF01 (serial transfer data)
         return 0xFF;
 
     if (addr == 0xFF02) // FF02 (serial transfer control)
-        return self->sc;
+        return gb->sc;
 
     if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
 
         // clang-format off
         switch (addr) {
-            case 0xFF04: return self->div;
-            case 0xFF05: return self->tima;
-            case 0xFF06: return self->tma;
-            case 0xFF07: return self->tac;
+            case 0xFF04: return gb->div;
+            case 0xFF05: return gb->tima;
+            case 0xFF06: return gb->tma;
+            case 0xFF07: return gb->tac;
             default: BAIL("Unexpected I/O timer and divider read ($%04X)", addr);
         }
         // clang-format on
     }
 
     if (addr == 0xFF0F) // FF0F (interrupts)
-        return self->if_;
+        return gb->if_;
 
     if (addr >= 0xFF10 && addr <= 0xFF26) // FF10-FF26 (audio)
         BAIL("I/O audio read ($%04X)", addr);
@@ -217,17 +257,17 @@ u8 GameBoy_read_io(const GameBoy *const self, const u16 addr)
         // FF40-FF4B (LCD)
         // clang-format off
         switch (addr) {
-            case 0xFF40: return self->lcdc;
-            case 0xFF44: return self->ly;
-            case 0xFF45: return self->lcy;
-            case 0xFF41: return self->stat;
-            case 0xFF42: return self->scy;
-            case 0xFF43: return self->scx;
-            case 0xFF4A: return self->wy;
-            case 0xFF4B: return self->wx;
-            case 0xFF47: return self->bgp;
-            case 0xFF48: return self->obp0;
-            case 0xFF49: return self->obp1;
+            case 0xFF40: return gb->lcdc;
+            case 0xFF44: return gb->ly;
+            case 0xFF45: return gb->lcy;
+            case 0xFF41: return gb->stat;
+            case 0xFF42: return gb->scy;
+            case 0xFF43: return gb->scx;
+            case 0xFF4A: return gb->wy;
+            case 0xFF4B: return gb->wx;
+            case 0xFF47: return gb->bgp;
+            case 0xFF48: return gb->obp0;
+            case 0xFF49: return gb->obp1;
             default: BAIL("Unexpected I/O LCD read (addr = $%04X)", addr);
         }
         // clang-format on
@@ -254,88 +294,86 @@ u8 GameBoy_read_io(const GameBoy *const self, const u16 addr)
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
 }
 
-u8 GameBoy_read_mem(const void *const ctx, const u16 addr)
+u8 gb_read_mem(const GameBoy *gb, u16 addr)
 {
-    const GameBoy *const self = ctx;
-
     if (addr <= 0x7FFF) {
-        if (self->boot_rom_enable && addr <= 0x100) {
+        if (gb->boot_rom_enable && addr <= 0x100) {
             // 0000-0100 (Boot ROM)
-            if (!self->boot_rom_exists)
+            if (gb->boot_rom == nullptr)
                 BAIL("Tried to read non-existing boot ROM");
 
-            return self->boot_rom[addr];
+            return gb->boot_rom[addr];
         }
 
-        if (self->rom == nullptr)
+        if (gb->rom == nullptr)
             BAIL("Tried to read non-existing ROM");
 
         // 0000-7FFF (ROM bank)
-        return self->rom[addr];
+        return gb->rom[addr];
     }
 
     if (addr <= 0x9FFF) // 8000-9FFF (VRAM)
-        return self->vram[addr - 0x8000];
+        return gb->vram[addr - 0x8000];
 
     if (addr <= 0xBFFF) // A000-BFFF (External RAM)
-        BAIL("TODO: GameBoy_read_mem (addr = $%04X)", addr);
+        BAIL("TODO: gb_read_mem (addr = $%04X)", addr);
 
     if (addr <= 0xDFFF) // C000-DFFF (WRAM)
-        return self->ram[addr - 0xC000];
+        return gb->ram[addr - 0xC000];
 
     if (addr <= 0xFDFF) // E000-FDFF (Echo RAM, mirror of C000-DDFF)
-        return self->ram[addr - 0xE000];
+        return gb->ram[addr - 0xE000];
 
     if (addr <= 0xFE9F) // FE00-FE9F (OAM)
-        return self->oam[addr - 0xFE00];
+        return gb->oam[addr - 0xFE00];
 
     if (addr <= 0xFEFF) // FEA0-FEFF (Not usable)
         BAIL("Tried to read unusable memory (addr = $%04X)", addr);
 
     if (addr <= 0xFF7F) // FF00-FF7F (I/O registers)
-        return GameBoy_read_io(self, addr);
+        return gb_read_io(gb, addr);
 
     if (addr <= 0xFFFE) // FF80-FFFE (High RAM)
-        return self->hram[addr - 0xFF80];
+        return gb->hram[addr - 0xFF80];
 
     // FFFF (Interrupt Enable Register)
-    return self->ie;
+    return gb->ie;
 }
 
-u16 GameBoy_read_mem_u16(GameBoy *const self, u16 addr)
+u16 gb_read_mem_u16(GameBoy *gb, u16 addr)
 {
-    const u8 lo = GameBoy_read_mem(self, addr);
-    const u8 hi = GameBoy_read_mem(self, addr + 1);
+    u8 lo = gb_read_mem(gb, addr);
+    u8 hi = gb_read_mem(gb, addr + 1);
     return concat_u16(hi, lo);
 }
 
 // NOLINTNEXTLINE
-void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
+void gb_write_io(GameBoy *gb, u16 addr, u8 value)
 {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        GameBoy_write_joyp(self, value);
+        gb_write_joyp(gb, value);
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
-        self->sb = value;
+        gb->sb = value;
     } else if (addr == 0xFF02) {
         // FF02 (serial transfer control)
         // TODO: implement properly
-        self->sc = value;
+        gb->sc = value;
     } else if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
         // clang-format off
         switch (addr) {
-            case 0xFF04: self->div = 0; break;
-            case 0xFF05: self->tima = value; break;
-            case 0xFF06: self->tma = value; break;
-            case 0xFF07: self->tac = value; break;
+            case 0xFF04: gb->div = 0; break;
+            case 0xFF05: gb->tima = value; break;
+            case 0xFF06: gb->tma = value; break;
+            case 0xFF07: gb->tac = value; break;
             default: BAIL("Unexpected I/O timer and divider write ($%04X, $%02X)", addr, value);
         }
         // clang-format on
     } else if (addr == 0xFF0F) {
         // FF0F (interrupts)
-        self->if_ = value;
+        gb->if_ = value;
     } else if (addr >= 0xFF10 && addr <= 0xFF26) {
         // FF10-FF26 (audio)
         // TODO: I/O audio write
@@ -344,43 +382,48 @@ void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
         // TODO: I/O wave pattern write
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        const u16 src = (u16)value << 8;
+        u16 src = (u16)value << 8;
 
         // TODO: implement proper timing
         for (size_t i = 0; i < 0xA0; ++i) {
-            self->oam[i] = GameBoy_read_mem(self, src + i);
+            gb->oam[i] = gb_read_mem(gb, src + i);
         }
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
         // clang-format off
         switch (addr) {
-            case 0xFF40: self->lcdc = value; break;
-            case 0xFF45: self->lcy = value; break;
+            case 0xFF40: gb->lcdc = value; break;
+            case 0xFF45: gb->lcy = value; break;
             case 0xFF41:
                 // Modifies only bits 3-7
-                self->stat = (self->stat & 0b111) | (value & ~0b111);
+                gb->stat = (gb->stat & 0b111) | (value & ~0b111);
                 break;
-            case 0xFF42: self->scy = value; break;
-            case 0xFF43: self->scx = value; break;
-            case 0xFF4A: self->wy = value; break;
-            case 0xFF4B: self->wx = value; break;
-            case 0xFF47: self->bgp = value; break;
-            case 0xFF48: self->obp0 = value; break;
-            case 0xFF49: self->obp1 = value; break;
+            case 0xFF42: gb->scy = value; break;
+            case 0xFF43: gb->scx = value; break;
+            case 0xFF4A: gb->wy = value; break;
+            case 0xFF4B: gb->wx = value; break;
+            case 0xFF47: gb->bgp = value; break;
+            case 0xFF48: gb->obp0 = value; break;
+            case 0xFF49: gb->obp1 = value; break;
             default: BAIL("Unexpected I/O LCD write (addr = $%04X, value = $%02X)", addr, value);
         }
         // clang-format on
+
+        gb->video_dirty = true;
     } else if (addr == 0xFF4F) {
         // FF4F
         BAIL("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
+        gb->video_dirty = true;
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
         if (value != 0)
-            self->boot_rom_enable = false;
+            gb->boot_rom_enable = false;
     } else if (addr >= 0xFF51 && addr <= 0xFF55) {
         // FF51-FF55 (VRAM DMA, CGB-only)
+        gb->video_dirty = true;
     } else if (addr >= 0xFF68 && addr <= 0xFF6B) {
         // FF68-FF6B (LCD color palettes, CGB-only)
+        gb->video_dirty = true;
     } else if (addr == 0xFF70) {
         // FF70 (WRAM bank select, CGB-only)
     } else if (addr == 0xFF7F) {
@@ -390,65 +433,267 @@ void GameBoy_write_io(GameBoy *const self, const u16 addr, const u8 value)
     }
 }
 
-void GameBoy_write_mem(void *const ctx, const u16 addr, const u8 value)
+void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
 {
-    GameBoy *const self = ctx;
-
     log_trace("write mem (addr = $%04X, value = $%02X)", addr, value);
 
     if (addr <= 0x7FFF) {
         // 0000-7FFF (ROM bank)
-        log_debug("TODO: GameBoy_write_mem ROM (addr = $%04X, $%02X)", addr,
-                  value);
+        log_debug("TODO: gb_write_mem ROM (addr = $%04X, $%02X)", addr, value);
     } else if (addr <= 0x9FFF) {
         // 8000-9FFF (VRAM)
-        self->vram[addr - 0x8000] = value;
+        gb->vram[addr - 0x8000] = value;
+        gb->video_dirty = true;
     } else if (addr <= 0xBFFF) {
         // A000-BFFF (External RAM)
-        BAIL("TODO: GameBoy_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
+        BAIL("TODO: gb_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
     } else if (addr <= 0xDFFF) {
         // C000-DFFF (WRAM)
-        self->ram[addr - 0xC000] = value;
+        gb->ram[addr - 0xC000] = value;
     } else if (addr <= 0xFDFF) {
         // E000-FDFF (Echo RAM, mirror of C000-DDFF)
-        self->ram[addr - 0xE000] = value;
+        gb->ram[addr - 0xE000] = value;
     } else if (addr <= 0xFE9F) {
         // FE00-FE9F (OAM)
         // TODO: should only be writable during HBlank or VBlank
-        self->oam[addr - 0xFE00] = value;
+        gb->oam[addr - 0xFE00] = value;
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
         log_debug("Tried to write into unusable memory (addr = $%04X, $%02X)",
                   addr, value);
     } else if (addr <= 0xFF7F) {
         // FF00-FF7F I/O registers
-        GameBoy_write_io(self, addr, value);
+        gb_write_io(gb, addr, value);
     } else if (addr <= 0xFFFE) {
         // FF80-FFFE (High RAM)
-        self->hram[addr - 0xFF80] = value;
+        gb->hram[addr - 0xFF80] = value;
     } else {
         // FFFF (Interrupt Enable Register)
-        self->ie = value;
+        gb->ie = value;
     }
 }
 
-void GameBoy_service_interrupts(GameBoy *const self, Memory *const mem)
+void gb_service_interrupts(GameBoy *gb, Memory *mem)
 {
-    const u8 int_mask = self->if_ & self->ie;
+    u8 int_mask = gb->if_ & gb->ie;
 
     // Disable HALT on an interrupt
-    if (int_mask != 0 && self->cpu.mode == CpuMode_Halted)
-        self->cpu.mode = CpuMode_Running;
+    if (int_mask != 0 && gb->cpu.mode == MODE_HALTED)
+        gb->cpu.mode = MODE_RUNNING;
 
-    if (!self->cpu.ime)
+    if (!gb->cpu.ime)
         return;
 
     for (size_t i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
             log_debug("Servicing interrupt #%zu", i);
-            self->if_ &= ~(1 << i);
-            Cpu_interrupt(&self->cpu, mem, 0x40 | (i << 3));
+            gb->if_ &= ~(1 << i);
+            cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
             break;
         }
     }
+}
+
+static u8 gb_read_mem_v(const void *ctx, u16 addr)
+{
+    return gb_read_mem(ctx, addr);
+}
+
+void gb_write_mem_v(void *ctx, u16 addr, u8 value)
+{
+    gb_write_mem(ctx, addr, value);
+}
+
+u64 gb_dispatch_instr(GameBoy *gb)
+{
+    Memory memory = (Memory){
+        .ctx = gb,
+        .read = gb_read_mem_v,
+        .write = gb_write_mem_v,
+    };
+
+    gb_service_interrupts(gb, &memory);
+    u64 mcycles = cpu_step(&gb->cpu, &memory);
+    return CPU_MCYCLE * mcycles;
+}
+
+static void gb_render_tiles(GameBoy *gb)
+{
+    static constexpr size_t TILES_HORIZONTAL = 32;
+    static constexpr size_t TILES_VERTICAL = 32;
+
+    size_t tile_data_start = gb->lcdc & LCDC_BG_WIN_TILES ? 0 : 0x1000;
+    size_t tile_map_start = gb->lcdc & LCDC_BG_TILE_MAP ? 0x1C00 : 0x1800;
+
+    const u8 *tile_data = &gb->vram[tile_data_start];
+    const u8 *tile_map = &gb->vram[tile_map_start];
+
+    for (size_t tile_y = 0; tile_y < TILES_VERTICAL; ++tile_y) {
+        for (size_t tile_x = 0; tile_x < TILES_HORIZONTAL; ++tile_x) {
+            u8 tile_index = tile_map[(tile_y * TILES_HORIZONTAL) + tile_x];
+            long tile_index_signed =
+                gb->lcdc & LCDC_BG_WIN_TILES ? tile_index : (i8)tile_index;
+
+            for (size_t tile_row_index = 0; tile_row_index < 8;
+                 ++tile_row_index) {
+                u8 byte_1 =
+                    tile_data[(tile_index_signed * 16) + (2 * tile_row_index)];
+                u8 byte_2 = tile_data[(tile_index_signed * 16) +
+                                      (2 * tile_row_index) + 1];
+
+                for (size_t tile_col_index = 0; tile_col_index < 8;
+                     ++tile_col_index) {
+                    u8 bit_lo = (byte_1 >> tile_col_index) & 1;
+                    u8 bit_hi = (byte_2 >> tile_col_index) & 1;
+                    u8 palette_index = bit_lo | (bit_hi << 1);
+
+                    size_t color = (gb->bgp >> (2 * palette_index)) & 0b11;
+
+                    size_t pixel_y = (8 * tile_y) + tile_row_index;
+                    size_t pixel_x = (8 * tile_x) + 7 - tile_col_index;
+
+                    assert(pixel_y < GB_BG_HEIGHT);
+                    assert(pixel_x < GB_BG_WIDTH);
+
+                    gb->render_buf[pixel_y][pixel_x] = color;
+                }
+            }
+        }
+    }
+}
+
+static void gb_render_obj(GameBoy *gb, const u8 *obj_data)
+{
+    u8 attrs = obj_data[3];
+    size_t y_pos = obj_data[0] - 16;
+    size_t x_pos = obj_data[1] - 8;
+    size_t tile_index = obj_data[2];
+
+    bool flip_x = (attrs & OBJ_ATTRS_FLIP_X) != 0;
+    bool flip_y = (attrs & OBJ_ATTRS_FLIP_Y) != 0;
+    u8 obp = (attrs & OBJ_ATTRS_DMG_PALETTE) != 0 ? gb->obp1 : gb->obp0;
+
+    for (size_t row = 0; row < 8; ++row) {
+        // Objects always use the $8000 method
+        u8 byte_1 = gb->vram[(16 * tile_index) + (2 * row)];
+        u8 byte_2 = gb->vram[(16 * tile_index) + (2 * row) + 1];
+
+        for (size_t col = 0; col < 8; ++col) {
+            u8 lo = (byte_1 >> col) & 1;
+            u8 hi = (byte_2 >> col) & 1;
+            u8 pal_idx = lo | (hi << 1);
+            size_t color = (obp >> (2 * pal_idx)) & 0b11;
+
+            if (color != 0) {
+                size_t pixel_y = y_pos + (flip_y ? 7 - row : row);
+                size_t pixel_x = x_pos + (flip_x ? col : 7 - col);
+
+                if (pixel_y < GB_BG_HEIGHT && pixel_x < GB_BG_WIDTH)
+                    gb->render_buf[pixel_y][pixel_x] = color;
+            }
+        }
+    }
+}
+
+static void gb_render_objs(GameBoy *gb)
+{
+    static constexpr size_t OBJ_COUNT = 40;
+
+    for (size_t obj = 0; obj < OBJ_COUNT; ++obj) {
+        // TODO: implement priority (background over object)
+        // Will probably need two passes: low and normal priority objs
+
+        const u8 *obj_data = &gb->oam[obj * 4];
+        gb_render_obj(gb, obj_data);
+    }
+}
+
+static void ensure_render_buf_updated(GameBoy *gb)
+{
+    if (!gb->video_dirty)
+        return;
+
+    memset(gb->render_buf, 0, sizeof(gb->render_buf));
+
+    if ((gb->lcdc & LCDC_ENABLE) != 0) {
+        gb_render_tiles(gb);
+
+        if ((gb->lcdc & LCDC_OBJ_ENABLE) != 0)
+            gb_render_objs(gb);
+    }
+
+    gb->video_dirty = false;
+}
+
+static u8 gb_scan_rendered(GameBoy *gb, size_t sy, size_t sx)
+{
+    assert(sy < GB_LCD_HEIGHT);
+    assert(sx < GB_LCD_WIDTH);
+
+    ensure_render_buf_updated(gb);
+
+    return gb->render_buf[(sy + gb->scy) % GB_BG_HEIGHT]
+                         [(sx + gb->scx) % GB_BG_WIDTH];
+}
+
+u64 gb_dispatch_pixel(GameBoy *gb)
+{
+    constexpr u16 GB_DOTS = 456;
+    constexpr u16 GB_LINES = 154;
+    constexpr u16 GB_DOTS_DRAW_BEGIN = 80;
+    constexpr u8 GB_LY_VBLANK = 144;
+
+    if (gb->ly < GB_LCD_HEIGHT && gb->lx >= GB_DOTS_DRAW_BEGIN) {
+        size_t y = gb->ly;
+        size_t x = gb->lx - GB_DOTS_DRAW_BEGIN;
+
+        if (x < GB_LCD_WIDTH)
+            gb->scanout_buf[y][x] = gb_scan_rendered(gb, y, x);
+    }
+
+    ++gb->lx;
+    assert(gb->lx <= GB_DOTS);
+
+    if (gb->lx == GB_DOTS) {
+        gb->lx = 0;
+        gb->ly = (gb->ly + 1) % GB_LINES;
+
+        bool lcy_eq_ly = gb->ly == gb->lcy;
+
+        set_bits(&gb->stat, 0b100, lcy_eq_ly);
+
+        // vblank interrupt
+        if (gb->ly == GB_LY_VBLANK)
+            gb->if_ |= INT_VBLANK;
+
+        // stat lcy == ly interrupt
+        if ((gb->stat & STAT_LYC_INT) != 0 && lcy_eq_ly)
+            gb->if_ |= INT_LCD;
+    }
+
+    return 1;
+}
+
+u64 gb_dispatch_div(GameBoy *gb)
+{
+    if (gb->cpu.mode != MODE_STOPPED)
+        ++gb->div;
+
+    return 256;
+}
+
+u64 gb_dispatch_tima(GameBoy *gb)
+{
+    if (gb->tac & 0b100)
+        ++gb->tima;
+
+    if (gb->tima == 0) {
+        gb->tima = gb->tma;
+        gb->if_ |= INT_TIMER;
+    }
+
+    // https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff07--tac-timer-control
+    u8 clock_select = gb->tac & 0b11;
+    u64 tima_mcycles = clock_select == 0 ? 256 : 4 * clock_select;
+    return CPU_MCYCLE * tima_mcycles;
 }

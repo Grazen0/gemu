@@ -74,10 +74,7 @@
             };
 
           devShells.default = pkgs.mkShell {
-            inputsFrom = [
-              self'.packages.gemu-sdl3
-              self'.packages.gemu-raylib
-            ];
+            inputsFrom = lib.attrValues self'.packages;
             packages = with pkgs; [ clang-tools ];
             hardeningDisable = [ "fortify" ];
           };

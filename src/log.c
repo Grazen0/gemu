@@ -17,7 +17,7 @@ static const char *LABELS[] = {
     [LOG_LEVEL_ERROR] = "\033[31mERROR",
 };
 
-static constexpr size_t LABELS_LEN = sizeof(LABELS) / sizeof(LABELS[0]);
+static constexpr size_t LABELS_LEN = ARRAY_LEN(LABELS);
 static_assert(LABELS_LEN == LOG_LEVEL_COUNT);
 
 static const char *log_level_label(LogLevel level)
@@ -56,8 +56,7 @@ bool log_level_from_str(const char *str, LogLevel *out)
         {"error", LOG_LEVEL_ERROR},
     };
 
-    static constexpr size_t ALTERNATIVES_LEN =
-        sizeof(ALTERNATIVES) / sizeof(ALTERNATIVES[0]);
+    static constexpr size_t ALTERNATIVES_LEN = ARRAY_LEN(ALTERNATIVES);
 
     for (size_t i = 0; i < ALTERNATIVES_LEN; ++i) {
         if (strcmp(str, ALTERNATIVES[i].name) == 0) {

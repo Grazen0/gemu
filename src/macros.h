@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
 #define BAIL(...)                                      \
     do {                                               \
         log_error("BAIL (%s:%d)", __FILE__, __LINE__); \

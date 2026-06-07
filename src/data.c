@@ -1,4 +1,5 @@
 #include "data.h"
+#include "macros.h"
 #include <stddef.h>
 
 static constexpr CartridgeType RAM_CART_TYPES[] = {
@@ -22,8 +23,7 @@ static constexpr CartridgeType RAM_CART_TYPES[] = {
     CART_TYPE_HUC1_RAM_BATTERY,
 
 };
-static constexpr size_t RAM_CART_TYPES_LEN =
-    sizeof(RAM_CART_TYPES) / sizeof(RAM_CART_TYPES[0]);
+static constexpr size_t RAM_CART_TYPES_LEN = ARRAY_LEN(RAM_CART_TYPES);
 
 bool CartridgeType_has_ram(CartridgeType cart_type)
 {

@@ -1,5 +1,6 @@
 #include "frontend.h"
 #include "game_boy.h"
+#include "macros.h"
 #include "scheduler.h"
 #include "stdinc.h"
 #include <SDL3/SDL.h>
@@ -56,8 +57,7 @@ static SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect *container,
     return *container;
 }
 
-static constexpr size_t PALETTE_RGB_LEN =
-    sizeof(PALETTE_RGB) / sizeof(PALETTE_RGB[0]);
+static constexpr size_t PALETTE_RGB_LEN = ARRAY_LEN(PALETTE_RGB);
 
 static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key,
                             SDL_Keymod mod)

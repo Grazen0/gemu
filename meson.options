@@ -1,1 +1,1 @@
-option('frontend', type : 'combo', choices : ['sdl', 'raylib'], value: 'sdl')
+option('frontend', type : 'combo', choices : ['sdl3', 'raylib'], value: 'sdl3')

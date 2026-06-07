@@ -18,21 +18,24 @@ add_project_arguments(
 subdir('src')
 subdir('tests')
 
+sources = [
+  'src/main.c',
+  'src/frontend/common.c',
+]
+
+dependencies = [
+  gemu_lib_dep
+]
 
 frontend = get_option('frontend')
 
-frontend_sources = {
-  'sdl': ['src/frontend/sdl.c', 'src/frontend/common.c'],
-  'raylib': ['src/frontend/raylib.c', 'src/frontend/common.c'],
-}
-
-frontend_deps = {
-  'sdl': [dependency('sdl3')],
-  'raylib': [dependency('raylib')],
-}
-
-sources = ['src/main.c'] + frontend_sources[frontend]
-dependencies = [gemu_lib_dep] + frontend_deps[frontend]
+if frontend == 'sdl3'
+  sources += ['src/frontend/sdl3.c']
+  dependencies += dependency('sdl3')
+elif frontend == 'raylib'
+  sources += ['src/frontend/raylib.c']
+  dependencies += dependency('raylib')
+endif
 
 exe = executable(
   'gemu',

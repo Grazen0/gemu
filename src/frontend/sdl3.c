@@ -1,4 +1,4 @@
-#include "sdl.h"
+#include "frontend/sdl3.h"
 #include "common.h"
 #include "game_boy.h"
 #include "log.h"

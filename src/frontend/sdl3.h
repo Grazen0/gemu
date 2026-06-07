@@ -1,0 +1,4 @@
+#ifndef GEMU_FRONTEND_SDL3_H
+#define GEMU_FRONTEND_SDL3_H
+
+#endif

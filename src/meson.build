@@ -17,4 +17,7 @@ if frontend == 'sdl3'
 elif frontend == 'raylib'
   gemu_sources += files('frontend/raylib.c')
   gemu_dependencies += dependency('raylib')
+elif frontend == 'opengl'
+  gemu_sources += files('frontend/opengl.c')
+  gemu_dependencies += [dependency('gl'), dependency('glut')]
 endif

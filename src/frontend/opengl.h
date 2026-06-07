@@ -1,0 +1,4 @@
+#ifndef GEMU_FRONTEND_OPENGL_H
+#define GEMU_FRONTEND_OPENGL_H
+
+#endif

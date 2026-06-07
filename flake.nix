@@ -50,7 +50,11 @@
                     with pkgs;
                     [ ]
                     ++ (lib.optionals (frontend == "sdl3") [ sdl3 ])
-                    ++ (lib.optionals (frontend == "raylib") [ raylib ]);
+                    ++ (lib.optionals (frontend == "raylib") [ raylib ])
+                    ++ (lib.optionals (frontend == "opengl") [
+                      libGL
+                      libglut
+                    ]);
 
                   mesonFlags = [
                     "-Dfrontend=${frontend}"
@@ -69,6 +73,7 @@
               gemu = self'.packages.gemu-sdl3;
               gemu-sdl3 = mkGemu { frontend = "sdl3"; };
               gemu-raylib = mkGemu { frontend = "raylib"; };
+              gemu-opengl = mkGemu { frontend = "opengl"; };
 
               default = self'.packages.gemu;
             };

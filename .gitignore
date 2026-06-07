@@ -2,6 +2,7 @@
 .direnv/
 build/
 /result
+/result-*
 Testing/
 .local/
 

@@ -43,7 +43,7 @@ static Args args_init()
         .help = false,
         .rom_path = nullptr,
         .boot_rom_path = nullptr,
-        .log_level = LOG_INFO,
+        .log_level = LOG_LEVEL_INFO,
     };
 }
 

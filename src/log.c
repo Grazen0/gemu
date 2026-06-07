@@ -109,16 +109,17 @@ static LogMessage queue_dequeue(LogQueue *queue)
     return out;
 }
 
+static const char *LABELS[] = {
+    [LOG_LEVEL_TRACE] = "\033[90mTRACE", [LOG_LEVEL_DEBUG] = "\033[36mDEBUG",
+    [LOG_LEVEL_INFO] = "\033[34mINFO",   [LOG_LEVEL_WARN] = "\033[33mWARN",
+    [LOG_LEVEL_ERROR] = "\033[31mERROR",
+};
+
+static constexpr size_t LABELS_LEN = sizeof(LABELS) / sizeof(LABELS[0]);
+static_assert(LABELS_LEN == LOG_LEVEL_COUNT);
+
 static const char *log_level_label(LogLevel level)
 {
-    static const char *LABELS[] = {
-        [LOG_TRACE] = "\033[90mTRACE", [LOG_DEBUG] = "\033[36mDEBUG",
-        [LOG_INFO] = "\033[34mINFO",   [LOG_WARN] = "\033[33mWARN",
-        [LOG_ERROR] = "\033[31mERROR",
-    };
-
-    static constexpr size_t LABELS_LEN = sizeof(LABELS) / sizeof(LABELS[0]);
-    static_assert(LABELS_LEN == LOG_LEVEL_COUNT);
 
     if (level >= LABELS_LEN)
         unreachable();
@@ -129,7 +130,7 @@ static const char *log_level_label(LogLevel level)
 static void print_log_message(const LogMessage *message)
 {
     const char *label = log_level_label(message->level);
-    FILE *stream = message->level == LOG_ERROR ? stderr : stdout;
+    FILE *stream = message->level == LOG_LEVEL_ERROR ? stderr : stdout;
 
     fprintf(stream, "\033[90m[%s\033[90m]:\033[0m ", label);
     fputs(message->text, stream);
@@ -162,7 +163,7 @@ static int log_thread_fn(void *data)
 static LoggerContext log_ctx_init()
 {
     return (LoggerContext){
-        .level = LOG_INFO,
+        .level = LOG_LEVEL_INFO,
         .thread = nullptr,
         .queue = queue_init(),
         .quit_queue_mtx = SDL_CreateMutex(),
@@ -238,11 +239,11 @@ bool log_level_from_str(const char *str, LogLevel *out)
         const char *name;
         LogLevel level;
     } ALTERNATIVES[] = {
-        {"trace", LOG_TRACE},
-        {"debug", LOG_DEBUG},
-        { "info",  LOG_INFO},
-        { "warn",  LOG_WARN},
-        {"error", LOG_ERROR},
+        {"trace", LOG_LEVEL_TRACE},
+        {"debug", LOG_LEVEL_DEBUG},
+        { "info",  LOG_LEVEL_INFO},
+        { "warn",  LOG_LEVEL_WARN},
+        {"error", LOG_LEVEL_ERROR},
     };
 
     static constexpr size_t ALTERNATIVES_LEN =
@@ -306,7 +307,7 @@ void log_trace(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vlog(LOG_TRACE, format, args);
+    vlog(LOG_LEVEL_TRACE, format, args);
     va_end(args);
 }
 
@@ -314,7 +315,7 @@ void log_debug(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vlog(LOG_DEBUG, format, args);
+    vlog(LOG_LEVEL_DEBUG, format, args);
     va_end(args);
 }
 
@@ -322,7 +323,7 @@ void log_info(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vlog(LOG_INFO, format, args);
+    vlog(LOG_LEVEL_INFO, format, args);
     va_end(args);
 }
 
@@ -330,7 +331,7 @@ void log_warn(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vlog(LOG_WARN, format, args);
+    vlog(LOG_LEVEL_WARN, format, args);
     va_end(args);
 }
 
@@ -338,6 +339,6 @@ void log_error(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vlog(LOG_ERROR, format, args);
+    vlog(LOG_LEVEL_ERROR, format, args);
     va_end(args);
 }

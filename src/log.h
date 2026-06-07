@@ -7,11 +7,11 @@
 #include <stddef.h>
 
 typedef enum : u8 {
-    LOG_ERROR,
-    LOG_WARN,
-    LOG_INFO,
-    LOG_DEBUG,
-    LOG_TRACE,
+    LOG_LEVEL_ERROR,
+    LOG_LEVEL_WARN,
+    LOG_LEVEL_INFO,
+    LOG_LEVEL_DEBUG,
+    LOG_LEVEL_TRACE,
 
     LOG_LEVEL_COUNT,
 } LogLevel;

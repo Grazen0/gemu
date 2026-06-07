@@ -1,4 +1,5 @@
 #include "log.h"
+#include "macros.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -12,9 +13,9 @@ typedef struct {
 } LoggerContext;
 
 static const char *LABELS[] = {
-    [LOG_LEVEL_TRACE] = "\033[90mTRACE", [LOG_LEVEL_DEBUG] = "\033[36mDEBUG",
-    [LOG_LEVEL_INFO] = "\033[34mINFO",   [LOG_LEVEL_WARN] = "\033[33mWARN",
-    [LOG_LEVEL_ERROR] = "\033[31mERROR",
+    [LOG_LEVEL_TRACE] = "TRACE", [LOG_LEVEL_DEBUG] = "DEBUG",
+    [LOG_LEVEL_INFO] = "INFO",   [LOG_LEVEL_WARN] = "WARN",
+    [LOG_LEVEL_ERROR] = "ERROR",
 };
 
 static constexpr size_t LABELS_LEN = ARRAY_LEN(LABELS);
@@ -38,7 +39,7 @@ static void log_ctx_vlog(LoggerContext *ctx, LogLevel level, const char *format,
     const char *label = log_level_label(level);
     FILE *stream = level == LOG_LEVEL_ERROR ? stderr : stdout;
 
-    fprintf(stream, "\033[90m[%s\033[90m]:\033[0m ", label);
+    fprintf(stream, "[%s] ", label);
     vfprintf(stream, format, args);
     fputc('\n', stream);
 }

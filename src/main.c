@@ -90,13 +90,15 @@ static u8 *load_file(const char filename[], size_t *data_size)
 
     u8 *data = calloc(size, sizeof(*data));
     if (data == nullptr)
-        return nullptr;
+        goto cleanup;
 
     fread(data, sizeof(*data), size, file);
 
     if (data_size != nullptr)
         *data_size = size;
 
+cleanup:
+    fclose(file);
     return data;
 }
 

@@ -2,7 +2,6 @@
 #define GEMU_LOG_H
 
 #include "stdinc.h"
-#include <SDL3/SDL.h>
 #include <stdarg.h>
 #include <stddef.h>
 

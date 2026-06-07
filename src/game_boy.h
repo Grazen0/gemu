@@ -127,7 +127,7 @@ void gb_write_mem(GameBoy *gb, u16 addr, u8 value);
 
 void gb_service_interrupts(GameBoy *gb, Memory *mem);
 
-u64 gb_dispatch_instr(GameBoy *gb);
+u64 gb_dispatch_cpu_instr(GameBoy *gb);
 
 u64 gb_dispatch_pixel(GameBoy *gb);
 

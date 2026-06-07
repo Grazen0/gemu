@@ -524,7 +524,7 @@ void gb_write_mem_v(void *ctx, u16 addr, u8 value)
     gb_write_mem(ctx, addr, value);
 }
 
-u64 gb_dispatch_instr(GameBoy *gb)
+u64 gb_dispatch_cpu_instr(GameBoy *gb)
 {
     Memory memory = (Memory){
         .ctx = gb,

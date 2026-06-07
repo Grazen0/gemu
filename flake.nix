@@ -45,6 +45,7 @@
 
               buildInputs = with pkgs; [
                 sdl3
+                raylib
               ];
 
               doCheck = true;

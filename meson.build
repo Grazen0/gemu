@@ -23,10 +23,12 @@ frontend = get_option('frontend')
 
 frontend_sources = {
   'sdl': ['src/frontend/sdl.c', 'src/frontend/common.c'],
+  'raylib': ['src/frontend/raylib.c', 'src/frontend/common.c'],
 }
 
 frontend_deps = {
   'sdl': [dependency('sdl3')],
+  'raylib': [dependency('raylib')],
 }
 
 sources = ['src/main.c'] + frontend_sources[frontend]

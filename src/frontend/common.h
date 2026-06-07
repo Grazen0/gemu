@@ -6,6 +6,11 @@
 #include "stdinc.h"
 #include <stddef.h>
 
+static constexpr int WINDOW_INIT_WIDTH = GB_LCD_WIDTH * 4;
+static constexpr int WINDOW_INIT_HEIGHT = GB_LCD_HEIGHT * 4;
+static constexpr float GB_LCD_ASPECT_RATIO =
+    (float)GB_LCD_WIDTH / GB_LCD_HEIGHT;
+
 static constexpr u8 PALETTE_RGB[][3] = {
     {186, 218, 85},
     {130, 153, 59},

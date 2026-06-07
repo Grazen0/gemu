@@ -116,7 +116,6 @@ static void handle_event(State *state, const SDL_Event *event)
 static void state_update_texture(const GameBoy *gb, SDL_Texture *texture,
                                  const u32 palette[])
 {
-
     SDL_Surface *surface = nullptr;
     assert(SDL_LockTextureToSurface(texture, nullptr, &surface));
 
@@ -142,8 +141,6 @@ static void state_update_texture(const GameBoy *gb, SDL_Texture *texture,
 static void render(const State *state, SDL_Renderer *renderer,
                    SDL_Texture *texture, const u32 palette[])
 {
-    static constexpr float ASPECT_RATIO = (float)GB_LCD_WIDTH / GB_LCD_HEIGHT;
-
     SDL_FRect win_rect = {
         0,
         0,
@@ -151,7 +148,8 @@ static void render(const State *state, SDL_Renderer *renderer,
         (float)state->window_height,
     };
 
-    SDL_FRect dest_rect = fit_rect_to_aspect_ratio(&win_rect, ASPECT_RATIO);
+    SDL_FRect dest_rect =
+        fit_rect_to_aspect_ratio(&win_rect, GB_LCD_ASPECT_RATIO);
 
     state_update_texture(state->gb, texture, palette);
     SDL_RenderTexture(renderer, texture, nullptr, &dest_rect);
@@ -184,15 +182,9 @@ static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[])
     }
 }
 
-static void run_until_quit(State *state, SDL_Renderer *renderer)
+static void run_frame_loop(State *state, SDL_Renderer *renderer,
+                           SDL_Texture *texture)
 {
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888,
-                                             SDL_TEXTUREACCESS_STREAMING,
-                                             GB_LCD_WIDTH, GB_LCD_HEIGHT);
-    assert(texture != nullptr);
-
-    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-
     u32 palette[PALETTE_RGB_LEN] = {};
     build_rgb_palette(texture->format, palette);
 
@@ -222,13 +214,7 @@ static void run_until_quit(State *state, SDL_Renderer *renderer)
     }
 
     sched_deinit(&sched);
-
-    SDL_DestroyTexture(texture);
-    texture = nullptr;
 }
-
-static constexpr int WINDOW_INIT_WIDTH = GB_LCD_WIDTH * 4;
-static constexpr int WINDOW_INIT_HEIGHT = GB_LCD_HEIGHT * 4;
 
 static int run(GameBoy *gb)
 {
@@ -256,7 +242,7 @@ static int run(GameBoy *gb)
     if (renderer == nullptr) {
         log_error("Could not create renderer: %s", SDL_GetError());
         retval = EXIT_FAILURE;
-        goto cleanup;
+        goto cleanup_1;
     }
 
     SDL_PropertiesID props = SDL_GetRendererProperties(renderer);
@@ -265,17 +251,32 @@ static int run(GameBoy *gb)
         SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
     log_info("Using renderer \"%s\"", renderer_name);
 
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888,
+                                             SDL_TEXTUREACCESS_STREAMING,
+                                             GB_LCD_WIDTH, GB_LCD_HEIGHT);
+
+    if (texture == nullptr) {
+        log_error("Could not create texture: %s", SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup_2;
+    }
+
+    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
     State state = state_init(gb, window);
 
     SDL_RenderPresent(renderer);
     SDL_SetWindowResizable(window, true);
 
     log_info("Running emulator");
-    run_until_quit(&state, renderer);
+    run_frame_loop(&state, renderer, texture);
 
     log_info("Cleaning up SDL objects");
+
+    SDL_DestroyTexture(texture);
+cleanup_2:
     SDL_DestroyRenderer(renderer);
-cleanup:
+cleanup_1:
     SDL_DestroyWindow(window);
 
     return retval;

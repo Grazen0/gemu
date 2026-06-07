@@ -59,12 +59,8 @@ static SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect *container,
 
 static constexpr size_t PALETTE_RGB_LEN = ARRAY_LEN(PALETTE_RGB);
 
-static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key,
-                            SDL_Keymod mod)
+static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key)
 {
-    if (mod != SDL_KMOD_NONE)
-        return nullptr;
-
     switch (key) {
         case SDLK_RETURN:
             return &joypad->start;
@@ -87,12 +83,6 @@ static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key,
     }
 }
 
-static inline SDL_Keymod mask_relevant_mod(SDL_Keymod mod)
-{
-    return mod &
-           (SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_ALT | SDL_KMOD_CAPS);
-}
-
 static void handle_event(State *state, const SDL_Event *event)
 {
     switch (event->type) {
@@ -104,9 +94,7 @@ static void handle_event(State *state, const SDL_Event *event)
             state->window_height = event->window.data2;
             break;
         case SDL_EVENT_KEY_DOWN: {
-            SDL_Keymod relevant_mod = mask_relevant_mod(event->key.mod);
-            bool *joypad_btn =
-                map_joypad_btn(&state->gb.btns, event->key.key, relevant_mod);
+            bool *joypad_btn = map_joypad_btn(&state->gb.btns, event->key.key);
 
             if (joypad_btn != nullptr) {
                 *joypad_btn = true;
@@ -115,9 +103,7 @@ static void handle_event(State *state, const SDL_Event *event)
             break;
         }
         case SDL_EVENT_KEY_UP: {
-            SDL_Keymod relevant_mod = mask_relevant_mod(event->key.mod);
-            bool *joypad_btn =
-                map_joypad_btn(&state->gb.btns, event->key.key, relevant_mod);
+            bool *joypad_btn = map_joypad_btn(&state->gb.btns, event->key.key);
 
             if (joypad_btn != nullptr)
                 *joypad_btn = false;

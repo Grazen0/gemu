@@ -504,6 +504,7 @@ void gb_service_interrupts(GameBoy *gb, Memory *mem)
     if (!gb->cpu.ime)
         return;
 
+    // https://gbdev.io/pandocs/Interrupts.html
     for (size_t i = 0; i <= 4; ++i) {
         if (int_mask & (1 << i)) {
             log_debug("Servicing interrupt #%zu", i);

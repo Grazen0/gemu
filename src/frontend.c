@@ -19,10 +19,10 @@ static constexpr u8 PALETTE_RGB[][3] = {
     { 19,  22,  8}
 };
 
-static double sdl_get_performance_time()
+static long double sdl_get_performance_time()
 {
-    return (double)SDL_GetPerformanceCounter() /
-           (double)SDL_GetPerformanceFrequency();
+    return (long double)SDL_GetPerformanceCounter() /
+           SDL_GetPerformanceFrequency();
 }
 
 static SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect *container,
@@ -212,17 +212,17 @@ void run_until_quit(State *state, SDL_Renderer *renderer)
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
-    double start = sdl_get_performance_time();
+    long double start = sdl_get_performance_time();
     Scheduler sched = sched_init();
 
     while (!state->quit) {
-        double frame_start = sdl_get_performance_time();
+        long double frame_start = sdl_get_performance_time();
 
         SDL_Event event = {};
         while (SDL_PollEvent(&event))
             handle_event(state, &event);
 
-        double cur_time = frame_start - start;
+        long double cur_time = frame_start - start;
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
         while (sched_cur_time(&sched) < cur_time_clk)
@@ -230,8 +230,8 @@ void run_until_quit(State *state, SDL_Renderer *renderer)
 
         render(state, renderer, texture, palette);
 
-        double frame_duration = sdl_get_performance_time() - frame_start;
-        double delay = TARGET_DELTA - frame_duration;
+        long double frame_duration = sdl_get_performance_time() - frame_start;
+        long double delay = TARGET_DELTA - frame_duration;
 
         if (delay > 0)
             SDL_DelayNS((u64)(delay * 1e9));

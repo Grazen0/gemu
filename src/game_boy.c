@@ -532,9 +532,13 @@ u64 gb_dispatch_instr(GameBoy *gb)
         .write = gb_write_mem_v,
     };
 
+    u64 mcycles_start = gb->cpu.mcycle_cnt;
+
     gb_service_interrupts(gb, &memory);
-    u64 mcycles = cpu_step(&gb->cpu, &memory);
-    return CPU_MCYCLE * mcycles;
+    cpu_step(&gb->cpu, &memory);
+
+    u64 mcycles_end = gb->cpu.mcycle_cnt;
+    return CPU_MCYCLE * (mcycles_end - mcycles_start);
 }
 
 static void gb_render_tiles(GameBoy *gb)

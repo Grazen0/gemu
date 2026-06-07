@@ -911,7 +911,7 @@ static inline void cpu_instr_rst_vec(Cpu *cpu, Memory *mem, u8 y)
     log_trace("rst $%02X", y * 8);
 
     cpu_stack_push_u16(cpu, mem, cpu->pc);
-    cpu->pc = y * 8;
+    cpu->pc = y << 3;
 }
 
 static inline void cpu_instr_rlc_r8(Cpu *cpu, Memory *mem, u8 z)
@@ -1272,11 +1272,12 @@ void cpu_execute(Cpu *cpu, Memory *mem, u8 opcode)
     }
 }
 
-u64 cpu_step(Cpu *cpu, Memory *mem)
+void cpu_step(Cpu *cpu, Memory *mem)
 {
     if (cpu->mode != MODE_RUNNING) {
+        ++cpu->mcycle_cnt; // Makes the frontend work lmao
         assert(false && "check this out");
-        return 1; // Makes the frontend work lmao
+        return;
     }
 
     if (cpu->queued_ime) {
@@ -1284,12 +1285,8 @@ u64 cpu_step(Cpu *cpu, Memory *mem)
         cpu->queued_ime = false;
     }
 
-    cpu->mcycle_cnt = 0;
-
     u8 opcode = cpu_read_pc(cpu, mem);
     cpu_execute(cpu, mem, opcode);
-
-    return cpu->mcycle_cnt;
 }
 
 void cpu_interrupt(Cpu *cpu, Memory *mem, u8 handler_location)

@@ -37,7 +37,7 @@ typedef struct {
 
 [[nodiscard]] Cpu cpu_init();
 
-u64 cpu_step(Cpu *cpu, Memory *mem);
+void cpu_step(Cpu *cpu, Memory *mem);
 
 void cpu_interrupt(Cpu *cpu, Memory *mem, u8 handler_location);
 

@@ -21,13 +21,4 @@
         }                                                                  \
     } while (0)
 
-#define BAIL_IF_NULL(ptr, ...)                                                 \
-    do {                                                                       \
-        if ((ptr) == nullptr) {                                                \
-            log_error("BAIL_IF_NULL('%s') (%s:%d)", #ptr, __FILE__, __LINE__); \
-            __VA_OPT__(log_error(__VA_ARGS__);)                                \
-            exit(1);                                                           \
-        }                                                                      \
-    } while (0)
-
 #endif

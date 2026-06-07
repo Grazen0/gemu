@@ -5,6 +5,7 @@
 #include "string.h"
 #include <SDL3/SDL.h>
 #include <assert.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -81,6 +82,28 @@ static bool parse_args(int argc, char **argv, Args *out_args)
     return true;
 }
 
+u8 *load_file(const char filename[], size_t *data_size)
+{
+    FILE *file = fopen(filename, "r");
+    if (file == nullptr)
+        return nullptr;
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    u8 *data = calloc(size, sizeof(*data));
+    if (data == nullptr)
+        return nullptr;
+
+    fread(data, sizeof(*data), size, file);
+
+    if (data_size != nullptr)
+        *data_size = size;
+
+    return data;
+}
+
 int main(int argc, char *argv[])
 {
     Args args = {};
@@ -96,25 +119,47 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
-    int retval = EXIT_SUCCESS;
+    logger_set_level(args.log_level);
 
     size_t rom_len = 0;
-    u8 *rom = SDL_LoadFile(args.rom_path, &rom_len);
+    u8 *rom = load_file(args.rom_path, &rom_len);
 
     if (rom == nullptr) {
         log_error("%s", SDL_GetError());
-        retval = EXIT_FAILURE;
-        goto cleanup_1;
+        return EXIT_FAILURE;
     }
+
+    int retval = EXIT_SUCCESS;
+    u8 *boot_rom = nullptr;
+
+    if (args.boot_rom_path != nullptr) {
+        size_t boot_rom_len = 0;
+        boot_rom = load_file(args.boot_rom_path, &boot_rom_len);
+
+        if (boot_rom == nullptr) {
+            log_error("Could not read boot ROM file: %s", strerror(errno));
+            retval = EXIT_FAILURE;
+            goto cleanup_1;
+        }
+
+        if (boot_rom_len != GB_BOOT_ROM_LEN) {
+            log_error("Boot ROM must be exactly %zu bytes long (was %zu)",
+                      GB_BOOT_ROM_LEN, boot_rom_len);
+            retval = EXIT_FAILURE;
+            goto cleanup_2;
+        }
+    }
+
+    GameBoy gb = gb_init(boot_rom);
+    gb_load_rom(&gb, rom, rom_len);
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         log_error("Could not read initialize video: %s", SDL_GetError());
         retval = EXIT_FAILURE;
-        goto cleanup_1;
+        goto cleanup_3;
     }
 
     atexit(SDL_Quit);
-    logger_set_level(args.log_level);
 
     SDL_Window *window =
         SDL_CreateWindow("gemu", WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, 0);
@@ -122,7 +167,7 @@ int main(int argc, char *argv[])
     if (window == nullptr) {
         log_error("Could not create window: %s", SDL_GetError());
         retval = EXIT_FAILURE;
-        goto cleanup_2;
+        goto cleanup_3;
     }
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
@@ -130,34 +175,14 @@ int main(int argc, char *argv[])
     if (renderer == nullptr) {
         log_error("Could not create renderer: %s", SDL_GetError());
         retval = EXIT_FAILURE;
-        goto cleanup_2;
+        goto cleanup_4;
     }
 
     SDL_PropertiesID props = SDL_GetRendererProperties(renderer);
 
-    const char *renderer_name =
+    auto renderer_name =
         SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
     log_info("Using renderer \"%s\"", renderer_name);
-
-    u8 *boot_rom = nullptr;
-
-    if (args.boot_rom_path != nullptr) {
-        size_t boot_rom_len = 0;
-        boot_rom = SDL_LoadFile(args.boot_rom_path, &boot_rom_len);
-
-        if (boot_rom == nullptr) {
-            log_error("Could not read boot ROM file.");
-            retval = EXIT_FAILURE;
-            goto cleanup_3;
-        }
-
-        if (boot_rom_len != GB_BOOT_ROM_LEN) {
-            log_error("Boot ROM must be exactly %zu bytes long (was %zu)",
-                      GB_BOOT_ROM_LEN, boot_rom_len);
-            retval = EXIT_FAILURE;
-            goto cleanup_4;
-        }
-    }
 
     GameInfo info = gb_cartridge_info(rom);
     log_info("Cartridge type: $%02X", info.cart_type);
@@ -165,22 +190,21 @@ int main(int argc, char *argv[])
     log_info("ROM size: $%02X", info.rom_size);
     log_info("Game title: %s", info.title);
 
-    State state = state_init(boot_rom, window);
-    gb_load_rom(&state.gb, rom, rom_len);
+    State state = state_init(&gb, window);
 
     SDL_RenderPresent(renderer);
     SDL_SetWindowResizable(window, true);
     run_until_quit(&state, renderer);
 
-    state_deinit(&state);
-cleanup_4:
-    SDL_free(boot_rom);
-cleanup_3:
     SDL_DestroyRenderer(renderer);
-cleanup_2:
+cleanup_4:
     SDL_DestroyWindow(window);
+cleanup_3:
+    gb_deinit(&gb);
+cleanup_2:
+    free(boot_rom);
 cleanup_1:
-    SDL_free(rom);
+    free(rom);
 
     return retval;
 }

@@ -94,7 +94,7 @@ static void handle_event(State *state, const SDL_Event *event)
             state->window_height = event->window.data2;
             break;
         case SDL_EVENT_KEY_DOWN: {
-            bool *joypad_btn = map_joypad_btn(&state->gb.btns, event->key.key);
+            bool *joypad_btn = map_joypad_btn(&state->gb->btns, event->key.key);
 
             if (joypad_btn != nullptr) {
                 *joypad_btn = true;
@@ -103,7 +103,7 @@ static void handle_event(State *state, const SDL_Event *event)
             break;
         }
         case SDL_EVENT_KEY_UP: {
-            bool *joypad_btn = map_joypad_btn(&state->gb.btns, event->key.key);
+            bool *joypad_btn = map_joypad_btn(&state->gb->btns, event->key.key);
 
             if (joypad_btn != nullptr)
                 *joypad_btn = false;
@@ -154,31 +154,35 @@ static void render(const State *state, SDL_Renderer *renderer,
 
     SDL_FRect dest_rect = fit_rect_to_aspect_ratio(&win_rect, ASPECT_RATIO);
 
-    state_update_texture(&state->gb, texture, palette);
+    state_update_texture(state->gb, texture, palette);
     SDL_RenderTexture(renderer, texture, nullptr, &dest_rect);
     SDL_RenderPresent(renderer);
 }
 
-State state_init(const u8 *boot_rom, SDL_Window *window)
+State state_init(GameBoy *gb, SDL_Window *window)
 {
     int window_width = 0;
     int window_height = 0;
     SDL_GetWindowSize(window, &window_width, &window_height);
 
     return (State){
-        .gb = gb_init(boot_rom),
+        .gb = gb,
         .window_width = window_width,
         .window_height = window_height,
         .quit = false,
     };
 }
 
-void state_deinit(State *state)
-{
-    if (state == nullptr)
-        return;
+static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[])
 
-    gb_deinit(&state->gb);
+{
+    assert(out_palette != nullptr);
+    auto details = SDL_GetPixelFormatDetails(format);
+
+    for (size_t i = 0; i < PALETTE_RGB_LEN; ++i) {
+        const u8 *rgb = PALETTE_RGB[i];
+        out_palette[i] = SDL_MapRGB(details, nullptr, rgb[0], rgb[1], rgb[2]);
+    }
 }
 
 void run_until_quit(State *state, SDL_Renderer *renderer)
@@ -188,15 +192,10 @@ void run_until_quit(State *state, SDL_Renderer *renderer)
                                              GB_LCD_WIDTH, GB_LCD_HEIGHT);
     assert(texture != nullptr);
 
-    u32 palette[PALETTE_RGB_LEN] = {};
-    auto pixel_format = SDL_GetPixelFormatDetails(texture->format);
-
-    for (size_t i = 0; i < PALETTE_RGB_LEN; ++i) {
-        const u8 *rgb = PALETTE_RGB[i];
-        palette[i] = SDL_MapRGB(pixel_format, nullptr, rgb[0], rgb[1], rgb[2]);
-    }
-
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+    u32 palette[PALETTE_RGB_LEN] = {};
+    build_rgb_palette(texture->format, palette);
 
     long double start = sdl_get_performance_time();
     Scheduler sched = sched_init();
@@ -212,7 +211,7 @@ void run_until_quit(State *state, SDL_Renderer *renderer)
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
         while (sched_cur_time(&sched) < cur_time_clk)
-            sched_dispatch(&sched, &state->gb);
+            sched_dispatch(&sched, state->gb);
 
         render(state, renderer, texture, palette);
 

@@ -6,15 +6,13 @@
 #include <stddef.h>
 
 typedef struct {
-    GameBoy gb;
+    GameBoy *gb;
     int window_width;
     int window_height;
     bool quit;
 } State;
 
-[[nodiscard]] State state_init(const u8 *boot_rom, SDL_Window *window);
-
-void state_deinit(State *state);
+[[nodiscard]] State state_init(GameBoy *gb, SDL_Window *window);
 
 void run_until_quit(State *state, SDL_Renderer *renderer);
 

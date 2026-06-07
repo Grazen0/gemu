@@ -11,7 +11,7 @@ If you have [Nix](https://nixos.org/), you already know what to do.
 Otherwise, you'll need the following dependencies:
 
 - [Meson](https://mesonbuild.com)
-- [SDL3](https://libsdl.org)
+- One of [SDL3](https://libsdl.org), [Raylib](https://github.com/raysan5/raylib).
 
 If you **don't** explicitly disable testing (via setting `BUILD_TESTING=OFF`), you'll also need these:
 
@@ -24,10 +24,12 @@ You can clone, compile and run the project with these commands:
 ```bash
 git clone https://codeberg.org/Grazen0/gemu
 cd gemu
-meson setup build
+meson setup build -Dfrontend=sdl # one of sdl, raylib
 meson compile -C build
 build/gemu path/to/rom.gb
 ```
+
+Note that you can choose the frontend (SDL or Raylib) with `-Dfrontend`.
 
 ## Progress
 

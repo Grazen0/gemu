@@ -126,6 +126,8 @@ GameBoy gb_init(const u8 *boot_rom)
         .hram = {},
         .oam = {},
         .btns = joypad_btns_init(),
+        .render_buf = nullptr,
+        .scanout_buf = nullptr,
         .rom = nullptr,
         .rom_len = 0,
         .boot_rom_enable = true,
@@ -158,6 +160,12 @@ GameBoy gb_init(const u8 *boot_rom)
     gb.vram = calloc(VRAM_SIZE, sizeof(*gb.vram));
     assert(gb.vram != nullptr);
 
+    gb.render_buf = calloc(GB_BG_HEIGHT, sizeof(*gb.render_buf));
+    assert(gb.render_buf != nullptr);
+
+    gb.scanout_buf = calloc(GB_LCD_HEIGHT, sizeof(*gb.scanout_buf));
+    assert(gb.scanout_buf != nullptr);
+
     if (boot_rom != nullptr) {
         gb.boot_rom = calloc(GB_BOOT_ROM_LEN, sizeof(*gb.boot_rom));
         assert(gb.boot_rom != nullptr);
@@ -182,6 +190,12 @@ void gb_deinit(GameBoy *gb)
 
     free(gb->vram);
     gb->vram = nullptr;
+
+    free(gb->render_buf);
+    gb->render_buf = nullptr;
+
+    free(gb->scanout_buf);
+    gb->scanout_buf = nullptr;
 }
 
 GameInfo gb_cartridge_info(const u8 *rom)
@@ -613,7 +627,7 @@ static void ensure_render_buf_updated(GameBoy *gb)
     if (!gb->video_dirty)
         return;
 
-    memset(gb->render_buf, 0, sizeof(gb->render_buf));
+    memset(gb->render_buf, 0, GB_BG_HEIGHT * sizeof(*gb->render_buf));
 
     if ((gb->lcdc & LCDC_ENABLE) != 0) {
         gb_render_tiles(gb);

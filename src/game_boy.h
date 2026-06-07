@@ -74,6 +74,8 @@ typedef struct {
     u8 hram[0x7F];
     u8 oam[0xA0];
     JoypadButtons btns;
+    u8 (*render_buf)[GB_BG_WIDTH];
+    u8 (*scanout_buf)[GB_LCD_WIDTH];
     u8 *ram;
     u8 *vram;
     u8 *rom;
@@ -101,8 +103,6 @@ typedef struct {
     u8 tma;
     u8 tac;
     u8 joyp;
-    u8 render_buf[GB_BG_HEIGHT][GB_BG_WIDTH];
-    u8 scanout_buf[GB_LCD_HEIGHT][GB_LCD_WIDTH];
     bool video_dirty;
 } GameBoy;
 
@@ -119,15 +119,6 @@ void gb_deinit(GameBoy *gb);
 
 [[nodiscard]] GameInfo gb_cartridge_info(const u8 *rom);
 
-/**
- * \brief Loads ROM data into a GameBoy.
- *
- * This method copies rom, so it does not take ownership of it.
- *
- * \param gb the GameBoy to load the ROM to.
- * \param rom the ROM data to load.
- * \param rom_len the length of rom.
- */
 void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len);
 
 [[nodiscard]] u8 gb_read_mem(const GameBoy *gbx, u16 addr);

@@ -55,10 +55,11 @@ static void verify_rom_checksum(const u8 *rom)
 
     u8 chksm_lo = chksm & 0x0F;
 
-    BAIL_IF(
-        chksm_lo != rom[ROM_HEADER_CHECKSUM],
-        "Lower 8 bits of ROM checksum do not match expected value in header (expected $%02X, was $%02X)",
-        rom[ROM_HEADER_CHECKSUM], chksm_lo);
+    if (chksm_lo != rom[ROM_HEADER_CHECKSUM]) {
+        BAIL(
+            "Lower 8 bits of ROM checksum do not match expected value in header (expected $%02X, was $%02X)",
+            rom[ROM_HEADER_CHECKSUM], chksm_lo);
+    }
 }
 
 static void gb_mock_boot(GameBoy *gb)
@@ -86,20 +87,23 @@ static void gb_reset(GameBoy *gb)
 
 static void gb_validate_rom(const GameBoy *gb)
 {
-    BAIL_IF(gb->rom[ROM_HEADER_CART_TYPE] != 0x00,
-            "Unsupported cartridge type ($%02X)",
-            gb->rom[ROM_HEADER_CART_TYPE]);
+    if (gb->rom[ROM_HEADER_CART_TYPE] != 0x00) {
+        BAIL("Unsupported cartridge type ($%02X)",
+             gb->rom[ROM_HEADER_CART_TYPE]);
+    }
 
-    BAIL_IF(
-        !CartridgeType_has_ram(gb->rom[ROM_HEADER_CART_TYPE]) &&
-            gb->rom[ROM_HEADER_RAM_SIZE] != 0,
-        "Cartridge type does not have RAM, but header indicates otherwise (cartridge type: $%02X, RAM size: $%02X)",
-        gb->rom[ROM_HEADER_CART_TYPE], gb->rom[ROM_HEADER_RAM_SIZE]);
+    if (!CartridgeType_has_ram(gb->rom[ROM_HEADER_CART_TYPE]) &&
+        gb->rom[ROM_HEADER_RAM_SIZE] != 0) {
+        BAIL(
+            "Cartridge type does not have RAM, but header indicates otherwise (cartridge type: $%02X, RAM size: $%02X)",
+            gb->rom[ROM_HEADER_CART_TYPE], gb->rom[ROM_HEADER_RAM_SIZE]);
+    }
 
-    BAIL_IF(
-        gb->rom_len != 0x8000 * ((size_t)1 << gb->rom[ROM_HEADER_ROM_SIZE]),
-        "Actual ROM size does not match header-specified size. (specified: %u, was: %zu)",
-        gb->rom[ROM_HEADER_ROM_SIZE], gb->rom_len);
+    if (gb->rom_len != 0x8000 * ((size_t)1 << gb->rom[ROM_HEADER_ROM_SIZE])) {
+        BAIL(
+            "Actual ROM size does not match header-specified size. (specified: %u, was: %zu)",
+            gb->rom[ROM_HEADER_ROM_SIZE], gb->rom_len);
+    }
 }
 
 static JoypadButtons joypad_btns_init()
@@ -213,13 +217,15 @@ GameInfo gb_cartridge_info(const u8 *rom)
 
 void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 {
-    BAIL_IF(rom_len < 0x8000,
-            "ROM data cannot be less than 32768 bytes long (was %zu)", rom_len);
+    if (rom_len < 0x8000) {
+        BAIL("ROM data cannot be less than 32768 bytes long (was %zu)",
+             rom_len);
+    }
 
     free(gb->rom);
 
     gb->rom = calloc(rom_len, sizeof(*gb->rom));
-    BAIL_IF(gb->rom == nullptr, "Could not allocate memory for new ROM");
+    assert(gb->rom != nullptr);
 
     memcpy(gb->rom, rom, rom_len * sizeof(*gb->rom));
     gb->rom_len = rom_len;

@@ -169,7 +169,7 @@ u64 sched_cur_time(const Scheduler *sched)
 
 void sched_dispatch(Scheduler *sched, GameBoy *gb)
 {
-    static u64 (*const DISPATCHERS[])(GameBoy *gb) = {
+    static u64 (*const DISPATCHERS[])(GameBoy *) = {
         [EVENT_CPU_INSTR] = gb_dispatch_cpu_instr,
         [EVENT_PIXEL] = gb_dispatch_pixel,
         [EVENT_DIV] = gb_dispatch_div,

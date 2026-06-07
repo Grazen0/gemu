@@ -18,16 +18,23 @@ add_project_arguments(
 subdir('src')
 subdir('tests')
 
-sdl3_dep = dependency('sdl3')
 
-dependencies = [
-  sdl3_dep,
-  gemu_lib_dep,
-]
+frontend = get_option('frontend')
+
+frontend_sources = {
+  'sdl': ['src/frontend/sdl.c', 'src/frontend/common.c'],
+}
+
+frontend_deps = {
+  'sdl': [dependency('sdl3')],
+}
+
+sources = ['src/main.c'] + frontend_sources[frontend]
+dependencies = [gemu_lib_dep] + frontend_deps[frontend]
 
 exe = executable(
   'gemu',
-  'src/main.c',
+  sources,
   dependencies : dependencies,
   install : true,
 )

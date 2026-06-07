@@ -1,6 +1,7 @@
-#include "frontend.h"
+#include "sdl.h"
+#include "common.h"
 #include "game_boy.h"
-#include "macros.h"
+#include "log.h"
 #include "scheduler.h"
 #include "stdinc.h"
 #include <SDL3/SDL.h>
@@ -13,12 +14,12 @@
 static constexpr int TARGET_FPS = 60;
 static constexpr double TARGET_DELTA = 1.0 / TARGET_FPS;
 
-static constexpr u8 PALETTE_RGB[][3] = {
-    {186, 218, 85},
-    {130, 153, 59},
-    { 74,  87, 34},
-    { 19,  22,  8}
-};
+typedef struct {
+    GameBoy *gb;
+    int window_width;
+    int window_height;
+    bool quit;
+} State;
 
 static long double sdl_get_performance_time()
 {
@@ -56,8 +57,6 @@ static SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect *container,
     // Exactly the right aspect ratio
     return *container;
 }
-
-static constexpr size_t PALETTE_RGB_LEN = ARRAY_LEN(PALETTE_RGB);
 
 static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key)
 {
@@ -159,7 +158,7 @@ static void render(const State *state, SDL_Renderer *renderer,
     SDL_RenderPresent(renderer);
 }
 
-State state_init(GameBoy *gb, SDL_Window *window)
+static State state_init(GameBoy *gb, SDL_Window *window)
 {
     int window_width = 0;
     int window_height = 0;
@@ -185,7 +184,7 @@ static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[])
     }
 }
 
-void run_until_quit(State *state, SDL_Renderer *renderer)
+static void run_until_quit(State *state, SDL_Renderer *renderer)
 {
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888,
                                              SDL_TEXTUREACCESS_STREAMING,
@@ -227,3 +226,62 @@ void run_until_quit(State *state, SDL_Renderer *renderer)
     SDL_DestroyTexture(texture);
     texture = nullptr;
 }
+
+static constexpr int WINDOW_INIT_WIDTH = GB_LCD_WIDTH * 4;
+static constexpr int WINDOW_INIT_HEIGHT = GB_LCD_HEIGHT * 4;
+
+static int run(GameBoy *gb)
+{
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        log_error("Could not read initialize video: %s", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+
+    atexit(SDL_Quit);
+
+    log_info("Creating window");
+    SDL_Window *window =
+        SDL_CreateWindow("gemu", WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, 0);
+
+    if (window == nullptr) {
+        log_error("Could not create window: %s", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+
+    log_info("Creating renderer");
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
+
+    int retval = EXIT_SUCCESS;
+
+    if (renderer == nullptr) {
+        log_error("Could not create renderer: %s", SDL_GetError());
+        retval = EXIT_FAILURE;
+        goto cleanup;
+    }
+
+    SDL_PropertiesID props = SDL_GetRendererProperties(renderer);
+
+    auto renderer_name =
+        SDL_GetStringProperty(props, SDL_PROP_RENDERER_NAME_STRING, "unknown");
+    log_info("Using renderer \"%s\"", renderer_name);
+
+    State state = state_init(gb, window);
+
+    SDL_RenderPresent(renderer);
+    SDL_SetWindowResizable(window, true);
+
+    log_info("Running emulator");
+    run_until_quit(&state, renderer);
+
+    log_info("Cleaning up SDL objects");
+    SDL_DestroyRenderer(renderer);
+cleanup:
+    SDL_DestroyWindow(window);
+
+    return retval;
+}
+
+const Frontend selected_frontend = {
+    .name = "SDL3",
+    .run = run,
+};

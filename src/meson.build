@@ -1,7 +1,8 @@
 sources = [
   'cpu.c',
   'data.c',
-  'frontend.c',
+  'frontend/common.c',
+  'frontend/sdl.c',
   'game_boy.c',
   'log.c',
   'macros.c',

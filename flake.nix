@@ -27,41 +27,57 @@
           inherit (pkgs) lib;
         in
         {
-          packages = {
-            gemu = pkgs.stdenv.mkDerivation (finalAttrs: {
-              pname = "gemu";
-              version = "main";
+          packages =
+            let
+              mkGemu =
+                { frontend }:
+                pkgs.stdenv.mkDerivation {
+                  pname = "gemu";
+                  version = "main";
 
-              src = lib.cleanSource ./.;
+                  src = lib.cleanSource ./.;
 
-              nativeBuildInputs = with pkgs; [
-                meson
-                ninja
-                pkg-config
-                unity-test
-                cjson
-                ruby
-              ];
+                  nativeBuildInputs = with pkgs; [
+                    meson
+                    ninja
+                    pkg-config
+                    unity-test
+                    cjson
+                    ruby
+                  ];
 
-              buildInputs = with pkgs; [
-                sdl3
-                raylib
-              ];
+                  buildInputs =
+                    with pkgs;
+                    [ ]
+                    ++ (lib.optionals (frontend == "sdl3") [ sdl3 ])
+                    ++ (lib.optionals (frontend == "raylib") [ raylib ]);
 
-              doCheck = true;
+                  mesonFlags = [
+                    "-Dfrontend=${frontend}"
+                  ];
 
-              meta = with lib; {
-                description = "A Game Boy emulator written in C.";
-                homepage = "https://codeberg.org/Grazen0/gemu";
-                license = licenses.gpl3;
-              };
-            });
+                  doCheck = false;
 
-            default = self'.packages.gemu;
-          };
+                  meta = with lib; {
+                    description = "A Game Boy emulator written in C.";
+                    homepage = "https://codeberg.org/Grazen0/gemu";
+                    license = licenses.gpl3;
+                  };
+                };
+            in
+            {
+              gemu = self'.packages.gemu-sdl3;
+              gemu-sdl3 = mkGemu { frontend = "sdl3"; };
+              gemu-raylib = mkGemu { frontend = "raylib"; };
+
+              default = self'.packages.gemu;
+            };
 
           devShells.default = pkgs.mkShell {
-            inputsFrom = [ self'.packages.gemu ];
+            inputsFrom = [
+              self'.packages.gemu-sdl3
+              self'.packages.gemu-raylib
+            ];
             packages = with pkgs; [ clang-tools ];
             hardeningDisable = [ "fortify" ];
           };

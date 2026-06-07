@@ -1,6 +1,5 @@
 #include "scheduler.h"
 #include "game_boy.h"
-#include "log.h"
 #include "stdinc.h"
 #include <assert.h>
 #include <stddef.h>
@@ -179,4 +178,10 @@ void sched_dispatch(Scheduler *sched, GameBoy *gb)
     Event event = queue_remove(&sched->queue);
     u64 elapsed_cycles = DISPATCHERS[event.kind](gb);
     queue_add(&sched->queue, event.time + elapsed_cycles, event.kind);
+}
+
+void sched_dispatch_until(Scheduler *sched, GameBoy *gb, u64 until)
+{
+    while (sched_cur_time(sched) < until)
+        sched_dispatch(sched, gb);
 }

@@ -2,6 +2,7 @@
 #define GEMU_SCHEDULER_H
 
 #include "game_boy.h"
+#include "stdinc.h"
 #include <stddef.h>
 
 typedef struct Event Event;
@@ -23,5 +24,7 @@ void sched_deinit(Scheduler *sched);
 [[nodiscard]] u64 sched_cur_time(const Scheduler *sched);
 
 void sched_dispatch(Scheduler *sched, GameBoy *gb);
+
+void sched_dispatch_until(Scheduler *sched, GameBoy *gb, u64 until);
 
 #endif

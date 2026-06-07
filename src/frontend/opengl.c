@@ -108,27 +108,17 @@ static void draw_quad(Rectangle dest, int screen_width, int screen_height)
 static void display(void)
 {
     long double frame_start = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
-
     long double cur_time = frame_start - g_start_time;
-
     u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-    while (sched_cur_time(&g_sched) < cur_time_clk)
-        sched_dispatch(&g_sched, g_gb);
-
+    sched_dispatch_until(&g_sched, g_gb, cur_time_clk);
     build_pixels(g_gb);
-
     update_texture();
 
     int width = glutGet(GLUT_WINDOW_WIDTH);
     int height = glutGet(GLUT_WINDOW_HEIGHT);
 
-    Rectangle win_rect = {
-        0,
-        0,
-        (float)width,
-        (float)height,
-    };
+    Rectangle win_rect = {0, 0, (float)width, (float)height};
 
     Rectangle dest = fit_rect_to_aspect_ratio(win_rect, GB_LCD_ASPECT_RATIO);
 

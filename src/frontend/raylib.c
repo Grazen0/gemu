@@ -119,9 +119,7 @@ static int run(GameBoy *gb)
         long double cur_time = frame_start - start;
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-        while (sched_cur_time(&sched) < cur_time_clk)
-            sched_dispatch(&sched, gb);
-
+        sched_dispatch_until(&sched, gb, cur_time_clk);
         draw(gb, texture, pixels, palette);
     }
 

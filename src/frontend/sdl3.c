@@ -201,9 +201,7 @@ static void run_frame_loop(State *state, SDL_Renderer *renderer,
         long double cur_time = frame_start - start;
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-        while (sched_cur_time(&sched) < cur_time_clk)
-            sched_dispatch(&sched, state->gb);
-
+        sched_dispatch_until(&sched, state->gb, cur_time_clk);
         render(state, renderer, texture, palette);
 
         long double frame_duration = sdl_get_performance_time() - frame_start;

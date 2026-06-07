@@ -15,31 +15,14 @@ add_project_arguments(
   language : 'c'
 )
 
+subdir('core')
 subdir('src')
 subdir('tests')
 
-sources = [
-  'src/main.c',
-  'src/frontend/common.c',
-]
-
-dependencies = [
-  gemu_lib_dep
-]
-
-frontend = get_option('frontend')
-
-if frontend == 'sdl3'
-  sources += ['src/frontend/sdl3.c']
-  dependencies += dependency('sdl3')
-elif frontend == 'raylib'
-  sources += ['src/frontend/raylib.c']
-  dependencies += dependency('raylib')
-endif
-
-exe = executable(
+executable(
   'gemu',
-  sources,
-  dependencies : dependencies,
+  gemu_sources,
+  include_directories : gemu_inc,
+  dependencies : gemu_dependencies,
   install : true,
 )

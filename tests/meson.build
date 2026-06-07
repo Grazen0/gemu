@@ -42,7 +42,7 @@ foreach test_source : test_sources
     dependencies: [
       unity_dep,
       cjson_dep,
-      gemu_lib_dep,
+      gemu_core_dep,
     ],
   )
 

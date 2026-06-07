@@ -56,7 +56,7 @@
                     "-Dfrontend=${frontend}"
                   ];
 
-                  doCheck = false;
+                  doCheck = true;
 
                   meta = with lib; {
                     description = "A Game Boy emulator written in C.";

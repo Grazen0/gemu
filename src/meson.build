@@ -1,23 +1,20 @@
-sources = [
-  'cpu.c',
-  'data.c',
-  'frontend/common.c',
-  'game_boy.c',
-  'log.c',
-  'macros.c',
-  'num.c',
-  'scheduler.c',
-]
-
 gemu_inc = include_directories('.')
 
-gemu_lib = static_library(
-  'gemu_lib',
-  sources,
-  include_directories: gemu_inc,
+frontend = get_option('frontend')
+
+gemu_sources = files(
+  'main.c',
+  'frontend/common.c',
 )
 
-gemu_lib_dep = declare_dependency(
-  link_with: gemu_lib,
-  include_directories: gemu_inc,
-)
+gemu_dependencies = [
+  gemu_core_dep
+]
+
+if frontend == 'sdl3'
+  gemu_sources += files('frontend/sdl3.c')
+  gemu_dependencies += dependency('sdl3')
+elif frontend == 'raylib'
+  gemu_sources += files('frontend/raylib.c')
+  gemu_dependencies += dependency('raylib')
+endif

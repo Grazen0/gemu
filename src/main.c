@@ -102,14 +102,13 @@ int main(int argc, char *argv[])
     u8 *rom = SDL_LoadFile(args.rom_path, &rom_len);
 
     if (rom == nullptr) {
-        fprintf(stderr, "%s\n", SDL_GetError());
+        log_error("%s", SDL_GetError());
         retval = EXIT_FAILURE;
         goto cleanup_1;
     }
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        fprintf(stderr, "Could not read initialize video: %s\n",
-                SDL_GetError());
+        log_error("Could not read initialize video: %s", SDL_GetError());
         retval = EXIT_FAILURE;
         goto cleanup_1;
     }
@@ -121,7 +120,7 @@ int main(int argc, char *argv[])
         SDL_CreateWindow("gemu", WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, 0);
 
     if (window == nullptr) {
-        fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+        log_error("Could not create window: %s", SDL_GetError());
         retval = EXIT_FAILURE;
         goto cleanup_2;
     }
@@ -129,7 +128,7 @@ int main(int argc, char *argv[])
     SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
 
     if (renderer == nullptr) {
-        fprintf(stderr, "Could not create renderer: %s\n", SDL_GetError());
+        log_error("Could not create renderer: %s", SDL_GetError());
         retval = EXIT_FAILURE;
         goto cleanup_2;
     }
@@ -147,15 +146,14 @@ int main(int argc, char *argv[])
         boot_rom = SDL_LoadFile(args.boot_rom_path, &boot_rom_len);
 
         if (boot_rom == nullptr) {
-            fprintf(stderr, "Could not read boot ROM file.\n");
+            log_error("Could not read boot ROM file.");
             retval = EXIT_FAILURE;
             goto cleanup_3;
         }
 
         if (boot_rom_len != GB_BOOT_ROM_LEN) {
-            fprintf(stderr,
-                    "Boot ROM must be exactly %zu bytes long (was %zu)\n",
-                    GB_BOOT_ROM_LEN, boot_rom_len);
+            log_error("Boot ROM must be exactly %zu bytes long (was %zu)",
+                      GB_BOOT_ROM_LEN, boot_rom_len);
             retval = EXIT_FAILURE;
             goto cleanup_4;
         }

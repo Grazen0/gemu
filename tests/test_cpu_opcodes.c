@@ -107,7 +107,7 @@ static void run_cpu_tick_test(const CpuState *const initial_state,
                               const CpuState *const final_state,
                               const char *const test_name)
 {
-    Cpu cpu = Cpu_new();
+    Cpu cpu = cpu_init();
 
     DumbRam dumb_ram = {};
 
@@ -136,7 +136,7 @@ static void run_cpu_tick_test(const CpuState *const initial_state,
         dumb_ram.active[entry->address] = true;
     }
 
-    Cpu_tick(&cpu, &mock_memory);
+    cpu_step(&cpu, &mock_memory);
 
     char msg_buffer[32];
 

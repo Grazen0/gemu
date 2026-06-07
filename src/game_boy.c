@@ -314,33 +314,43 @@ u8 gb_read_io(const GameBoy *gb, u16 addr)
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
 }
 
-u8 gb_read_mem(const GameBoy *gb, u16 addr)
+static u8 gb_read_mem_0000_8000(const GameBoy *gb, u16 addr)
 {
-    if (addr <= 0x7FFF) {
-        if (gb->boot_rom_enable && addr <= 0x100) {
-            // 0000-0100 (Boot ROM)
-            if (gb->boot_rom == nullptr)
-                BAIL("Tried to read non-existing boot ROM");
+    if (gb->boot_rom_enable && addr <= GB_BOOT_ROM_LEN) {
+        // 0000-0100 (Boot ROM)
+        if (gb->boot_rom == nullptr)
+            BAIL("Tried to read non-existing boot ROM");
 
-            return gb->boot_rom[addr];
-        }
-
-        if (gb->rom == nullptr)
-            BAIL("Tried to read non-existing ROM");
-
-        // 0000-7FFF (ROM bank)
-        return gb->rom[addr];
+        return gb->boot_rom[addr];
     }
 
-    if (addr <= 0x9FFF) // 8000-9FFF (VRAM)
-        return gb->vram[addr - 0x8000];
+    if (gb->rom == nullptr)
+        BAIL("Tried to read non-existing ROM");
 
-    if (addr <= 0xBFFF) // A000-BFFF (External RAM)
-        BAIL("TODO: gb_read_mem (addr = $%04X)", addr);
+    // 0000-7FFF (ROM bank)
+    return gb->rom[addr];
+}
 
-    if (addr <= 0xDFFF) // C000-DFFF (WRAM)
-        return gb->ram[addr - 0xC000];
+static u8 gb_read_mem_8000_A000(const GameBoy *gb, u16 addr)
+{
+    // 8000-9FFF (VRAM)
+    return gb->vram[addr - 0x8000];
+}
 
+static u8 gb_read_mem_A000_C000([[maybe_unused]] const GameBoy *gb, u16 addr)
+{
+    // A000-BFFF (External RAM)
+    BAIL("TODO: gb_read_mem_A000_C000 (addr = $%04X)", addr);
+}
+
+static u8 gb_read_mem_C000_E000(const GameBoy *gb, u16 addr)
+{
+    // C000-DFFF (WRAM)
+    return gb->ram[addr - 0xC000];
+}
+
+static u8 gb_read_mem_E000_10000(const GameBoy *gb, u16 addr)
+{
     if (addr <= 0xFDFF) // E000-FDFF (Echo RAM, mirror of C000-DDFF)
         return gb->ram[addr - 0xE000];
 
@@ -358,6 +368,24 @@ u8 gb_read_mem(const GameBoy *gb, u16 addr)
 
     // FFFF (Interrupt Enable Register)
     return gb->ie;
+}
+
+u8 gb_read_mem(const GameBoy *gb, u16 addr)
+{
+    static u8 (*const HANDLERS[])(const GameBoy *, u16) = {
+        [0x0] = gb_read_mem_0000_8000,  [0x1] = gb_read_mem_0000_8000,
+        [0x2] = gb_read_mem_0000_8000,  [0x3] = gb_read_mem_0000_8000,
+        [0x4] = gb_read_mem_0000_8000,  [0x5] = gb_read_mem_0000_8000,
+        [0x6] = gb_read_mem_0000_8000,  [0x7] = gb_read_mem_0000_8000,
+        [0x8] = gb_read_mem_8000_A000,  [0x9] = gb_read_mem_8000_A000,
+        [0xA] = gb_read_mem_A000_C000,  [0xB] = gb_read_mem_A000_C000,
+        [0xC] = gb_read_mem_C000_E000,  [0xD] = gb_read_mem_C000_E000,
+        [0xE] = gb_read_mem_E000_10000, [0xF] = gb_read_mem_E000_10000,
+    };
+    static_assert(ARRAY_LEN(HANDLERS) == 16);
+
+    u8 nib = (addr >> 12) & 0xF;
+    return HANDLERS[nib](gb, addr);
 }
 
 u16 gb_read_mem_u16(GameBoy *gb, u16 addr)
@@ -453,24 +481,36 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
     }
 }
 
-void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
+static void gb_write_mem_0000_8000([[maybe_unused]] GameBoy *gb, u16 addr,
+                                   u8 value)
 {
-    log_trace("write mem (addr = $%04X, value = $%02X)", addr, value);
+    // 0000-7FFF (ROM bank)
+    log_debug("TODO: gb_write_mem ROM (addr = $%04X, $%02X)", addr, value);
+}
 
-    if (addr <= 0x7FFF) {
-        // 0000-7FFF (ROM bank)
-        log_debug("TODO: gb_write_mem ROM (addr = $%04X, $%02X)", addr, value);
-    } else if (addr <= 0x9FFF) {
-        // 8000-9FFF (VRAM)
-        gb->vram[addr - 0x8000] = value;
-        gb->video_dirty = true;
-    } else if (addr <= 0xBFFF) {
-        // A000-BFFF (External RAM)
-        BAIL("TODO: gb_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
-    } else if (addr <= 0xDFFF) {
-        // C000-DFFF (WRAM)
-        gb->ram[addr - 0xC000] = value;
-    } else if (addr <= 0xFDFF) {
+static void gb_write_mem_8000_A000(GameBoy *gb, u16 addr, u8 value)
+{
+    // 8000-9FFF (VRAM)
+    gb->vram[addr - 0x8000] = value;
+    gb->video_dirty = true;
+}
+
+static void gb_write_mem_A000_C000([[maybe_unused]] GameBoy *gb, u16 addr,
+                                   u8 value)
+{
+    // A000-BFFF (External RAM)
+    BAIL("TODO: gb_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
+}
+
+static void gb_write_mem_C000_E000(GameBoy *gb, u16 addr, u8 value)
+{
+    // C000-DFFF (WRAM)
+    gb->ram[addr - 0xC000] = value;
+}
+
+static void gb_write_mem_E000_10000(GameBoy *gb, u16 addr, u8 value)
+{
+    if (addr <= 0xFDFF) {
         // E000-FDFF (Echo RAM, mirror of C000-DDFF)
         gb->ram[addr - 0xE000] = value;
     } else if (addr <= 0xFE9F) {
@@ -491,6 +531,24 @@ void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
         // FFFF (Interrupt Enable Register)
         gb->ie = value;
     }
+}
+
+void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
+{
+    static void (*const HANDLERS[])(GameBoy *, u16, u8) = {
+        [0x0] = gb_write_mem_0000_8000,  [0x1] = gb_write_mem_0000_8000,
+        [0x2] = gb_write_mem_0000_8000,  [0x3] = gb_write_mem_0000_8000,
+        [0x4] = gb_write_mem_0000_8000,  [0x5] = gb_write_mem_0000_8000,
+        [0x6] = gb_write_mem_0000_8000,  [0x7] = gb_write_mem_0000_8000,
+        [0x8] = gb_write_mem_8000_A000,  [0x9] = gb_write_mem_8000_A000,
+        [0xA] = gb_write_mem_A000_C000,  [0xB] = gb_write_mem_A000_C000,
+        [0xC] = gb_write_mem_C000_E000,  [0xD] = gb_write_mem_C000_E000,
+        [0xE] = gb_write_mem_E000_10000, [0xF] = gb_write_mem_E000_10000,
+    };
+    static_assert(ARRAY_LEN(HANDLERS) == 16);
+
+    u8 nib = (addr >> 12) & 0xF;
+    HANDLERS[nib](gb, addr, value);
 }
 
 void gb_service_interrupts(GameBoy *gb, Memory *mem)

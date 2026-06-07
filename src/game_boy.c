@@ -204,10 +204,10 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 
     free(gb->rom);
 
-    gb->rom = malloc(rom_len * sizeof(gb->rom[0]));
+    gb->rom = calloc(rom_len, sizeof(*gb->rom));
     BAIL_IF(gb->rom == nullptr, "Could not allocate memory for new ROM");
 
-    memcpy(gb->rom, rom, rom_len * sizeof(gb->rom[0]));
+    memcpy(gb->rom, rom, rom_len * sizeof(*gb->rom));
     gb->rom_len = rom_len;
 
     gb_validate_rom(gb);

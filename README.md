@@ -40,9 +40,9 @@ build/gemu path/to/rom.gb
   - [x] Background tiles
   - [x] Objects
   - [ ] Window drawing
-  - [ ] Scrolling (still needs support for wrapping)
+  - [x] Scrolling
   - [ ] Proper OAM transfer timing
-- [ ] Timers
+- [x] Timers
 - [ ] Mappers
   - [ ] MBC1
   - [ ] MBC2
@@ -66,11 +66,6 @@ build/gemu path/to/rom.gb
 - [ ] Audio
 - [ ] CGB support
 - [ ] Gamepad support (via SDL)
-
-Some other notes:
-
-- The graphics system right now is very, very fragile. A rewrite would be well-suited.
-- Also, a major rework of the timing system should be coming soon&trade;.
 
 ## Credits
 

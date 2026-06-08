@@ -1,7 +1,7 @@
 #ifndef GEMU_MAPPER_H
 #define GEMU_MAPPER_H
 
-#include "stdinc.h"
+#include "util.h"
 #include <stddef.h>
 
 typedef struct MapperVTable MapperVTable;

@@ -1,12 +1,14 @@
+#include "cpu.h"
 #include "frontend/common.h"
 #include "game_boy.h"
 #include "log.h"
 #include "scheduler.h"
-#include "stdinc.h"
 #include "string.h"
+#include "util.h"
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
+#include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,6 +128,93 @@ static u8 *load_boot_rom(const char filename[])
     return boot_rom;
 }
 
+typedef struct {
+    char *buf;
+    size_t buf_len;
+    size_t max_msg_len;
+    size_t head;
+    size_t tail;
+} RingLogger;
+
+static RingLogger ring_logger_init(size_t buf_size, size_t max_msg_size)
+{
+    assert(buf_size > 0);
+    assert(max_msg_size > 0);
+
+    char *buf = calloc(buf_size, max_msg_size);
+    assert(buf != nullptr);
+
+    return (RingLogger){
+        .buf = buf,
+        .buf_len = buf_size,
+        .max_msg_len = max_msg_size,
+        .head = 0,
+        .tail = 0,
+    };
+}
+
+static void ring_logger_deinit(RingLogger *logger)
+{
+    free(logger->buf);
+    logger->buf = nullptr;
+}
+
+static char *ring_logger_slot(RingLogger *logger, size_t idx)
+{
+    assert(idx < logger->buf_len);
+    return &logger->buf[idx * logger->max_msg_len];
+}
+
+static void ring_logger_vlog(RingLogger *logger, const char format[],
+                             va_list args)
+{
+    char *message = ring_logger_slot(logger, logger->tail);
+    vsnprintf(message, logger->max_msg_len, format, args);
+    logger->tail = (logger->tail + 1) % logger->buf_len;
+
+    if (logger->tail == logger->head)
+        logger->head = (logger->head + 1) % logger->buf_len;
+}
+
+static void ring_logger_dump(RingLogger *logger, int fd)
+{
+    size_t cur = logger->head;
+
+    while (cur != logger->tail) {
+        char *message = ring_logger_slot(logger, cur);
+        size_t len = strnlen(message, logger->max_msg_len);
+
+        write(fd, message, len);
+        write(fd, "\n", 1);
+        cur = (cur + 1) % logger->buf_len;
+    }
+}
+
+static void ring_logger_vlog_v(void *logger, const char format[], va_list args)
+{
+    ring_logger_vlog(logger, format, args);
+}
+
+static void ring_logger_deinit_v(void *logger)
+{
+    ring_logger_deinit(logger);
+}
+
+IMPL_UPCASTS(RingLogger, ring_logger, Logger, logger,
+             .vlog = ring_logger_vlog_v, .deinit = ring_logger_deinit_v)
+
+static RingLogger ring_logger;
+
+static void crash_handler([[maybe_unused]] int sig)
+{
+    static constexpr char MESSAGE[] =
+        "\n"
+        "================ Last executed instructions ================\n";
+
+    write(STDERR_FILENO, MESSAGE, sizeof(MESSAGE) - 1);
+    ring_logger_dump(&ring_logger, STDERR_FILENO);
+}
+
 int main(int argc, char *argv[])
 {
     Args args = {};
@@ -171,7 +260,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    GameBoy gb = gb_init(boot_rom);
+    ring_logger = ring_logger_init(32, 256);
+
+    signal(SIGSEGV, crash_handler);
+    signal(SIGABRT, crash_handler);
+    signal(SIGFPE, crash_handler);
+    signal(SIGILL, crash_handler);
+    signal(SIGBUS, crash_handler);
+
+    GameBoy gb = gb_init(ring_logger_as_logger(&ring_logger), boot_rom);
     gb_load_rom(&gb, rom, rom_len);
 
     Scheduler sched = sched_init();
@@ -181,6 +278,7 @@ int main(int argc, char *argv[])
 
     log_info("Cleaning up other allocations");
 
+    ring_logger_deinit(&ring_logger);
     sched_deinit(&sched);
     gb_deinit(&gb);
     free(boot_rom);

@@ -4,7 +4,7 @@
 #include "game_boy.h"
 #include "macros.h"
 #include "scheduler.h"
-#include "stdinc.h"
+#include "util.h"
 #include <stddef.h>
 
 static constexpr int WINDOW_INIT_WIDTH = GB_LCD_WIDTH * 4;

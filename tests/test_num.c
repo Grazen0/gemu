@@ -1,5 +1,4 @@
-#include "num.h"
-#include "stdinc.h"
+#include "util.h"
 #include <unity.h>
 
 void test_concat_u16()

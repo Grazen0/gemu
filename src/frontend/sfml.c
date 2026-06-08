@@ -3,7 +3,7 @@
 #include "game_boy.h"
 #include "log.h"
 #include "scheduler.h"
-#include "stdinc.h"
+#include "util.h"
 #include <CSFML/Graphics.h>
 #include <assert.h>
 #include <stddef.h>

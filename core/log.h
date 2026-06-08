@@ -1,7 +1,7 @@
 #ifndef GEMU_LOG_H
 #define GEMU_LOG_H
 
-#include "stdinc.h"
+#include "util.h"
 #include <stdarg.h>
 #include <stddef.h>
 

@@ -1,7 +1,7 @@
 #ifndef GEMU_DATA_H
 #define GEMU_DATA_H
 
-#include "stdinc.h"
+#include "util.h"
 #include <stddef.h>
 
 typedef enum : u16 {

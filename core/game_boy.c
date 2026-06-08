@@ -4,9 +4,8 @@
 #include "log.h"
 #include "macros.h"
 #include "mapper.h"
-#include "num.h"
-#include "stdinc.h"
 #include "string.h"
+#include "util.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -118,10 +117,10 @@ static JoypadButtons joypad_btns_init()
     };
 }
 
-GameBoy gb_init(const u8 *boot_rom)
+GameBoy gb_init(Logger logger, const u8 *boot_rom)
 {
     GameBoy gb = {
-        .cpu = cpu_init(),
+        .cpu = cpu_init(logger),
         .mapper = mapper_default(),
         .ram = nullptr,
         .vram = nullptr,
@@ -568,7 +567,7 @@ static void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
     HANDLERS[nib](gb, addr, value);
 }
 
-static void gb_service_interrupts(GameBoy *gb, Memory *mem)
+static void gb_service_interrupts(GameBoy *gb, Memory mem)
 {
     u8 int_mask = gb->if_ & gb->ie;
 
@@ -615,8 +614,8 @@ u64 gb_dispatch_cpu_instr(GameBoy *gb)
     u64 mcycles_start = gb->cpu.mcycle_cnt;
 
     gb_update_joyp(gb);
-    gb_service_interrupts(gb, &memory);
-    cpu_step(&gb->cpu, &memory);
+    gb_service_interrupts(gb, memory);
+    cpu_step(&gb->cpu, memory);
 
     u64 mcycles_end = gb->cpu.mcycle_cnt;
     return CPU_MCYCLE * (mcycles_end - mcycles_start);

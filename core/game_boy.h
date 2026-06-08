@@ -118,7 +118,7 @@ typedef struct {
     u8 rom_size;
 } GameInfo;
 
-[[nodiscard]] GameBoy gb_init(const u8 *boot_rom);
+[[nodiscard]] GameBoy gb_init(Logger logger, const u8 *boot_rom);
 
 void gb_deinit(GameBoy *gb);
 

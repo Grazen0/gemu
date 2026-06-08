@@ -1,11 +1,26 @@
 #include "cpu.h"
-#include "stdinc.h"
+#include "util.h"
 #include <assert.h>
 #include <cjson/cJSON.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unity.h>
+
+static void nop_vlog_v([[maybe_unused]] void *logger,
+                       [[maybe_unused]] const char format[],
+                       [[maybe_unused]] va_list args)
+{
+}
+
+static const LoggerVTable NOP_LOGGER_VTABLE = {
+    .vlog = nop_vlog_v,
+};
+
+static const Logger NOP_LOGGER = {
+    .ptr = nullptr,
+    .vtable = &NOP_LOGGER_VTABLE,
+};
 
 typedef struct {
     bool *active;
@@ -144,7 +159,7 @@ static void run_cpu_tick_test(const CpuState *initial_state,
                               const CpuState *final_state,
                               const char *test_name)
 {
-    Cpu cpu = cpu_init();
+    Cpu cpu = cpu_init(NOP_LOGGER);
 
     MockRam mock_ram = mock_ram_init();
 
@@ -172,7 +187,7 @@ static void run_cpu_tick_test(const CpuState *initial_state,
         mock_ram.active[entry->addr] = true;
     }
 
-    cpu_step(&cpu, &mock_memory);
+    cpu_step(&cpu, mock_memory);
 
     char msg_buffer[32];
 

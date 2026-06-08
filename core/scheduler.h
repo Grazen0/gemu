@@ -2,7 +2,7 @@
 #define GEMU_SCHEDULER_H
 
 #include "game_boy.h"
-#include "stdinc.h"
+#include "util.h"
 #include <stddef.h>
 
 typedef struct Event Event;

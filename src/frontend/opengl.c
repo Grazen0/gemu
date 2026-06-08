@@ -2,7 +2,7 @@
 #include "game_boy.h"
 #include "macros.h"
 #include "scheduler.h"
-#include "stdinc.h"
+#include "util.h"
 #include <GL/freeglut.h>
 #include <GL/gl.h>
 #include <assert.h>

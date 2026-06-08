@@ -460,8 +460,8 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
         gb->video_dirty = true;
     } else if (addr == 0xFF4F) {
         // FF4F
-        BAIL("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
         gb->video_dirty = true;
+        BAIL("I/O VRAM bank select write ($%04X, $%02X)", addr, value);
     } else if (addr == 0xFF50) {
         // FF50 (boot ROM disable)
         if (value != 0)
@@ -472,8 +472,11 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
     } else if (addr >= 0xFF68 && addr <= 0xFF6B) {
         // FF68-FF6B (LCD color palettes, CGB-only)
         gb->video_dirty = true;
+        BAIL("LCD color palettes write (addr = $%04X, value = $%02X)", addr,
+             value);
     } else if (addr == 0xFF70) {
         // FF70 (WRAM bank select, CGB-only)
+        BAIL("WRAM bank select (addr = $%04X, value = $%02X)", addr, value);
     } else if (addr == 0xFF7F) {
         // Tetris tries to write here. Probably a no-op.
     } else {
@@ -578,7 +581,7 @@ static u8 gb_read_mem_v(const void *ctx, u16 addr)
     return gb_read_mem(ctx, addr);
 }
 
-void gb_write_mem_v(void *ctx, u16 addr, u8 value)
+static void gb_write_mem_v(void *ctx, u16 addr, u8 value)
 {
     gb_write_mem(ctx, addr, value);
 }

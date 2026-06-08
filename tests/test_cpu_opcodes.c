@@ -48,6 +48,11 @@ static void write_mock_ram(void *ctx, const u16 addr, const u8 value)
     ram->data[addr] = value;
 }
 
+static const MemoryVTable MOCK_MEMORY_VTABLE = {
+    .read = read_mock_ram,
+    .write = write_mock_ram,
+};
+
 static CpuState CpuState_from_cjson(const cJSON *const src)
 {
     const cJSON *const pc = cJSON_GetObjectItemCaseSensitive(src, "pc");
@@ -113,8 +118,7 @@ static void run_cpu_tick_test(const CpuState *const initial_state,
 
     Memory mock_memory = (Memory){
         .ctx = &dumb_ram,
-        .read = read_mock_ram,
-        .write = write_mock_ram,
+        .vtable = &MOCK_MEMORY_VTABLE,
     };
 
     cpu.pc = initial_state->pc;

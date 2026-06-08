@@ -585,10 +585,14 @@ void gb_write_mem_v(void *ctx, u16 addr, u8 value)
 
 u64 gb_dispatch_cpu_instr(GameBoy *gb)
 {
-    Memory memory = (Memory){
-        .ctx = gb,
+    static const MemoryVTable GB_MEMORY_VTABLE = {
         .read = gb_read_mem_v,
         .write = gb_write_mem_v,
+    };
+
+    Memory memory = (Memory){
+        .ctx = gb,
+        .vtable = &GB_MEMORY_VTABLE,
     };
 
     u64 mcycles_start = gb->cpu.mcycle_cnt;

@@ -7,10 +7,24 @@
 static constexpr u8 CPU_MCYCLE = 4;
 
 typedef struct {
-    void *ctx;
     u8 (*read)(const void *ctx, u16 addr);
     void (*write)(void *ctx, u16 addr, u8 value);
+} MemoryVTable;
+
+typedef struct {
+    void *ctx;
+    const MemoryVTable *vtable;
 } Memory;
+
+static inline u8 mem_read(const Memory *mem, u16 addr)
+{
+    return mem->vtable->read(mem->ctx, addr);
+}
+
+static inline void mem_write(Memory *mem, u16 addr, u8 value)
+{
+    mem->vtable->write(mem->ctx, addr, value);
+}
 
 typedef enum : u8 {
     MODE_RUNNING,

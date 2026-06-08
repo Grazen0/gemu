@@ -556,8 +556,8 @@ void gb_service_interrupts(GameBoy *gb, Memory *mem)
     u8 int_mask = gb->if_ & gb->ie;
 
     // Disable HALT on an interrupt
-    if (int_mask != 0 && gb->cpu.mode == MODE_HALTED)
-        gb->cpu.mode = MODE_RUNNING;
+    if (int_mask != 0 && gb->cpu.mode == CPU_MODE_HALTED)
+        gb->cpu.mode = CPU_MODE_RUNNING;
 
     if (!gb->cpu.ime)
         return;
@@ -763,7 +763,7 @@ u64 gb_dispatch_pixel(GameBoy *gb)
 
 u64 gb_dispatch_div(GameBoy *gb)
 {
-    if (gb->cpu.mode != MODE_STOPPED)
+    if (gb->cpu.mode != CPU_MODE_STOPPED)
         ++gb->div;
 
     return 256;

@@ -61,7 +61,7 @@ Cpu cpu_init()
         .mcycle_cnt = 0,
         .sp = 0,
         .pc = 0,
-        .mode = MODE_RUNNING,
+        .mode = CPU_MODE_RUNNING,
         .b = 0,
         .c = 0,
         .d = 0,
@@ -398,7 +398,7 @@ static inline void cpu_instr_ld_n16_sp(Cpu *cpu, Memory *mem)
 static inline void cpu_instr_stop(Cpu *cpu)
 {
     log_trace("stop");
-    cpu->mode = MODE_STOPPED;
+    cpu->mode = CPU_MODE_STOPPED;
 
     log_debug("TODO: implement STOP instruction properly");
 }
@@ -684,7 +684,7 @@ static inline void cpu_instr_ccf(Cpu *cpu)
 static inline void cpu_instr_halt(Cpu *cpu)
 {
     log_trace("halt");
-    cpu->mode = MODE_HALTED;
+    cpu->mode = CPU_MODE_HALTED;
 }
 
 static inline void cpu_instr_ld_r8_r8(Cpu *cpu, Memory *mem, u8 y, u8 z)
@@ -1273,7 +1273,7 @@ void cpu_execute(Cpu *cpu, Memory *mem, u8 opcode)
 
 void cpu_step(Cpu *cpu, Memory *mem)
 {
-    if (cpu->mode != MODE_RUNNING) {
+    if (cpu->mode != CPU_MODE_RUNNING) {
         ++cpu->mcycle_cnt; // Makes the frontend work lmao
         assert(false && "check this out");
         return;

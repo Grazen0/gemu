@@ -27,9 +27,9 @@ static inline void mem_write(Memory *mem, u16 addr, u8 value)
 }
 
 typedef enum : u8 {
-    MODE_RUNNING,
-    MODE_HALTED,
-    MODE_STOPPED,
+    CPU_MODE_RUNNING,
+    CPU_MODE_HALTED,
+    CPU_MODE_STOPPED,
 } CpuMode;
 
 typedef struct {

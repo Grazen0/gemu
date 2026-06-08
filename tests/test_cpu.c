@@ -19,7 +19,7 @@ void test_cpu_new()
     TEST_ASSERT_EQUAL(cpu.f, 0);
     TEST_ASSERT_EQUAL(cpu.sp, 0);
     TEST_ASSERT_EQUAL(cpu.pc, 0);
-    TEST_ASSERT_EQUAL(cpu.mode, MODE_RUNNING);
+    TEST_ASSERT_EQUAL(cpu.mode, CPU_MODE_RUNNING);
     TEST_ASSERT_EQUAL(cpu.ime, true);
     TEST_ASSERT_EQUAL(cpu.mcycle_cnt, 0);
 }

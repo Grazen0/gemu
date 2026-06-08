@@ -43,7 +43,7 @@ Note that you can choose the frontend (`sdl3`, `raylib`, `opengl`, or `sfml`) wi
   - [x] Objects
   - [ ] Window drawing
   - [x] Scrolling
-  - [ ] Proper OAM transfer timing
+  - [x] Proper OAM transfer timing
 - [x] Timers
 - [ ] Mappers
   - [ ] MBC1

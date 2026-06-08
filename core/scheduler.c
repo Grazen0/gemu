@@ -1,8 +1,10 @@
 #include "scheduler.h"
 #include "game_boy.h"
+#include "macros.h"
 #include "stdinc.h"
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 typedef enum : u8 {
@@ -10,6 +12,9 @@ typedef enum : u8 {
     EVENT_PIXEL,
     EVENT_DIV,
     EVENT_TIMA,
+    EVENT_DMA_CP,
+
+    EVENT_COUNT,
 } EventKind;
 
 struct Event {
@@ -173,11 +178,20 @@ void sched_dispatch(Scheduler *sched, GameBoy *gb)
         [EVENT_PIXEL] = gb_dispatch_pixel,
         [EVENT_DIV] = gb_dispatch_div,
         [EVENT_TIMA] = gb_dispatch_tima,
+        [EVENT_DMA_CP] = gb_dispatch_dma_cp,
     };
+    static_assert(ARRAY_LEN(DISPATCHERS) == EVENT_COUNT);
 
     Event event = queue_remove(&sched->queue);
     u64 elapsed_cycles = DISPATCHERS[event.kind](gb);
-    queue_add(&sched->queue, event.time + elapsed_cycles, event.kind);
+
+    if (elapsed_cycles != SIZE_MAX)
+        queue_add(&sched->queue, event.time + elapsed_cycles, event.kind);
+
+    if (gb->dma_pending) {
+        queue_add(&sched->queue, event.time + elapsed_cycles, EVENT_DMA_CP);
+        gb->dma_pending = false;
+    }
 }
 
 void sched_dispatch_until(Scheduler *sched, GameBoy *gb, u64 until)

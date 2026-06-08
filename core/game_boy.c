@@ -8,6 +8,7 @@
 #include "string.h"
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -136,6 +137,7 @@ GameBoy gb_init(const u8 *boot_rom)
         .scanout_buf = nullptr,
         .rom = nullptr,
         .rom_len = 0,
+        .dma_cur_addr = 0,
         .boot_rom_enable = true,
         .lcdc = 0,
         .stat = 0,
@@ -158,6 +160,7 @@ GameBoy gb_init(const u8 *boot_rom)
         .tma = 0,
         .tac = 0,
         .joyp = 0x0F,
+        .dma_pending = false,
     };
 
     gb.ram = calloc(RAM_SIZE, sizeof(*gb.ram));
@@ -444,11 +447,10 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
         // TODO: I/O wave pattern write
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        u16 src = (u16)value << 8;
+        assert(!gb->dma_pending);
 
-        // TODO: implement proper timing
-        for (size_t i = 0; i < 0xA0; ++i)
-            gb->oam[i] = gb_read_mem(gb, src + i);
+        gb->dma_cur_addr = (u16)value << 8;
+        gb->dma_pending = true;
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
         // clang-format off
@@ -803,6 +805,8 @@ u64 gb_dispatch_div(GameBoy *gb)
     return 256;
 }
 
+// See
+// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff07--tac-timer-control
 u64 gb_dispatch_tima(GameBoy *gb)
 {
     if (gb->tac & 0b100)
@@ -813,8 +817,21 @@ u64 gb_dispatch_tima(GameBoy *gb)
         gb->if_ |= INT_TIMER;
     }
 
-    // https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff07--tac-timer-control
     u8 clock_select = gb->tac & 0b11;
     u64 tima_mcycles = clock_select == 0 ? 256 : 4 * clock_select;
     return CPU_MCYCLE * tima_mcycles;
+}
+
+// See https://gbdev.io/pandocs/OAM_DMA_Transfer.html
+u64 gb_dispatch_dma_cp(GameBoy *gb)
+{
+    u8 lo = gb->dma_cur_addr & 0xFF;
+    gb->oam[lo] = gb_read_mem(gb, gb->dma_cur_addr);
+
+    ++gb->dma_cur_addr;
+
+    if ((gb->dma_cur_addr & 0xFF) == OAM_SIZE)
+        return SIZE_MAX; // done
+
+    return 4;
 }

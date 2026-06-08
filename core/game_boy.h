@@ -76,12 +76,12 @@ typedef struct {
     u8 (*scanout_buf)[GB_LCD_WIDTH];
     u8 *rom;
     size_t rom_len;
+    u16 dma_cur_addr;
     u8 *ram;
     u8 *vram;
     u8 *hram;
     u8 *oam;
     u8 *boot_rom;
-    bool boot_rom_enable;
     u8 lcdc;
     u8 stat;
     u8 ly;
@@ -104,6 +104,8 @@ typedef struct {
     u8 tac;
     u8 joyp;
     bool video_dirty;
+    bool dma_pending;
+    bool boot_rom_enable;
 } GameBoy;
 
 typedef struct {
@@ -134,5 +136,7 @@ u64 gb_dispatch_pixel(GameBoy *gb);
 u64 gb_dispatch_div(GameBoy *gb);
 
 u64 gb_dispatch_tima(GameBoy *gb);
+
+u64 gb_dispatch_dma_cp(GameBoy *gb);
 
 #endif

@@ -20,6 +20,7 @@ static constexpr size_t OAM_SIZE = 0xA0;
 
 static void gb_update_joyp(GameBoy *gb)
 {
+    gb->joyp_prev = gb->joyp;
     gb->joyp |= 0x0F;
 
     if ((gb->joyp & JOYP_SELECT_DPAD) == 0) {
@@ -155,6 +156,7 @@ GameBoy gb_init(const u8 *boot_rom)
         .tma = 0,
         .tac = 0,
         .joyp = 0x0F,
+        .joyp_prev = 0x0F,
         .dma_pending = false,
     };
 
@@ -257,10 +259,8 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 // NOLINTNEXTLINE
 u8 gb_read_io(GameBoy *gb, u16 addr)
 {
-    if (addr == 0xFF00) { // FF00 (joypad input)
-        gb_update_joyp(gb);
+    if (addr == 0xFF00) // FF00 (joypad input)
         return gb->joyp;
-    }
 
     // TODO: implement serial transfer
     if (addr == 0xFF01) // FF01 (serial transfer data)
@@ -590,14 +590,14 @@ static void gb_service_interrupts(GameBoy *gb, Memory *mem)
     }
 }
 
-static u8 gb_read_mem_v(void *ctx, u16 addr)
+static u8 gb_read_mem_v(void *ptr, u16 addr)
 {
-    return gb_read_mem(ctx, addr);
+    return gb_read_mem(ptr, addr);
 }
 
-static void gb_write_mem_v(void *ctx, u16 addr, u8 value)
+static void gb_write_mem_v(void *ptr, u16 addr, u8 value)
 {
-    gb_write_mem(ctx, addr, value);
+    gb_write_mem(ptr, addr, value);
 }
 
 u64 gb_dispatch_cpu_instr(GameBoy *gb)
@@ -608,12 +608,13 @@ u64 gb_dispatch_cpu_instr(GameBoy *gb)
     };
 
     Memory memory = (Memory){
-        .ctx = gb,
+        .ptr = gb,
         .vtable = &GB_MEMORY_VTABLE,
     };
 
     u64 mcycles_start = gb->cpu.mcycle_cnt;
 
+    gb_update_joyp(gb);
     gb_service_interrupts(gb, &memory);
     cpu_step(&gb->cpu, &memory);
 

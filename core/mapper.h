@@ -7,7 +7,7 @@
 typedef struct MapperVTable MapperVTable;
 
 typedef struct {
-    void *ctx;
+    void *ptr;
     const MapperVTable *vtable;
 } Mapper;
 

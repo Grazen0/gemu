@@ -70,14 +70,14 @@ static void write_mock_ram(MockRam *ram, u16 addr, u8 value)
     ram->data[addr] = value;
 }
 
-static inline u8 read_mock_ram_v(void *ctx, u16 addr)
+static inline u8 read_mock_ram_v(void *ptr, u16 addr)
 {
-    return read_mock_ram(ctx, addr);
+    return read_mock_ram(ptr, addr);
 }
 
-static inline void write_mock_ram_v(void *ctx, u16 addr, u8 value)
+static inline void write_mock_ram_v(void *ptr, u16 addr, u8 value)
 {
-    write_mock_ram(ctx, addr, value);
+    write_mock_ram(ptr, addr, value);
 }
 
 static MemoryVTable MOCK_MEMORY_VTABLE = {
@@ -149,7 +149,7 @@ static void run_cpu_tick_test(const CpuState *initial_state,
     MockRam mock_ram = mock_ram_init();
 
     Memory mock_memory = (Memory){
-        .ctx = &mock_ram,
+        .ptr = &mock_ram,
         .vtable = &MOCK_MEMORY_VTABLE,
     };
 

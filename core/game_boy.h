@@ -105,6 +105,7 @@ typedef struct {
     u8 tma;
     u8 tac;
     u8 joyp;
+    u8 joyp_prev;
     bool video_dirty;
     bool dma_pending;
     bool boot_rom_enable;

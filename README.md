@@ -11,9 +11,9 @@ If you have [Nix], you already know what to do.
 Otherwise, you'll need the following dependencies:
 
 - [Meson]
-- One of [SDL3], [Raylib], [OpenGL] + [GLUT].
+- One of [SDL3], [Raylib], [OpenGL] + [GLUT], [SFML].
 
-If you **don't** explicitly disable testing (via setting `BUILD_TESTING=OFF`), you'll also need these:
+If you don't specify `-Dtests=false` when running `meson setup`, you'll also need:
 
 - [Unity Test]
 - [cJSON]
@@ -24,12 +24,12 @@ You can clone, compile and run the project with these commands:
 ```bash
 git clone https://codeberg.org/Grazen0/gemu
 cd gemu
-meson setup build -Dfrontend=sdl3 # One of sdl3, raylib, opengl. Defaults to "sdl3".
+meson setup build -Dfrontend=sdl3 # One of sdl3, raylib, opengl, sfml. Defaults to "sdl3".
 meson compile -C build
 build/gemu path/to/rom.gb
 ```
 
-Note that you can choose the frontend (`sdl3`, `raylib` or `opengl`) with `-Dfrontend`.
+Note that you can choose the frontend (`sdl3`, `raylib`, `opengl`, or `sfml`) with `-Dfrontend`.
 
 ## Progress
 
@@ -76,11 +76,12 @@ Note that you can choose the frontend (`sdl3`, `raylib` or `opengl`) with `-Dfro
 
 [qemu]: https://www.qemu.org/
 [nix]: https://nixos.org/
-[meson]: https://mesonbuild.com
-[sdl3]: https://libsdl.org
+[meson]: https://mesonbuild.com/
+[sdl3]: https://libsdl.org/
 [raylib]: https://github.com/raysan5/raylib
 [opengl]: https://www.opengl.org/
 [glut]: https://www.opengl.org/resources/libraries/glut/glut_downloads.php
+[sfml]: https://www.sfml-dev.org/
 [unity test]: https://github.com/ThrowTheSwitch/Unity
 [cjson]: https://github.com/DaveGamble/cJSON
 [ruby]: https://www.ruby-lang.org

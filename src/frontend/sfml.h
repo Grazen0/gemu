@@ -1,0 +1,4 @@
+#ifndef GEMU_FRONTEND_SFML_H
+#define GEMU_FRONTEND_SFML_H
+
+#endif

@@ -1,6 +1,7 @@
 #include "frontend/raylib.h"
 #include "frontend/common.h"
 #include "game_boy.h"
+#include "macros.h"
 #include "scheduler.h"
 #include <assert.h>
 #include <raylib.h>
@@ -38,20 +39,29 @@ static Rectangle fit_rect_to_aspect_ratio(Rectangle container,
     return container;
 }
 
-static void update_pixels(const GameBoy *gb, Texture texture, Color *pixels,
-                          Color palette[])
+#define TO_COLOR(rgb) {(rgb)[0], (rgb)[1], (rgb)[2], 255}
+
+static void update_pixels(const GameBoy *gb, Texture texture, Color *pixels)
 {
+    static const Color PALETTE[] = {
+        TO_COLOR(PALETTE_RGB[0]),
+        TO_COLOR(PALETTE_RGB[1]),
+        TO_COLOR(PALETTE_RGB[2]),
+        TO_COLOR(PALETTE_RGB[3]),
+    };
+    static_assert(ARRAY_LEN(PALETTE) == PALETTE_RGB_LEN);
+
     for (size_t y = 0; y < GB_LCD_HEIGHT; ++y) {
         for (size_t x = 0; x < GB_LCD_WIDTH; ++x) {
             u8 color = gb->scanout_buf[y][x];
-            pixels[(y * texture.width) + x] = palette[color];
+            pixels[(y * texture.width) + x] = PALETTE[color];
         }
     }
 }
 
-static void draw(GameBoy *gb, Texture texture, Color *pixels, Color palette[])
+static void draw(GameBoy *gb, Texture texture, Color *pixels)
 {
-    update_pixels(gb, texture, pixels, palette);
+    update_pixels(gb, texture, pixels);
     UpdateTexture(texture, pixels);
 
     int width = GetScreenWidth();
@@ -69,19 +79,8 @@ static void draw(GameBoy *gb, Texture texture, Color *pixels, Color palette[])
     EndDrawing();
 }
 
-static void build_color_palette(Color out_palette[])
-{
-    for (size_t i = 0; i < PALETTE_RGB_LEN; ++i) {
-        const u8 *rgb = PALETTE_RGB[i];
-        out_palette[i] = (Color){rgb[0], rgb[1], rgb[2], 255};
-    }
-}
-
 static int run(GameBoy *gb)
 {
-    Color palette[PALETTE_RGB_LEN] = {};
-    build_color_palette(palette);
-
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, "gemu");
     SetTargetFPS(60);
@@ -120,7 +119,7 @@ static int run(GameBoy *gb)
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
         sched_dispatch_until(&sched, gb, cur_time_clk);
-        draw(gb, texture, pixels, palette);
+        draw(gb, texture, pixels);
     }
 
     sched_deinit(&sched);

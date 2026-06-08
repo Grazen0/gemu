@@ -18,7 +18,7 @@ static GLuint texture = 0;
 static u32 *pixels = nullptr;
 
 static GameBoy *g_gb = nullptr;
-static Scheduler g_sched;
+static Scheduler *g_sched = nullptr;
 
 static double g_start_time = 0.0;
 
@@ -195,13 +195,13 @@ static void init_gl(void)
                  GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 }
 
-static int run(GameBoy *gb)
+static int run(GameBoy *gb, Scheduler *sched)
 {
     g_gb = gb;
     pixels = calloc((size_t)GB_LCD_WIDTH * GB_LCD_HEIGHT, sizeof(*pixels));
     assert(pixels != NULL);
 
-    g_sched = sched_init();
+    g_sched = sched;
 
     int argc = 1;
 
@@ -225,7 +225,6 @@ static int run(GameBoy *gb)
     g_start_time = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
 
     glutMainLoop();
-    sched_deinit(&g_sched);
     glDeleteTextures(1, &texture);
     free(pixels);
 

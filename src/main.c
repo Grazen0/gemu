@@ -1,6 +1,7 @@
 #include "frontend/common.h"
 #include "game_boy.h"
 #include "log.h"
+#include "scheduler.h"
 #include "stdinc.h"
 #include "string.h"
 #include <assert.h>
@@ -173,11 +174,14 @@ int main(int argc, char *argv[])
     GameBoy gb = gb_init(boot_rom);
     gb_load_rom(&gb, rom, rom_len);
 
+    Scheduler sched = sched_init();
+
     log_info("Using frontend \"%s\"", selected_frontend.name);
-    selected_frontend.run(&gb);
+    selected_frontend.run(&gb, &sched);
 
-    log_info("Cleaning up core");
+    log_info("Cleaning up other allocations");
 
+    sched_deinit(&sched);
     gb_deinit(&gb);
     free(boot_rom);
 cleanup:

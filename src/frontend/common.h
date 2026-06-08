@@ -3,6 +3,7 @@
 
 #include "game_boy.h"
 #include "macros.h"
+#include "scheduler.h"
 #include "stdinc.h"
 #include <stddef.h>
 
@@ -31,7 +32,7 @@ FitRect fit_rect_to_ratio(float cx, float cy, float cw, float ch, float ratio);
 
 typedef struct {
     const char *name;
-    int (*run)(GameBoy *gb);
+    int (*run)(GameBoy *, Scheduler *);
 } Frontend;
 
 extern const Frontend selected_frontend;

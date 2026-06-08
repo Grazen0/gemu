@@ -99,7 +99,7 @@ static void handle_event(sfEvent *event, GameBoy *gb, sfRenderWindow *window,
     }
 }
 
-static int run(GameBoy *gb)
+static int run(GameBoy *gb, Scheduler *sched)
 {
     sfVideoMode vid_mode = {
         {WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT},
@@ -133,8 +133,6 @@ static int run(GameBoy *gb)
         calloc((size_t)GB_LCD_WIDTH * GB_LCD_HEIGHT, sizeof(*pixel_buf));
     assert(pixel_buf != nullptr);
 
-    Scheduler sched = sched_init();
-
     bool quit = false;
 
     sfClock *clock = sfClock_create();
@@ -148,7 +146,7 @@ static int run(GameBoy *gb)
         long double cur_time = sfTime_asSeconds(sfClock_getElapsedTime(clock));
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-        sched_dispatch_until(&sched, gb, cur_time_clk);
+        sched_dispatch_until(sched, gb, cur_time_clk);
         update_pixels(gb, pixel_buf);
         sfTexture_updateFromPixels(texture, (u8 *)pixel_buf, texture_size,
                                    (sfVector2u){0, 0});
@@ -157,7 +155,6 @@ static int run(GameBoy *gb)
 
     log_info("Cleaning up SFML");
     sfClock_destroy(clock);
-    sched_deinit(&sched);
     free(pixel_buf);
     sfSprite_destroy(gb_spr);
     sfTexture_destroy(texture);

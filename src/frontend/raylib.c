@@ -47,7 +47,7 @@ static void draw(GameBoy *gb, Texture texture, Color *pixels)
     EndDrawing();
 }
 
-static int run(GameBoy *gb)
+static int run(GameBoy *gb, Scheduler *sched)
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, "gemu");
@@ -69,7 +69,6 @@ static int run(GameBoy *gb)
     Texture2D texture = LoadTextureFromImage(image);
 
     double start = GetTime();
-    Scheduler sched = sched_init();
 
     while (!WindowShouldClose()) {
         long double frame_start = GetTime();
@@ -86,11 +85,10 @@ static int run(GameBoy *gb)
         long double cur_time = frame_start - start;
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-        sched_dispatch_until(&sched, gb, cur_time_clk);
+        sched_dispatch_until(sched, gb, cur_time_clk);
         draw(gb, texture, pixels);
     }
 
-    sched_deinit(&sched);
     UnloadTexture(texture);
     UnloadImage(image);
     CloseWindow();

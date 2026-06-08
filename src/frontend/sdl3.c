@@ -146,14 +146,13 @@ static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[])
     }
 }
 
-static void run_frame_loop(State *state, SDL_Renderer *renderer,
-                           SDL_Texture *texture)
+static void run_frame_loop(State *state, Scheduler *sched,
+                           SDL_Renderer *renderer, SDL_Texture *texture)
 {
     u32 palette[PALETTE_RGB_LEN] = {};
     build_rgb_palette(texture->format, palette);
 
     long double start = sdl_get_performance_time();
-    Scheduler sched = sched_init();
 
     while (!state->quit) {
         long double frame_start = sdl_get_performance_time();
@@ -165,7 +164,7 @@ static void run_frame_loop(State *state, SDL_Renderer *renderer,
         long double cur_time = frame_start - start;
         u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-        sched_dispatch_until(&sched, state->gb, cur_time_clk);
+        sched_dispatch_until(sched, state->gb, cur_time_clk);
         render(state, renderer, texture, palette);
 
         long double frame_duration = sdl_get_performance_time() - frame_start;
@@ -174,11 +173,9 @@ static void run_frame_loop(State *state, SDL_Renderer *renderer,
         if (delay > 0)
             SDL_DelayNS((u64)(delay * 1e9));
     }
-
-    sched_deinit(&sched);
 }
 
-static int run(GameBoy *gb)
+static int run(GameBoy *gb, Scheduler *sched)
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         log_error("Could not read initialize video: %s", SDL_GetError());
@@ -231,7 +228,7 @@ static int run(GameBoy *gb)
     SDL_SetWindowResizable(window, true);
 
     log_info("Running emulator");
-    run_frame_loop(&state, renderer, texture);
+    run_frame_loop(&state, sched, renderer, texture);
 
     log_info("Cleaning up SDL objects");
 

@@ -52,6 +52,10 @@ typedef enum : u8 {
     CART_TYPE_HUC1_RAM_BATTERY = 0xFF,
 } CartridgeType;
 
-[[nodiscard]] bool CartridgeType_has_ram(CartridgeType cart_type);
+[[nodiscard]] bool cart_type_has_ram(CartridgeType cart_type);
+
+[[nodiscard]] size_t rom_banks_from_size_code(u8 rom_size_code);
+
+[[nodiscard]] size_t ram_banks_from_size_code(u8 ram_size_code);
 
 #endif

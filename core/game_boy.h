@@ -3,6 +3,7 @@
 
 #include "cpu.h"
 #include "data.h"
+#include "mapper.h"
 #include <stddef.h>
 
 static constexpr int GB_LCD_WIDTH = 160;
@@ -72,6 +73,7 @@ typedef struct {
 typedef struct {
     Cpu cpu;
     JoypadButtons btns;
+    Mapper mapper;
     u8 (*render_buf)[GB_BG_WIDTH];
     u8 (*scanout_buf)[GB_LCD_WIDTH];
     u8 *rom;

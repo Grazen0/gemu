@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 static constexpr CartridgeType RAM_CART_TYPES[] = {
-
     CART_TYPE_MBC1_RAM,
     CART_TYPE_MBC1_RAM_BATTERY,
     CART_TYPE_MBC2,
@@ -25,7 +24,7 @@ static constexpr CartridgeType RAM_CART_TYPES[] = {
 };
 static constexpr size_t RAM_CART_TYPES_LEN = ARRAY_LEN(RAM_CART_TYPES);
 
-bool CartridgeType_has_ram(CartridgeType cart_type)
+bool cart_type_has_ram(CartridgeType cart_type)
 {
     for (size_t i = 0; i < RAM_CART_TYPES_LEN; ++i) {
         if (cart_type == RAM_CART_TYPES[i])
@@ -33,4 +32,30 @@ bool CartridgeType_has_ram(CartridgeType cart_type)
     }
 
     return false;
+}
+
+size_t rom_banks_from_size_code(u8 rom_size_code)
+{
+    if (rom_size_code > 0x08)
+        BAIL("invalid ROM size code: $%02X", rom_size_code);
+
+    return 1 << (rom_size_code + 1);
+}
+
+size_t ram_banks_from_size_code(u8 ram_size_code)
+{
+    switch (ram_size_code) {
+        case 0x00:
+            return 0;
+        case 0x02:
+            return 1;
+        case 0x03:
+            return 4;
+        case 0x04:
+            return 16;
+        case 0x05:
+            return 8;
+        default:
+            BAIL("invalid RAM size code: $%02X", ram_size_code);
+    }
 }

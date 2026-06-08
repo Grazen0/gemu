@@ -3,6 +3,7 @@
 #include "data.h"
 #include "log.h"
 #include "macros.h"
+#include "mapper.h"
 #include "num.h"
 #include "stdinc.h"
 #include "string.h"
@@ -50,6 +51,7 @@ static void gb_update_joyp(GameBoy *gb)
     }
 }
 
+// https://gbdev.io/pandocs/The_Cartridge_Header.html#014d--header-checksum
 static void verify_rom_checksum(const u8 *rom)
 {
     u8 chksm = 0;
@@ -87,12 +89,7 @@ static void gb_reset(GameBoy *gb)
 
 static void gb_validate_rom(const GameBoy *gb)
 {
-    if (gb->rom[ROM_HEADER_CART_TYPE] != 0x00) {
-        BAIL("Unsupported cartridge type ($%02X)",
-             gb->rom[ROM_HEADER_CART_TYPE]);
-    }
-
-    if (!CartridgeType_has_ram(gb->rom[ROM_HEADER_CART_TYPE]) &&
+    if (!cart_type_has_ram(gb->rom[ROM_HEADER_CART_TYPE]) &&
         gb->rom[ROM_HEADER_RAM_SIZE] != 0) {
         BAIL(
             "Cartridge type does not have RAM, but header indicates otherwise (cartridge type: $%02X, RAM size: $%02X)",
@@ -124,6 +121,7 @@ GameBoy gb_init(const u8 *boot_rom)
 {
     GameBoy gb = {
         .cpu = cpu_init(),
+        .mapper = mapper_default(),
         .ram = nullptr,
         .vram = nullptr,
         .boot_rom = nullptr,
@@ -214,6 +212,8 @@ void gb_deinit(GameBoy *gb)
 
     free(gb->oam);
     gb->oam = nullptr;
+
+    mapper_deinit(&gb->mapper);
 }
 
 GameInfo gb_cartridge_info(const u8 *rom)
@@ -244,6 +244,10 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
     gb->rom_len = rom_len;
 
     gb_validate_rom(gb);
+
+    mapper_deinit(&gb->mapper);
+    gb->mapper = mapper_from_rom(rom, rom_len);
+
     gb_reset(gb);
 
     if (gb->boot_rom == nullptr)
@@ -339,11 +343,8 @@ static u8 gb_read_mem_0000_8000(GameBoy *gb, u16 addr)
         return gb->boot_rom[addr];
     }
 
-    if (gb->rom == nullptr)
-        BAIL("Tried to read non-existing ROM");
-
-    // 0000-7FFF (ROM bank)
-    return gb->rom[addr];
+    // 0000-7FFF (from cartridge)
+    return mapper_read(&gb->mapper, gb->rom, gb->rom_len, addr);
 }
 
 static u8 gb_read_mem_8000_A000(GameBoy *gb, u16 addr)
@@ -355,7 +356,7 @@ static u8 gb_read_mem_8000_A000(GameBoy *gb, u16 addr)
 static u8 gb_read_mem_A000_C000(GameBoy *gb, u16 addr)
 {
     // A000-BFFF (External RAM)
-    BAIL("TODO: gb_read_mem_A000_C000 (addr = $%04X)", addr);
+    return mapper_read(&gb->mapper, gb->rom, gb->rom_len, addr);
 }
 
 static u8 gb_read_mem_C000_E000(GameBoy *gb, u16 addr)
@@ -462,6 +463,7 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
                 break;
             case 0xFF42: gb->scy = value; break;
             case 0xFF43: gb->scx = value; break;
+            case 0xFF44: break;
             case 0xFF4A: gb->wy = value; break;
             case 0xFF4B: gb->wx = value; break;
             case 0xFF47: gb->bgp = value; break;
@@ -493,15 +495,15 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
     } else if (addr == 0xFF7F) {
         // Tetris tries to write here. Probably a no-op.
     } else {
-        BAIL("Unexpected I/O write (addr = $%04X, value = $%02X)", addr, value);
+        log_warn("Unexpected I/O write (addr = $%04X, value = $%02X)", addr,
+                 value);
     }
 }
 
-static void gb_write_mem_0000_8000([[maybe_unused]] GameBoy *gb, u16 addr,
-                                   u8 value)
+static void gb_write_mem_0000_8000(GameBoy *gb, u16 addr, u8 value)
 {
-    // 0000-7FFF (ROM bank)
-    log_debug("TODO: gb_write_mem ROM (addr = $%04X, $%02X)", addr, value);
+    // 0000-7FFF (from cartridge)
+    mapper_write(&gb->mapper, addr, value);
 }
 
 static void gb_write_mem_8000_A000(GameBoy *gb, u16 addr, u8 value)
@@ -511,11 +513,10 @@ static void gb_write_mem_8000_A000(GameBoy *gb, u16 addr, u8 value)
     gb->video_dirty = true;
 }
 
-static void gb_write_mem_A000_C000([[maybe_unused]] GameBoy *gb, u16 addr,
-                                   u8 value)
+static void gb_write_mem_A000_C000(GameBoy *gb, u16 addr, u8 value)
 {
     // A000-BFFF (External RAM)
-    BAIL("TODO: gb_write_mem ERAM (addr = $%04X, $%02X)", addr, value);
+    mapper_write(&gb->mapper, addr, value);
 }
 
 static void gb_write_mem_C000_E000(GameBoy *gb, u16 addr, u8 value)

@@ -60,7 +60,7 @@ Note that you can choose the frontend (`sdl3`, `raylib`, `opengl`, or `sfml`) wi
   - [ ] Other (?)
 - [ ] Interrupts
   - [x] VBlank
-  - [ ] STAT
+  - [x] STAT
   - [x] Timer
   - [ ] Serial
   - [ ] Joypad

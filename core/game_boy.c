@@ -13,6 +13,8 @@
 
 static constexpr size_t RAM_SIZE = 0x2000;
 static constexpr size_t VRAM_SIZE = 0x2000;
+static constexpr size_t HRAM_SIZE = 0x7F;
+static constexpr size_t OAM_SIZE = 0xA0;
 
 static void gb_write_joyp(GameBoy *gb, u8 value)
 {
@@ -127,8 +129,8 @@ GameBoy gb_init(const u8 *boot_rom)
         .ram = nullptr,
         .vram = nullptr,
         .boot_rom = nullptr,
-        .hram = {},
-        .oam = {},
+        .hram = nullptr,
+        .oam = nullptr,
         .btns = joypad_btns_init(),
         .render_buf = nullptr,
         .scanout_buf = nullptr,
@@ -177,6 +179,12 @@ GameBoy gb_init(const u8 *boot_rom)
         memcpy(gb.boot_rom, boot_rom, GB_BOOT_ROM_LEN * sizeof(*gb.boot_rom));
     }
 
+    gb.hram = calloc(HRAM_SIZE, sizeof(*gb.hram));
+    assert(gb.hram != nullptr);
+
+    gb.oam = calloc(OAM_SIZE, sizeof(*gb.oam));
+    assert(gb.oam != nullptr);
+
     return gb;
 }
 
@@ -200,6 +208,12 @@ void gb_deinit(GameBoy *gb)
 
     free(gb->scanout_buf);
     gb->scanout_buf = nullptr;
+
+    free(gb->hram);
+    gb->hram = nullptr;
+
+    free(gb->oam);
+    gb->oam = nullptr;
 }
 
 GameInfo gb_cartridge_info(const u8 *rom)
@@ -433,9 +447,8 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
         u16 src = (u16)value << 8;
 
         // TODO: implement proper timing
-        for (size_t i = 0; i < 0xA0; ++i) {
+        for (size_t i = 0; i < 0xA0; ++i)
             gb->oam[i] = gb_read_mem(gb, src + i);
-        }
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
         // clang-format off

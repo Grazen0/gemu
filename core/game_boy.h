@@ -71,15 +71,15 @@ typedef struct {
 
 typedef struct {
     Cpu cpu;
-    u8 hram[0x7F];
-    u8 oam[0xA0];
     JoypadButtons btns;
     u8 (*render_buf)[GB_BG_WIDTH];
     u8 (*scanout_buf)[GB_LCD_WIDTH];
-    u8 *ram;
-    u8 *vram;
     u8 *rom;
     size_t rom_len;
+    u8 *ram;
+    u8 *vram;
+    u8 *hram;
+    u8 *oam;
     u8 *boot_rom;
     bool boot_rom_enable;
     u8 lcdc;

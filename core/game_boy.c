@@ -756,6 +756,20 @@ static u8 gb_scan_rendered(GameBoy *gb, size_t sy, size_t sx)
                          [(sx + gb->scx) % GB_BG_WIDTH];
 }
 
+static u8 calc_ppu_mode(u8 ly, u16 lx)
+{
+    if (ly >= GB_LCD_HEIGHT)
+        return 1;
+
+    if (lx < 80)
+        return 2;
+
+    if (lx < 252)
+        return 3;
+
+    return 0;
+}
+
 u64 gb_dispatch_pixel(GameBoy *gb)
 {
     static constexpr u16 GB_DOTS = 456;
@@ -771,6 +785,8 @@ u64 gb_dispatch_pixel(GameBoy *gb)
             gb->scanout_buf[y][x] = gb_scan_rendered(gb, y, x);
     }
 
+    u8 ppu_mode_prev = calc_ppu_mode(gb->ly, gb->lx);
+
     ++gb->lx;
     assert(gb->lx <= GB_DOTS);
 
@@ -780,7 +796,7 @@ u64 gb_dispatch_pixel(GameBoy *gb)
 
         bool lcy_eq_ly = gb->ly == gb->lcy;
 
-        set_bits(&gb->stat, 0b100, lcy_eq_ly);
+        set_bits(&gb->stat, STAT_LCY_EQ_LY, lcy_eq_ly);
 
         // vblank interrupt
         if (gb->ly == GB_LY_VBLANK)
@@ -788,6 +804,22 @@ u64 gb_dispatch_pixel(GameBoy *gb)
 
         // stat lcy == ly interrupt
         if ((gb->stat & STAT_LYC_INT) != 0 && lcy_eq_ly)
+            gb->if_ |= INT_LCD;
+    }
+
+    u8 ppu_mode = calc_ppu_mode(gb->ly, gb->lx);
+    assert(ppu_mode < 4);
+    gb->stat = (gb->stat & ~STAT_PPU_MODE) | ppu_mode;
+
+    // TEST: need testing
+    if (ppu_mode != ppu_mode_prev) {
+        if (ppu_mode == 0 && (gb->stat & STAT_MODE0_INT) != 0)
+            gb->if_ |= INT_LCD;
+
+        if (ppu_mode == 1 && (gb->stat & STAT_MODE1_INT) != 0)
+            gb->if_ |= INT_LCD;
+
+        if (ppu_mode == 2 && (gb->stat & STAT_MODE2_INT) != 0)
             gb->if_ |= INT_LCD;
     }
 

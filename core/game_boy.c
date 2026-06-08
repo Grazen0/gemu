@@ -607,54 +607,68 @@ u64 gb_dispatch_cpu_instr(GameBoy *gb)
     return CPU_MCYCLE * (mcycles_end - mcycles_start);
 }
 
+static void gb_render_tile(GameBoy *gb, const u8 *tdata, u8 ti, size_t ty,
+                           size_t tx)
+{
+    long tile_index_signed = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? ti : (i8)ti;
+
+    for (size_t tile_row_index = 0; tile_row_index < 8; ++tile_row_index) {
+        u8 byte_1 = tdata[(tile_index_signed * 16) + (2 * tile_row_index)];
+        u8 byte_2 = tdata[(tile_index_signed * 16) + (2 * tile_row_index) + 1];
+
+        for (size_t tile_col_index = 0; tile_col_index < 8; ++tile_col_index) {
+            u8 bit_lo = (byte_1 >> tile_col_index) & 1;
+            u8 bit_hi = (byte_2 >> tile_col_index) & 1;
+            u8 palette_index = bit_lo | (bit_hi << 1);
+
+            size_t color = (gb->bgp >> (2 * palette_index)) & 0b11;
+
+            size_t pixel_y = (8 * ty) + tile_row_index;
+            size_t pixel_x = (8 * tx) + 7 - tile_col_index;
+
+            assert(pixel_y < GB_BG_HEIGHT);
+            assert(pixel_x < GB_BG_WIDTH);
+
+            if (color != 0)
+                gb->render_buf[pixel_y][pixel_x] = color;
+        }
+    }
+}
+
 static void gb_render_tiles(GameBoy *gb)
 {
     static constexpr size_t TILES_HORIZONTAL = 32;
     static constexpr size_t TILES_VERTICAL = 32;
 
-    size_t tile_data_start = gb->lcdc & LCDC_BG_WIN_TILES ? 0 : 0x1000;
-    size_t tile_map_start = gb->lcdc & LCDC_BG_TILE_MAP ? 0x1C00 : 0x1800;
+    size_t tdata_start = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? 0 : 0x1000;
+    size_t tmap_start = (gb->lcdc & LCDC_BG_TILE_MAP) != 0 ? 0x1C00 : 0x1800;
 
-    const u8 *tile_data = &gb->vram[tile_data_start];
-    const u8 *tile_map = &gb->vram[tile_map_start];
+    const u8 *tdata = &gb->vram[tdata_start];
+    const u8 *tmap = &gb->vram[tmap_start];
 
-    for (size_t tile_y = 0; tile_y < TILES_VERTICAL; ++tile_y) {
-        for (size_t tile_x = 0; tile_x < TILES_HORIZONTAL; ++tile_x) {
-            u8 tile_index = tile_map[(tile_y * TILES_HORIZONTAL) + tile_x];
-            long tile_index_signed =
-                gb->lcdc & LCDC_BG_WIN_TILES ? tile_index : (i8)tile_index;
-
-            for (size_t tile_row_index = 0; tile_row_index < 8;
-                 ++tile_row_index) {
-                u8 byte_1 =
-                    tile_data[(tile_index_signed * 16) + (2 * tile_row_index)];
-                u8 byte_2 = tile_data[(tile_index_signed * 16) +
-                                      (2 * tile_row_index) + 1];
-
-                for (size_t tile_col_index = 0; tile_col_index < 8;
-                     ++tile_col_index) {
-                    u8 bit_lo = (byte_1 >> tile_col_index) & 1;
-                    u8 bit_hi = (byte_2 >> tile_col_index) & 1;
-                    u8 palette_index = bit_lo | (bit_hi << 1);
-
-                    size_t color = (gb->bgp >> (2 * palette_index)) & 0b11;
-
-                    size_t pixel_y = (8 * tile_y) + tile_row_index;
-                    size_t pixel_x = (8 * tile_x) + 7 - tile_col_index;
-
-                    assert(pixel_y < GB_BG_HEIGHT);
-                    assert(pixel_x < GB_BG_WIDTH);
-
-                    gb->render_buf[pixel_y][pixel_x] = color;
-                }
-            }
+    for (size_t ty = 0; ty < TILES_VERTICAL; ++ty) {
+        for (size_t tx = 0; tx < TILES_HORIZONTAL; ++tx) {
+            u8 ti = tmap[(ty * TILES_HORIZONTAL) + tx];
+            gb_render_tile(gb, tdata, ti, ty, tx);
         }
     }
 }
 
-static void gb_render_obj(GameBoy *gb, const u8 *obj_data)
+typedef enum : u8 {
+    OBJ_PRIORITY_LOW,
+    OBJ_PRIORITY_HIGH,
+} ObjPriority;
+
+static void gb_render_obj(GameBoy *gb, const u8 *obj_data, ObjPriority priority)
 {
     u8 attrs = obj_data[3];
+    ObjPriority obj_priority = (attrs & OBJ_ATTRS_PRIORITY) == 0
+                                   ? OBJ_PRIORITY_HIGH
+                                   : OBJ_PRIORITY_LOW;
+
+    if (obj_priority != priority)
+        return;
+
     size_t y_pos = obj_data[0] - 16;
     size_t x_pos = obj_data[1] - 8;
     size_t tile_index = obj_data[2];
@@ -685,33 +699,37 @@ static void gb_render_obj(GameBoy *gb, const u8 *obj_data)
     }
 }
 
-static void gb_render_objs(GameBoy *gb)
+static void gb_render_objs(GameBoy *gb, ObjPriority priority)
 {
     static constexpr size_t OBJ_COUNT = 40;
 
     for (size_t obj = 0; obj < OBJ_COUNT; ++obj) {
-        // TODO: implement priority (background over object)
-        // Will probably need two passes: low and normal priority objs
-
         const u8 *obj_data = &gb->oam[obj * 4];
-        gb_render_obj(gb, obj_data);
+        gb_render_obj(gb, obj_data, priority);
     }
 }
 
-static void ensure_render_buf_updated(GameBoy *gb)
+static void gb_render(GameBoy *gb)
+{
+    memset(gb->render_buf, 0, GB_BG_HEIGHT * sizeof(*gb->render_buf));
+
+    if ((gb->lcdc & LCDC_ENABLE) != 0) {
+        if ((gb->lcdc & LCDC_OBJ_ENABLE) != 0)
+            gb_render_objs(gb, OBJ_PRIORITY_LOW);
+
+        gb_render_tiles(gb);
+
+        if ((gb->lcdc & LCDC_OBJ_ENABLE) != 0)
+            gb_render_objs(gb, OBJ_PRIORITY_HIGH);
+    }
+}
+
+static void gb_ensure_rendered(GameBoy *gb)
 {
     if (!gb->video_dirty)
         return;
 
-    memset(gb->render_buf, 0, GB_BG_HEIGHT * sizeof(*gb->render_buf));
-
-    if ((gb->lcdc & LCDC_ENABLE) != 0) {
-        gb_render_tiles(gb);
-
-        if ((gb->lcdc & LCDC_OBJ_ENABLE) != 0)
-            gb_render_objs(gb);
-    }
-
+    gb_render(gb);
     gb->video_dirty = false;
 }
 
@@ -720,7 +738,7 @@ static u8 gb_scan_rendered(GameBoy *gb, size_t sy, size_t sx)
     assert(sy < GB_LCD_HEIGHT);
     assert(sx < GB_LCD_WIDTH);
 
-    ensure_render_buf_updated(gb);
+    gb_ensure_rendered(gb);
 
     return gb->render_buf[(sy + gb->scy) % GB_BG_HEIGHT]
                          [(sx + gb->scx) % GB_BG_WIDTH];
@@ -728,10 +746,10 @@ static u8 gb_scan_rendered(GameBoy *gb, size_t sy, size_t sx)
 
 u64 gb_dispatch_pixel(GameBoy *gb)
 {
-    constexpr u16 GB_DOTS = 456;
-    constexpr u16 GB_LINES = 154;
-    constexpr u16 GB_DOTS_DRAW_BEGIN = 80;
-    constexpr u8 GB_LY_VBLANK = 144;
+    static constexpr u16 GB_DOTS = 456;
+    static constexpr u16 GB_LINES = 154;
+    static constexpr u16 GB_DOTS_DRAW_BEGIN = 80;
+    static constexpr u8 GB_LY_VBLANK = 144;
 
     if (gb->ly < GB_LCD_HEIGHT && gb->lx >= GB_DOTS_DRAW_BEGIN) {
         size_t y = gb->ly;

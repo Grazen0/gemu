@@ -56,12 +56,9 @@ static void verify_rom_checksum(const u8 *rom)
     for (u16 addr = 0x0134; addr <= 0x014C; ++addr)
         chksm = chksm - rom[addr] - 1;
 
-    u8 chksm_lo = chksm & 0x0F;
-
-    if (chksm_lo != rom[ROM_HEADER_CHECKSUM]) {
-        BAIL(
-            "Lower 8 bits of ROM checksum do not match expected value in header (expected $%02X, was $%02X)",
-            rom[ROM_HEADER_CHECKSUM], chksm_lo);
+    if (chksm != rom[ROM_HEADER_CHECKSUM]) {
+        BAIL("ROM checksum mismatch (expected $%02X, was $%02X)",
+             rom[ROM_HEADER_CHECKSUM], chksm);
     }
 }
 

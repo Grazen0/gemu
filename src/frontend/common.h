@@ -21,6 +21,15 @@ static constexpr u8 PALETTE_RGB[][3] = {
 static constexpr size_t PALETTE_RGB_LEN = ARRAY_LEN(PALETTE_RGB);
 
 typedef struct {
+    float x;
+    float y;
+    float w;
+    float h;
+} FitRect;
+
+FitRect fit_rect_to_ratio(float cx, float cy, float cw, float ch, float ratio);
+
+typedef struct {
     const char *name;
     int (*run)(GameBoy *gb);
 } Frontend;

@@ -1238,7 +1238,7 @@ void cpu_execute(Cpu *cpu, Memory *mem, u8 opcode)
                         case 1: cpu_instr_prefix(cpu, mem); break;
                         case 6: cpu_instr_di(cpu); break;
                         case 7: cpu_instr_ei(cpu); break;
-                        default: BAIL("removed instruction");
+                        default: BAIL("removed instruction (opcode = $%02X)", opcode);
                     }
                     // clang-format on
                     break;
@@ -1246,7 +1246,7 @@ void cpu_execute(Cpu *cpu, Memory *mem, u8 opcode)
                     if (y < 4)
                         cpu_instr_call_cc_n16(cpu, mem, y);
                     else
-                        BAIL("removed instruction");
+                        BAIL("removed instruction (opcode = $%02X)", opcode);
                     break;
                 case 5:
                     if (q == 0)
@@ -1254,7 +1254,7 @@ void cpu_execute(Cpu *cpu, Memory *mem, u8 opcode)
                     else if (p == 0)
                         cpu_instr_call_n16(cpu, mem);
                     else
-                        BAIL("removed instruction");
+                        BAIL("removed instruction (opcode = $%02X)", opcode);
                     break;
                 case 6:
                     cpu_instr_alu_a_a8(cpu, mem, y);

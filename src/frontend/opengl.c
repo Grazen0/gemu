@@ -24,38 +24,6 @@ static double g_start_time = 0.0;
 
 static bool running = true;
 
-static Rectangle fit_rect_to_aspect_ratio(Rectangle container,
-                                          float aspect_ratio)
-{
-    double container_aspect_ratio = container.width / container.height;
-
-    if (container_aspect_ratio > aspect_ratio) {
-        float w = container.height * aspect_ratio;
-
-        return (Rectangle){
-            .x = container.x + (container.width / 2) - (w / 2),
-            .y = container.y,
-            .width = w,
-            .height = container.height,
-        };
-    }
-
-    if (container_aspect_ratio < aspect_ratio) {
-        float h = container.width / aspect_ratio;
-
-        return (Rectangle){
-            .x = container.x,
-
-            .y = container.y + (container.height / 2) - (h / 2),
-
-            .width = container.width,
-            .height = h,
-        };
-    }
-
-    return container;
-}
-
 #define THING(i)                                              \
     ((u32)PALETTE_RGB[i][0] | ((u32)PALETTE_RGB[i][1] << 8) | \
      ((u32)PALETTE_RGB[i][2] << 16) | 0xFF000000)
@@ -86,12 +54,12 @@ static void update_texture(void)
                     GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 }
 
-static void draw_quad(Rectangle dest, int screen_width, int screen_height)
+static void draw_quad(FitRect dest, int screen_width, int screen_height)
 {
     float left = ((dest.x / (float)screen_width) * 2) - 1;
-    float right = (((dest.x + dest.width) / (float)screen_width) * 2) - 1;
+    float right = (((dest.x + dest.w) / (float)screen_width) * 2) - 1;
     float top = 1 - ((dest.y / (float)screen_height) * 2);
-    float bottom = 1 - (((dest.y + dest.height) / (float)screen_height) * 2);
+    float bottom = 1 - (((dest.y + dest.h) / (float)screen_height) * 2);
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0);
@@ -118,9 +86,8 @@ static void display(void)
     int width = glutGet(GLUT_WINDOW_WIDTH);
     int height = glutGet(GLUT_WINDOW_HEIGHT);
 
-    Rectangle win_rect = {0, 0, (float)width, (float)height};
-
-    Rectangle dest = fit_rect_to_aspect_ratio(win_rect, GB_LCD_ASPECT_RATIO);
+    FitRect fit = fit_rect_to_ratio(0, 0, (float)width, (float)height,
+                                    GB_LCD_ASPECT_RATIO);
 
     glViewport(0, 0, width, height);
 
@@ -137,7 +104,7 @@ static void display(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    draw_quad(dest, width, height);
+    draw_quad(fit, width, height);
 
     glutSwapBuffers();
     glutPostRedisplay();

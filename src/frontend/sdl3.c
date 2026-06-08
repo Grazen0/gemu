@@ -110,9 +110,9 @@ static void state_update_texture(const GameBoy *gb, SDL_Texture *texture,
 static void render(const State *state, SDL_Renderer *renderer,
                    SDL_Texture *texture, const u32 palette[])
 {
-    FitRect fit = fit_rect_to_aspect_ratio(0, 0, (float)state->window_width,
-                                           (float)state->window_height,
-                                           GB_LCD_ASPECT_RATIO);
+    FitRect fit =
+        fit_rect_to_ratio(0, 0, (float)state->window_width,
+                          (float)state->window_height, GB_LCD_ASPECT_RATIO);
     SDL_FRect dest_rect = {.x = fit.x, .y = fit.y, .w = fit.w, .h = fit.h};
 
     state_update_texture(state->gb, texture, palette);

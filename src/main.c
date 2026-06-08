@@ -92,7 +92,9 @@ static u8 *load_file(const char filename[], size_t *data_size)
     if (data == nullptr)
         goto cleanup;
 
-    fread(data, sizeof(*data), size, file);
+    size_t read = fread(data, sizeof(*data), size, file);
+    if (read != size)
+        goto cleanup;
 
     if (data_size != nullptr)
         *data_size = size;

@@ -41,32 +41,23 @@ static void update_pixels(const GameBoy *gb, sfTexture *tex, u8 *rgb_buf)
                                (sfVector2u){0, 0});
 }
 
-static void update_screen(sfSprite *spr, sfRenderWindow *wnd)
+static void update_screen(sfSprite *spr, sfRenderWindow *wnd, sfView *view)
 {
     sfVector2u size = sfRenderWindow_getSize(wnd);
 
     float wnd_w = (float)size.x;
     float wnd_h = (float)size.y;
 
-    float cont_ratio = wnd_w / wnd_h;
-    float dest_w = wnd_w;
-    float dest_h = wnd_h;
-    float dest_x = 0.F;
-    float dest_y = 0.F;
+    sfView_setSize(view, (sfVector2f){wnd_w, wnd_h});
+    sfView_setCenter(view, (sfVector2f){wnd_w / 2.0F, wnd_h / 2.0F});
+    sfRenderWindow_setView(wnd, view);
 
-    if (cont_ratio > GB_LCD_ASPECT_RATIO) {
-        dest_w = wnd_h * GB_LCD_ASPECT_RATIO;
-        dest_x = (wnd_w - dest_w) / 2.0F;
-    } else if (cont_ratio < GB_LCD_ASPECT_RATIO) {
-        dest_h = wnd_w / GB_LCD_ASPECT_RATIO;
-        dest_y = (wnd_h - dest_h) / 2.0F;
-    }
-
-    float scl_x = dest_w / (float)GB_LCD_WIDTH;
-    float scl_y = dest_h / (float)GB_LCD_HEIGHT;
+    FitRect fit = fit_rect_to_ratio(0, 0, wnd_w, wnd_h, GB_LCD_ASPECT_RATIO);
+    float scl_x = fit.w / (float)GB_LCD_WIDTH;
+    float scl_y = fit.h / (float)GB_LCD_HEIGHT;
 
     sfSprite_setScale(spr, (sfVector2f){scl_x, scl_y});
-    sfSprite_setPosition(spr, (sfVector2f){dest_x, dest_y});
+    sfSprite_setPosition(spr, (sfVector2f){fit.x, fit.y});
 
     sfRenderWindow_clear(wnd, sfBlack);
     sfRenderWindow_drawSprite(wnd, spr, nullptr);
@@ -107,6 +98,8 @@ static int run(GameBoy *gb)
         vid_mode, "gemu", sfTitlebar | sfClose | sfResize, sfWindowed, nullptr);
     sfRenderWindow_setFramerateLimit(window, 60);
 
+    sfView *view = sfView_create();
+
     sfVector2u tex_size = {GB_LCD_WIDTH, GB_LCD_HEIGHT};
     sfTexture *texture = sfTexture_create(tex_size);
 
@@ -146,9 +139,12 @@ static int run(GameBoy *gb)
 
         sched_dispatch_until(&sched, gb, cur_time_clk);
         update_pixels(gb, texture, pixel_buffer);
-        update_screen(gb_spr, window);
+        update_screen(gb_spr, window, view);
     }
 
+    sfView_destroy(view);
+    sfSprite_destroy(gb_spr);
+    sfTexture_destroy(texture);
     sfRenderWindow_destroy(window);
     return EXIT_SUCCESS;
 }

@@ -9,10 +9,10 @@
 typedef struct {
     bool active[0x10000];
     u8 data[0x10000];
-} DumbRam;
+} MockRam;
 
 typedef struct {
-    u16 address;
+    u16 addr;
     u8 value;
 } RamEntry;
 
@@ -32,54 +32,62 @@ typedef struct {
     int ram_len;
 } CpuState;
 
-static u8 read_mock_ram(const void *ctx, const u16 addr)
+static u8 read_mock_ram(const MockRam *ram, u16 addr)
 {
-    const DumbRam *const ram = ctx;
     TEST_ASSERT_TRUE_MESSAGE(ram->active[addr],
                              "tried to read from inactive memory");
     return ram->data[addr];
 }
 
-static void write_mock_ram(void *ctx, const u16 addr, const u8 value)
+static void write_mock_ram(MockRam *ram, u16 addr, u8 value)
 {
-    DumbRam *const ram = ctx;
     TEST_ASSERT_TRUE_MESSAGE(ram->active[addr],
                              "tried to write into inactive memory");
     ram->data[addr] = value;
 }
 
-static const MemoryVTable MOCK_MEMORY_VTABLE = {
-    .read = read_mock_ram,
-    .write = write_mock_ram,
+static inline u8 read_mock_ram_v(const void *ctx, u16 addr)
+{
+    return read_mock_ram(ctx, addr);
+}
+
+static inline void write_mock_ram_v(void *ctx, u16 addr, u8 value)
+{
+    write_mock_ram(ctx, addr, value);
+}
+
+static MemoryVTable MOCK_MEMORY_VTABLE = {
+    .read = read_mock_ram_v,
+    .write = write_mock_ram_v,
 };
 
-static CpuState CpuState_from_cjson(const cJSON *const src)
+static CpuState CpuState_from_cjson(const cJSON *src)
 {
-    const cJSON *const pc = cJSON_GetObjectItemCaseSensitive(src, "pc");
-    const cJSON *const sp = cJSON_GetObjectItemCaseSensitive(src, "sp");
-    const cJSON *const a = cJSON_GetObjectItemCaseSensitive(src, "a");
-    const cJSON *const b = cJSON_GetObjectItemCaseSensitive(src, "b");
-    const cJSON *const c = cJSON_GetObjectItemCaseSensitive(src, "c");
-    const cJSON *const d = cJSON_GetObjectItemCaseSensitive(src, "d");
-    const cJSON *const e = cJSON_GetObjectItemCaseSensitive(src, "e");
-    const cJSON *const f = cJSON_GetObjectItemCaseSensitive(src, "f");
-    const cJSON *const h = cJSON_GetObjectItemCaseSensitive(src, "h");
-    const cJSON *const l = cJSON_GetObjectItemCaseSensitive(src, "l");
-    const cJSON *const ime = cJSON_GetObjectItemCaseSensitive(src, "ime");
-    const cJSON *const ram_src = cJSON_GetObjectItemCaseSensitive(src, "ram");
+    const cJSON *pc = cJSON_GetObjectItemCaseSensitive(src, "pc");
+    const cJSON *sp = cJSON_GetObjectItemCaseSensitive(src, "sp");
+    const cJSON *a = cJSON_GetObjectItemCaseSensitive(src, "a");
+    const cJSON *b = cJSON_GetObjectItemCaseSensitive(src, "b");
+    const cJSON *c = cJSON_GetObjectItemCaseSensitive(src, "c");
+    const cJSON *d = cJSON_GetObjectItemCaseSensitive(src, "d");
+    const cJSON *e = cJSON_GetObjectItemCaseSensitive(src, "e");
+    const cJSON *f = cJSON_GetObjectItemCaseSensitive(src, "f");
+    const cJSON *h = cJSON_GetObjectItemCaseSensitive(src, "h");
+    const cJSON *l = cJSON_GetObjectItemCaseSensitive(src, "l");
+    const cJSON *ime = cJSON_GetObjectItemCaseSensitive(src, "ime");
+    const cJSON *ram_src = cJSON_GetObjectItemCaseSensitive(src, "ram");
 
-    const int ram_len = cJSON_GetArraySize(ram_src);
+    int ram_len = cJSON_GetArraySize(ram_src);
 
-    RamEntry *const ram = calloc(ram_len, sizeof(*ram));
+    RamEntry *ram = calloc(ram_len, sizeof(*ram));
 
     for (int i = 0; i < ram_len; ++i) {
-        const cJSON *const entry_src = cJSON_GetArrayItem(ram_src, i);
+        const cJSON *entry_src = cJSON_GetArrayItem(ram_src, i);
 
-        const cJSON *const address = cJSON_GetArrayItem(entry_src, 0);
-        const cJSON *const value = cJSON_GetArrayItem(entry_src, 1);
+        const cJSON *address = cJSON_GetArrayItem(entry_src, 0);
+        const cJSON *value = cJSON_GetArrayItem(entry_src, 1);
 
         ram[i] = (RamEntry){
-            .address = address->valueint,
+            .addr = address->valueint,
             .value = value->valueint,
         };
     }
@@ -101,23 +109,23 @@ static CpuState CpuState_from_cjson(const cJSON *const src)
     };
 }
 
-static void CpuState_destroy(CpuState *const state)
+static void CpuState_destroy(CpuState *state)
 {
     free(state->ram);
     state->ram = nullptr;
     state->ram_len = 0;
 }
 
-static void run_cpu_tick_test(const CpuState *const initial_state,
-                              const CpuState *const final_state,
-                              const char *const test_name)
+static void run_cpu_tick_test(const CpuState *initial_state,
+                              const CpuState *final_state,
+                              const char *test_name)
 {
     Cpu cpu = cpu_init();
 
-    DumbRam dumb_ram = {};
+    MockRam mock_ram = {};
 
     Memory mock_memory = (Memory){
-        .ctx = &dumb_ram,
+        .ctx = &mock_ram,
         .vtable = &MOCK_MEMORY_VTABLE,
     };
 
@@ -135,9 +143,9 @@ static void run_cpu_tick_test(const CpuState *const initial_state,
 
     // Set up memory
     for (int j = 0; j < initial_state->ram_len; ++j) {
-        const RamEntry *const entry = &initial_state->ram[j];
-        dumb_ram.data[entry->address] = entry->value;
-        dumb_ram.active[entry->address] = true;
+        const RamEntry *entry = &initial_state->ram[j];
+        mock_ram.data[entry->addr] = entry->value;
+        mock_ram.active[entry->addr] = true;
     }
 
     cpu_step(&cpu, &mock_memory);
@@ -168,42 +176,41 @@ static void run_cpu_tick_test(const CpuState *const initial_state,
     TEST_ASSERT_EQUAL_HEX8_MESSAGE(final_state->ime, cpu.ime, msg_buffer);
 
     for (int i = 0; i < final_state->ram_len; ++i) {
-        const RamEntry *const entry = &final_state->ram[i];
+        const RamEntry *entry = &final_state->ram[i];
 
         snprintf(msg_buffer, sizeof(msg_buffer), "(%s, ram @ $%04X)", test_name,
-                 entry->address);
-        TEST_ASSERT_EQUAL_HEX8_MESSAGE(
-            entry->value, dumb_ram.data[entry->address], msg_buffer);
+                 entry->addr);
+        TEST_ASSERT_EQUAL_HEX8_MESSAGE(entry->value, mock_ram.data[entry->addr],
+                                       msg_buffer);
     }
 }
 
-static void run_opcode_test_file(const char *const filepath)
+static void run_opcode_test_file(const char *filepath)
 {
-    FILE *const file = fopen(filepath, "r");
+    FILE *file = fopen(filepath, "r");
     TEST_ASSERT_NOT_NULL_MESSAGE(file, "could not open JSON file");
 
     fseek(file, 0, SEEK_END);
-    const size_t file_len = ftell(file);
+    size_t file_len = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char *const file_content = calloc(file_len, sizeof(*file_content));
-    const size_t read_bytes =
+    char *file_content = calloc(file_len, sizeof(*file_content));
+    size_t read_bytes =
         fread(file_content, sizeof(*file_content), file_len, file);
     TEST_ASSERT_EQUAL_MESSAGE(file_len, read_bytes, "could not read JSON file");
     fclose(file);
 
-    cJSON *const test_cases = cJSON_ParseWithLength(file_content, file_len);
+    cJSON *test_cases = cJSON_ParseWithLength(file_content, file_len);
     TEST_ASSERT_NOT_NULL_MESSAGE(test_cases, "could not parse JSON");
     free(file_content);
 
     for (cJSON *test_case = test_cases->child; test_case != nullptr;
          test_case = test_case->next) {
-        const cJSON *const name =
-            cJSON_GetObjectItemCaseSensitive(test_case, "name");
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(test_case, "name");
 
-        const cJSON *const initial =
+        const cJSON *initial =
             cJSON_GetObjectItemCaseSensitive(test_case, "initial");
-        const cJSON *const final =
+        const cJSON *final =
             cJSON_GetObjectItemCaseSensitive(test_case, "final");
 
         CpuState initial_state = CpuState_from_cjson(initial);
@@ -221,7 +228,7 @@ static void run_opcode_test_file(const char *const filepath)
     cJSON_Delete(test_cases);
 }
 
-static int dirent_filter(const struct dirent *const entry)
+static int dirent_filter(const struct dirent *entry)
 {
     return entry->d_type == DT_REG && entry->d_name[0] != '.';
 }
@@ -231,13 +238,12 @@ static int dirent_filter(const struct dirent *const entry)
 void test_cpu_opcodes()
 {
     struct dirent **entries = nullptr;
-    const int entries_len =
-        scandir(OPCODES_DIR, &entries, dirent_filter, alphasort);
+    int entries_len = scandir(OPCODES_DIR, &entries, dirent_filter, alphasort);
     TEST_ASSERT_NOT_EQUAL_MESSAGE(-1, entries_len,
                                   "could not read data directory");
 
     for (int i = 0; i < entries_len; ++i) {
-        struct dirent *const entry = entries[i];
+        struct dirent *entry = entries[i];
 
         char full_path[512];
         snprintf(full_path, sizeof(full_path), OPCODES_DIR "/%s",

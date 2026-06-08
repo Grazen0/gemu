@@ -27,37 +27,6 @@ static long double sdl_get_performance_time()
            SDL_GetPerformanceFrequency();
 }
 
-static SDL_FRect fit_rect_to_aspect_ratio(const SDL_FRect *container,
-                                          float aspect_ratio)
-{
-    double container_aspect_ratio = container->w / container->h;
-
-    if (container_aspect_ratio > aspect_ratio) {
-        // Stretched out horizontally
-        float w = container->h * aspect_ratio;
-        return (SDL_FRect){
-            .w = w,
-            .h = container->h,
-            .x = container->x + (container->w / 2.0F) - (w / 2.0F),
-            .y = container->y,
-        };
-    }
-
-    if (container_aspect_ratio < aspect_ratio) {
-        // Stretched out vertically
-        float h = container->w / aspect_ratio;
-        return (SDL_FRect){
-            .w = container->w,
-            .h = h,
-            .x = container->x,
-            .y = container->y + (container->h / 2.0F) - (h / 2.0F),
-        };
-    }
-
-    // Exactly the right aspect ratio
-    return *container;
-}
-
 static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key)
 {
     switch (key) {
@@ -141,15 +110,10 @@ static void state_update_texture(const GameBoy *gb, SDL_Texture *texture,
 static void render(const State *state, SDL_Renderer *renderer,
                    SDL_Texture *texture, const u32 palette[])
 {
-    SDL_FRect win_rect = {
-        0,
-        0,
-        (float)state->window_width,
-        (float)state->window_height,
-    };
-
-    SDL_FRect dest_rect =
-        fit_rect_to_aspect_ratio(&win_rect, GB_LCD_ASPECT_RATIO);
+    FitRect fit = fit_rect_to_aspect_ratio(0, 0, (float)state->window_width,
+                                           (float)state->window_height,
+                                           GB_LCD_ASPECT_RATIO);
+    SDL_FRect dest_rect = {.x = fit.x, .y = fit.y, .w = fit.w, .h = fit.h};
 
     state_update_texture(state->gb, texture, palette);
     SDL_RenderTexture(renderer, texture, nullptr, &dest_rect);

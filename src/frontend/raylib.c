@@ -8,37 +8,6 @@
 #include <raymath.h>
 #include <stdlib.h>
 
-static Rectangle fit_rect_to_aspect_ratio(Rectangle container,
-                                          float aspect_ratio)
-{
-    double container_aspect_ratio = container.width / container.height;
-
-    if (container_aspect_ratio > aspect_ratio) {
-        // Stretched out horizontally
-        float w = container.height * aspect_ratio;
-        return (Rectangle){
-            .x = container.x + (container.width / 2.0F) - (w / 2.0F),
-            .y = container.y,
-            .width = w,
-            .height = container.height,
-        };
-    }
-
-    if (container_aspect_ratio < aspect_ratio) {
-        // Stretched out vertically
-        float h = container.width / aspect_ratio;
-        return (Rectangle){
-            .x = container.x,
-            .y = container.y + (container.height / 2.0F) - (h / 2.0F),
-            .width = container.width,
-            .height = h,
-        };
-    }
-
-    // Exactly the right aspect ratio
-    return container;
-}
-
 #define TO_COLOR(rgb) {(rgb)[0], (rgb)[1], (rgb)[2], 255}
 
 static void update_pixels(const GameBoy *gb, Texture texture, Color *pixels)
@@ -64,12 +33,11 @@ static void draw(GameBoy *gb, Texture texture, Color *pixels)
     update_pixels(gb, texture, pixels);
     UpdateTexture(texture, pixels);
 
-    int width = GetScreenWidth();
-    int height = GetScreenHeight();
-
+    FitRect fit =
+        fit_rect_to_ratio(0, 0, (float)GetScreenWidth(),
+                          (float)GetScreenHeight(), GB_LCD_ASPECT_RATIO);
     Rectangle source = {0, 0, (float)texture.width, (float)texture.height};
-    Rectangle win_rect = {0, 0, (float)width, (float)height};
-    Rectangle dest = fit_rect_to_aspect_ratio(win_rect, GB_LCD_ASPECT_RATIO);
+    Rectangle dest = {fit.x, fit.y, fit.w, fit.h};
 
     BeginDrawing();
 

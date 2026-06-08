@@ -1,11 +1,7 @@
 #include "cpu.h"
-#include <cjson/cJSON.h>
-#include <dirent.h>
-#include <stddef.h>
-#include <sys/stat.h>
 #include <unity.h>
 
-void test_cpu_new()
+void test_cpu_init()
 {
     Cpu cpu = cpu_init();
 

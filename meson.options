@@ -1,1 +1,2 @@
 option('frontend', type : 'combo', choices : ['sdl3', 'raylib', 'opengl', 'sfml'], value: 'sdl3')
+option('tests', type : 'boolean', value: true)

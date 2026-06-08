@@ -17,7 +17,12 @@ add_project_arguments(
 
 subdir('core')
 subdir('src')
-subdir('tests')
+
+tests = get_option('tests')
+
+if tests
+  subdir('tests')
+endif
 
 executable(
   'gemu',

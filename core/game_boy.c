@@ -636,7 +636,7 @@ static void gb_render_tile(GameBoy *gb, const u8 *tdata, u8 ti, size_t ty,
             u8 bit_hi = (byte_2 >> tile_col_index) & 1;
             u8 palette_index = bit_lo | (bit_hi << 1);
 
-            size_t color = (gb->bgp >> (2 * palette_index)) & 0b11;
+            u8 color = (gb->bgp >> (2 * palette_index)) & 0b11;
 
             size_t pixel_y = (8 * ty) + tile_row_index;
             size_t pixel_x = (8 * tx) + 7 - tile_col_index;
@@ -701,14 +701,13 @@ static void gb_render_obj(GameBoy *gb, const u8 *obj_data, ObjPriority priority)
             u8 lo = (byte_1 >> col) & 1;
             u8 hi = (byte_2 >> col) & 1;
             u8 pal_idx = lo | (hi << 1);
-            size_t color = (obp >> (2 * pal_idx)) & 0b11;
+            u8 color = (obp >> (2 * pal_idx)) & 0b11;
 
             if (color != 0) {
-                size_t pixel_y = y_pos + (flip_y ? 7 - row : row);
-                size_t pixel_x = x_pos + (flip_x ? col : 7 - col);
+                size_t py = gb->scy + y_pos + (flip_y ? 7 - row : row);
+                size_t px = gb->scx + x_pos + (flip_x ? col : 7 - col);
 
-                if (pixel_y < GB_BG_HEIGHT && pixel_x < GB_BG_WIDTH)
-                    gb->render_buf[pixel_y][pixel_x] = color;
+                gb->render_buf[py % GB_BG_HEIGHT][px % GB_BG_WIDTH] = color;
             }
         }
     }
@@ -719,7 +718,7 @@ static void gb_render_objs(GameBoy *gb, ObjPriority priority)
     static constexpr size_t OBJ_COUNT = 40;
 
     for (size_t obj = 0; obj < OBJ_COUNT; ++obj) {
-        const u8 *obj_data = &gb->oam[obj * 4];
+        const u8 *obj_data = &gb->oam[4 * obj];
         gb_render_obj(gb, obj_data, priority);
     }
 }

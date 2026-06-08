@@ -4,6 +4,7 @@ cjson_dep = dependency('libcjson')
 test_sources = [
   'test_cpu.c',
   'test_cpu_opcodes.c',
+  'test_log.c',
   'test_num.c',
 ]
 
@@ -37,7 +38,7 @@ foreach test_source : test_sources
     'gemu_' + test_name,
     [
       test_source,
-      runner_source
+      runner_source,
     ],
     dependencies: [
       unity_dep,

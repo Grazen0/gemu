@@ -70,7 +70,7 @@ static void write_mock_ram(MockRam *ram, u16 addr, u8 value)
     ram->data[addr] = value;
 }
 
-static inline u8 read_mock_ram_v(const void *ctx, u16 addr)
+static inline u8 read_mock_ram_v(void *ctx, u16 addr)
 {
     return read_mock_ram(ctx, addr);
 }

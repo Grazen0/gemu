@@ -255,7 +255,7 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 }
 
 // NOLINTNEXTLINE
-u8 gb_read_io(const GameBoy *gb, u16 addr)
+u8 gb_read_io(GameBoy *gb, u16 addr)
 {
     if (addr == 0xFF00) // FF00 (joypad input)
         return gb->joyp;
@@ -331,7 +331,7 @@ u8 gb_read_io(const GameBoy *gb, u16 addr)
     BAIL("Unexpected I/O read (addr = $%04X)", addr);
 }
 
-static u8 gb_read_mem_0000_8000(const GameBoy *gb, u16 addr)
+static u8 gb_read_mem_0000_8000(GameBoy *gb, u16 addr)
 {
     if (gb->boot_rom_enable && addr <= GB_BOOT_ROM_LEN) {
         // 0000-0100 (Boot ROM)
@@ -348,25 +348,25 @@ static u8 gb_read_mem_0000_8000(const GameBoy *gb, u16 addr)
     return gb->rom[addr];
 }
 
-static u8 gb_read_mem_8000_A000(const GameBoy *gb, u16 addr)
+static u8 gb_read_mem_8000_A000(GameBoy *gb, u16 addr)
 {
     // 8000-9FFF (VRAM)
     return gb->vram[addr - 0x8000];
 }
 
-static u8 gb_read_mem_A000_C000([[maybe_unused]] const GameBoy *gb, u16 addr)
+static u8 gb_read_mem_A000_C000(GameBoy *gb, u16 addr)
 {
     // A000-BFFF (External RAM)
     BAIL("TODO: gb_read_mem_A000_C000 (addr = $%04X)", addr);
 }
 
-static u8 gb_read_mem_C000_E000(const GameBoy *gb, u16 addr)
+static u8 gb_read_mem_C000_E000(GameBoy *gb, u16 addr)
 {
     // C000-DFFF (WRAM)
     return gb->ram[addr - 0xC000];
 }
 
-static u8 gb_read_mem_E000_10000(const GameBoy *gb, u16 addr)
+static u8 gb_read_mem_E000_10000(GameBoy *gb, u16 addr)
 {
     if (addr <= 0xFDFF) // E000-FDFF (Echo RAM, mirror of C000-DDFF)
         return gb->ram[addr - 0xE000];
@@ -387,9 +387,9 @@ static u8 gb_read_mem_E000_10000(const GameBoy *gb, u16 addr)
     return gb->ie;
 }
 
-u8 gb_read_mem(const GameBoy *gb, u16 addr)
+static u8 gb_read_mem(GameBoy *gb, u16 addr)
 {
-    static u8 (*const HANDLERS[])(const GameBoy *, u16) = {
+    static u8 (*const HANDLERS[])(GameBoy *, u16) = {
         [0x0] = gb_read_mem_0000_8000,  [0x1] = gb_read_mem_0000_8000,
         [0x2] = gb_read_mem_0000_8000,  [0x3] = gb_read_mem_0000_8000,
         [0x4] = gb_read_mem_0000_8000,  [0x5] = gb_read_mem_0000_8000,
@@ -551,7 +551,7 @@ static void gb_write_mem_E000_10000(GameBoy *gb, u16 addr, u8 value)
     }
 }
 
-void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
+static void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
 {
     static void (*const HANDLERS[])(GameBoy *, u16, u8) = {
         [0x0] = gb_write_mem_0000_8000,  [0x1] = gb_write_mem_0000_8000,
@@ -569,7 +569,7 @@ void gb_write_mem(GameBoy *gb, u16 addr, u8 value)
     HANDLERS[nib](gb, addr, value);
 }
 
-void gb_service_interrupts(GameBoy *gb, Memory *mem)
+static void gb_service_interrupts(GameBoy *gb, Memory *mem)
 {
     u8 int_mask = gb->if_ & gb->ie;
 
@@ -591,7 +591,7 @@ void gb_service_interrupts(GameBoy *gb, Memory *mem)
     }
 }
 
-static u8 gb_read_mem_v(const void *ctx, u16 addr)
+static u8 gb_read_mem_v(void *ctx, u16 addr)
 {
     return gb_read_mem(ctx, addr);
 }

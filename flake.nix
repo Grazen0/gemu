@@ -51,6 +51,7 @@
                     [ ]
                     ++ (lib.optionals (frontend == "sdl3") [ sdl3 ])
                     ++ (lib.optionals (frontend == "raylib") [ raylib ])
+                    ++ (lib.optionals (frontend == "sfml") [ csfml ])
                     ++ (lib.optionals (frontend == "opengl") [
                       libGL
                       libglut
@@ -74,6 +75,7 @@
               gemu-sdl3 = mkGemu { frontend = "sdl3"; };
               gemu-raylib = mkGemu { frontend = "raylib"; };
               gemu-opengl = mkGemu { frontend = "opengl"; };
+              gemu-sfml = mkGemu { frontend = "sfml"; };
 
               default = self'.packages.gemu;
             };

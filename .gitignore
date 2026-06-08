@@ -10,3 +10,4 @@ Testing/
 zig-out/
 *.o
 vgcore.*
+*.gb

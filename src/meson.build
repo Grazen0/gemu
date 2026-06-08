@@ -20,4 +20,7 @@ elif frontend == 'raylib'
 elif frontend == 'opengl'
   gemu_sources += files('frontend/opengl.c')
   gemu_dependencies += [dependency('gl'), dependency('glut')]
+elif frontend == 'sfml'
+  gemu_sources += files('frontend/sfml.c')
+  gemu_dependencies += dependency('csfml-graphics')
 endif

@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "stdinc.h"
+#include <assert.h>
 #include <cjson/cJSON.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -7,8 +8,8 @@
 #include <unity.h>
 
 typedef struct {
-    bool active[0x10000];
-    u8 data[0x10000];
+    bool *active;
+    u8 *data;
 } MockRam;
 
 typedef struct {
@@ -31,6 +32,29 @@ typedef struct {
     RamEntry *ram;
     int ram_len;
 } CpuState;
+
+static MockRam mock_ram_init()
+{
+    bool *active = calloc(0x10000, sizeof(*active));
+    assert(active != nullptr);
+
+    u8 *data = calloc(0x10000, sizeof(*data));
+    assert(data != nullptr);
+
+    return (MockRam){
+        .active = active,
+        .data = data,
+    };
+}
+
+static void mock_ram_deinit(MockRam *ram)
+{
+    free(ram->active);
+    ram->active = nullptr;
+
+    free(ram->data);
+    ram->data = nullptr;
+}
 
 static u8 read_mock_ram(const MockRam *ram, u16 addr)
 {
@@ -122,7 +146,7 @@ static void run_cpu_tick_test(const CpuState *initial_state,
 {
     Cpu cpu = cpu_init();
 
-    MockRam mock_ram = {};
+    MockRam mock_ram = mock_ram_init();
 
     Memory mock_memory = (Memory){
         .ctx = &mock_ram,
@@ -183,6 +207,8 @@ static void run_cpu_tick_test(const CpuState *initial_state,
         TEST_ASSERT_EQUAL_HEX8_MESSAGE(entry->value, mock_ram.data[entry->addr],
                                        msg_buffer);
     }
+
+    mock_ram_deinit(&mock_ram);
 }
 
 static void run_opcode_test_file(const char *filepath)

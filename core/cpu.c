@@ -400,7 +400,7 @@ static inline void cpu_instr_stop(Cpu *cpu)
     log_trace("stop");
     cpu->mode = CPU_MODE_STOPPED;
 
-    BAIL("TODO: implement STOP instruction properly");
+    log_warn("TODO: implement STOP instruction properly");
 }
 
 static inline void cpu_instr_jr_e8(Cpu *cpu, Memory *mem)

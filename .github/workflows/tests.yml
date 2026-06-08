@@ -17,7 +17,7 @@ jobs:
         uses: "https://github.com/cachix/install-nix-action@v31"
 
       - name: Build
-        run: nix build .#gemu .#gemu-sdl3 .#gemu-raylib
+        run: nix build .#gemu .#gemu-sdl3 .#gemu-raylib .#gemu-opengl .#gemu-sfml
 
       - name: Check flake
         run: nix flake check --show-trace

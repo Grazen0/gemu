@@ -28,7 +28,7 @@ typedef enum : u8 {
     INT_LCD = 1 << 1,
     INT_TIMER = 1 << 2,
     INT_SERIAL = 1 << 3,
-    INT_JOYPAd = 1 << 4,
+    INT_JOYPAD = 1 << 4,
 } InterruptFlag;
 
 typedef enum : u8 {

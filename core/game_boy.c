@@ -17,9 +17,9 @@ static constexpr size_t VRAM_SIZE = 0x2000;
 static constexpr size_t HRAM_SIZE = 0x7F;
 static constexpr size_t OAM_SIZE = 0xA0;
 
-static void gb_write_joyp(GameBoy *gb, u8 value)
+static void gb_update_joyp(GameBoy *gb)
 {
-    gb->joyp = value | 0x0F;
+    gb->joyp |= 0x0F;
 
     if ((gb->joyp & JOYP_SELECT_DPAD) == 0) {
         if (gb->btns.right)
@@ -240,7 +240,6 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
     }
 
     free(gb->rom);
-
     gb->rom = calloc(rom_len, sizeof(*gb->rom));
     assert(gb->rom != nullptr);
 
@@ -257,8 +256,10 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 // NOLINTNEXTLINE
 u8 gb_read_io(GameBoy *gb, u16 addr)
 {
-    if (addr == 0xFF00) // FF00 (joypad input)
+    if (addr == 0xFF00) { // FF00 (joypad input)
+        gb_update_joyp(gb);
         return gb->joyp;
+    }
 
     // TODO: implement serial transfer
     if (addr == 0xFF01) // FF01 (serial transfer data)
@@ -417,7 +418,8 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
 {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
-        gb_write_joyp(gb, value);
+        // joyp will be loaded with gb->btns on the next read
+        gb->joyp = value | 0x0F;
     } else if (addr == 0xFF01) {
         // FF01 (serial transfer data)
         gb->sb = value;

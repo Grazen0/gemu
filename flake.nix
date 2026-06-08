@@ -48,14 +48,14 @@
 
                   buildInputs =
                     with pkgs;
-                    [ ]
-                    ++ (lib.optionals (frontend == "sdl3") [ sdl3 ])
+                    (lib.optionals (frontend == "sdl3") [ sdl3 ])
                     ++ (lib.optionals (frontend == "raylib") [ raylib ])
-                    ++ (lib.optionals (frontend == "sfml") [ csfml ])
                     ++ (lib.optionals (frontend == "opengl") [
                       libGL
+                      libGLU
                       libglut
-                    ]);
+                    ])
+                    ++ (lib.optionals (frontend == "sfml") [ csfml ]);
 
                   mesonFlags = [
                     "-Dfrontend=${frontend}"

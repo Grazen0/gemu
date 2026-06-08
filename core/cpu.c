@@ -1275,7 +1275,6 @@ void cpu_step(Cpu *cpu, Memory *mem)
 {
     if (cpu->mode != CPU_MODE_RUNNING) {
         ++cpu->mcycle_cnt; // Makes the frontend work lmao
-        assert(false && "check this out");
         return;
     }
 

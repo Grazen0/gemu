@@ -69,6 +69,6 @@ CartInfo cart_info_from_rom(const u8 *rom)
         .rom_size = rom[ROM_HEADER_ROM_SIZE],
     };
 
-    memcpy(out.title, (char *)&rom[ROM_HEADER_TITLE], sizeof(out.title));
+    memcpy(out.title, (char *)&rom[ROM_HEADER_TITLE], sizeof(out.title) - 1);
     return out;
 }

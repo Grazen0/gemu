@@ -184,7 +184,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    ring_sink = ring_sink_init(32, 256);
+    size_t trace_depth = 32;
+
+    const char *trace_depth_str = getenv("GEMU_TRACE_DEPTH");
+    if (trace_depth_str != nullptr)
+        trace_depth = strtoll(trace_depth_str, nullptr, 10);
+
+    ring_sink = ring_sink_init(trace_depth, 256);
 
     signal(SIGSEGV, crash_handler);
     signal(SIGABRT, crash_handler);

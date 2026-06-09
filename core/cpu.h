@@ -40,6 +40,7 @@ typedef struct {
     size_t mcycle_cnt;
     u16 sp;
     u16 pc;
+    u16 start_pc;
     CpuMode mode;
     u8 b;
     u8 c;
@@ -57,6 +58,6 @@ typedef struct {
 
 void cpu_step(Cpu *cpu, Memory mem);
 
-void cpu_interrupt(Cpu *cpu, Memory mem, u8 handler_location);
+bool cpu_interrupt(Cpu *cpu, Memory mem, u8 handler_location);
 
 #endif

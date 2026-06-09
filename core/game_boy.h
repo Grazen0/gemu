@@ -59,6 +59,11 @@ typedef enum : u8 {
     OBJ_ATTRS_PRIORITY = 1 << 7,
 } ObjAttrs;
 
+typedef enum : u8 {
+    TAC_CLK_SELECT = 0b11,
+    TAC_ENABLE = 1 << 2,
+} Tac;
+
 typedef struct {
     bool up;
     bool down;
@@ -106,6 +111,7 @@ typedef struct {
     u8 tac;
     u8 joyp;
     u8 joyp_prev;
+    u8 stat_line;
     bool video_dirty;
     bool dma_pending;
     bool boot_rom_enable;

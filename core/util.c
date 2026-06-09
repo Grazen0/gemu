@@ -2,9 +2,25 @@
 #include "macros.h"
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+void sink_box_deinit(Sink *sink)
+{
+    sink_deinit(*sink);
+    free(sink->ptr);
+    sink->ptr = nullptr;
+}
+
+void sink_log(Sink sink, const char format[], ...)
+{
+    va_list args;
+    va_start(args, format);
+    sink_vlog(sink, format, args);
+    va_end(args);
+}
 
 RingSink ring_sink_init(size_t buf_size, size_t max_msg_size)
 {
@@ -49,13 +65,19 @@ void ring_sink_dump(RingSink *sink, int fd)
 {
     size_t cur = sink->head;
 
+    size_t i = 1;
+
     while (cur != sink->tail) {
         char *message = ring_sink_slot(sink, cur);
         size_t len = strnlen(message, sink->max_msg_len);
 
+        printf("%4zu: ", i);
+        fflush(stdout);
         write(fd, message, len);
         write(fd, "\n", 1);
+
         cur = (cur + 1) % sink->buf_len;
+        ++i;
     }
 }
 
@@ -72,7 +94,7 @@ static void ring_sink_deinit_v(void *sink)
 IMPL_UPCASTS(RingSink, ring_sink, Sink, sink, .vlog = ring_sink_vlog_v,
              .deinit = ring_sink_deinit_v)
 
-const Sink void_sink = (Sink){
+const Sink void_sink = {
     .ptr = nullptr,
     .vtable = &void_sink_vtable,
 };

@@ -156,6 +156,7 @@ GameBoy gb_init(Sink sink, const u8 *boot_rom)
         .tac = 0,
         .joyp = 0x0F,
         .joyp_prev = 0x0F,
+        .stat_line = 0,
         .dma_pending = false,
     };
 
@@ -575,16 +576,17 @@ static void gb_service_interrupts(GameBoy *gb, Memory mem)
     if (int_mask != 0 && gb->cpu.mode == CPU_MODE_HALTED)
         gb->cpu.mode = CPU_MODE_RUNNING;
 
-    if (!gb->cpu.ime)
-        return;
-
     // https://gbdev.io/pandocs/Interrupts.html
     for (size_t i = 0; i <= 4; ++i) {
-        if (int_mask & (1 << i)) {
-            log_debug("Servicing interrupt #%zu", i);
-            gb->if_ &= ~(1 << i);
-            cpu_interrupt(&gb->cpu, mem, 0x40 | (i << 3));
-            break;
+        u8 mask = 1 << i;
+
+        if ((int_mask & mask) != 0) {
+            u8 handler = 0x40 | (i << 3);
+
+            if (cpu_interrupt(&gb->cpu, mem, handler)) {
+                gb->if_ &= ~mask;
+                break;
+            }
         }
     }
 }
@@ -628,10 +630,13 @@ static inline void gb_mem_deinit_v(void *ptr)
 }
 
 IMPL_UPCASTS(GameBoyMemory, gb_mem, Memory, mem, .read = gb_mem_read_v,
-             .write = gb_mem_write_v, .deinit = gb_mem_deinit_v, )
+             .write = gb_mem_write_v, .deinit = gb_mem_deinit_v)
 
 u64 gb_dispatch_cpu_instr(GameBoy *gb)
 {
+    if ((gb->ie & INT_JOYPAD) != 0)
+        BAIL("TODO: implement joypad interrupts");
+
     GameBoyMemory gb_mem = gb_mem_init(gb);
     Memory mem = gb_mem_as_mem(&gb_mem);
 
@@ -648,21 +653,21 @@ u64 gb_dispatch_cpu_instr(GameBoy *gb)
 static void gb_render_tile(GameBoy *gb, const u8 *tdata, u8 ti, size_t ty,
                            size_t tx)
 {
-    long tile_index_signed = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? ti : (i8)ti;
+    ssize_t ti_signed = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? ti : (i8)ti;
 
-    for (size_t tile_row_index = 0; tile_row_index < 8; ++tile_row_index) {
-        u8 byte_1 = tdata[(tile_index_signed * 16) + (2 * tile_row_index)];
-        u8 byte_2 = tdata[(tile_index_signed * 16) + (2 * tile_row_index) + 1];
+    for (size_t row = 0; row < 8; ++row) {
+        u8 byte_1 = tdata[(ti_signed * 16) + (2 * row)];
+        u8 byte_2 = tdata[(ti_signed * 16) + (2 * row) + 1];
 
-        for (size_t tile_col_index = 0; tile_col_index < 8; ++tile_col_index) {
-            u8 bit_lo = (byte_1 >> tile_col_index) & 1;
-            u8 bit_hi = (byte_2 >> tile_col_index) & 1;
+        for (size_t col = 0; col < 8; ++col) {
+            u8 bit_lo = (byte_1 >> col) & 1;
+            u8 bit_hi = (byte_2 >> col) & 1;
             u8 palette_index = bit_lo | (bit_hi << 1);
 
             u8 color = (gb->bgp >> (2 * palette_index)) & 0b11;
 
-            size_t pixel_y = (8 * ty) + tile_row_index;
-            size_t pixel_x = (8 * tx) + 7 - tile_col_index;
+            size_t pixel_y = (8 * ty) + row;
+            size_t pixel_x = (8 * tx) + 7 - col;
 
             assert(pixel_y < GB_BG_HEIGHT);
             assert(pixel_x < GB_BG_WIDTH);
@@ -709,7 +714,7 @@ static void gb_render_obj(GameBoy *gb, const u8 *obj_data, ObjPriority priority)
 
     size_t y_pos = obj_data[0] - 16;
     size_t x_pos = obj_data[1] - 8;
-    size_t tile_index = obj_data[2];
+    size_t ti = obj_data[2];
 
     bool flip_x = (attrs & OBJ_ATTRS_FLIP_X) != 0;
     bool flip_y = (attrs & OBJ_ATTRS_FLIP_Y) != 0;
@@ -717,8 +722,8 @@ static void gb_render_obj(GameBoy *gb, const u8 *obj_data, ObjPriority priority)
 
     for (size_t row = 0; row < 8; ++row) {
         // Objects always use the $8000 method
-        u8 byte_1 = gb->vram[(16 * tile_index) + (2 * row)];
-        u8 byte_2 = gb->vram[(16 * tile_index) + (2 * row) + 1];
+        u8 byte_1 = gb->vram[(16 * ti) + (2 * row)];
+        u8 byte_2 = gb->vram[(16 * ti) + (2 * row) + 1];
 
         for (size_t col = 0; col < 8; ++col) {
             u8 lo = (byte_1 >> col) & 1;
@@ -770,7 +775,7 @@ static void gb_ensure_rendered(GameBoy *gb)
     gb->video_dirty = false;
 }
 
-static u8 gb_scan_rendered(GameBoy *gb, size_t sy, size_t sx)
+static u8 gb_scan_pixel(GameBoy *gb, size_t sy, size_t sx)
 {
     assert(sy < GB_LCD_HEIGHT);
     assert(sx < GB_LCD_WIDTH);
@@ -800,53 +805,40 @@ u64 gb_dispatch_pixel(GameBoy *gb)
     static constexpr u16 GB_DOTS = 456;
     static constexpr u16 GB_LINES = 154;
     static constexpr u16 GB_DOTS_DRAW_BEGIN = 80;
-    static constexpr u8 GB_LY_VBLANK = 144;
 
     if (gb->ly < GB_LCD_HEIGHT && gb->lx >= GB_DOTS_DRAW_BEGIN) {
         size_t y = gb->ly;
         size_t x = gb->lx - GB_DOTS_DRAW_BEGIN;
 
         if (x < GB_LCD_WIDTH)
-            gb->scanout_buf[y][x] = gb_scan_rendered(gb, y, x);
+            gb->scanout_buf[y][x] = gb_scan_pixel(gb, y, x);
     }
 
+    u8 stat_line_masked_prev = gb->stat_line & gb->stat;
     u8 ppu_mode_prev = calc_ppu_mode(gb->ly, gb->lx);
 
-    ++gb->lx;
-    assert(gb->lx <= GB_DOTS);
-
-    if (gb->lx == GB_DOTS) {
-        gb->lx = 0;
+    gb->lx = (gb->lx + 1) % GB_DOTS;
+    if (gb->lx == 0)
         gb->ly = (gb->ly + 1) % GB_LINES;
 
-        bool lcy_eq_ly = gb->ly == gb->lcy;
-
-        set_bits(&gb->stat, STAT_LCY_EQ_LY, lcy_eq_ly);
-
-        // vblank interrupt
-        if (gb->ly == GB_LY_VBLANK)
-            gb->if_ |= INT_VBLANK;
-
-        // stat lcy == ly interrupt
-        if ((gb->stat & STAT_LYC_INT) != 0 && lcy_eq_ly)
-            gb->if_ |= INT_LCD;
-    }
+    bool lcy_eq_ly = gb->ly == gb->lcy;
 
     u8 ppu_mode = calc_ppu_mode(gb->ly, gb->lx);
-    assert(ppu_mode < 4);
     gb->stat = (gb->stat & ~STAT_PPU_MODE) | ppu_mode;
 
+    set_bits(&gb->stat, STAT_LCY_EQ_LY, lcy_eq_ly);
+    set_bits(&gb->stat_line, STAT_LYC_INT, lcy_eq_ly);
+    set_bits(&gb->stat_line, STAT_MODE0_INT, ppu_mode == 0);
+    set_bits(&gb->stat_line, STAT_MODE1_INT, ppu_mode == 1);
+    set_bits(&gb->stat_line, STAT_MODE2_INT, ppu_mode == 2);
+
+    if (ppu_mode_prev != ppu_mode && ppu_mode == 1)
+        gb->if_ |= INT_VBLANK;
+
     // TEST: need testing
-    if (ppu_mode != ppu_mode_prev) {
-        if (ppu_mode == 0 && (gb->stat & STAT_MODE0_INT) != 0)
-            gb->if_ |= INT_LCD;
-
-        if (ppu_mode == 1 && (gb->stat & STAT_MODE1_INT) != 0)
-            gb->if_ |= INT_LCD;
-
-        if (ppu_mode == 2 && (gb->stat & STAT_MODE2_INT) != 0)
-            gb->if_ |= INT_LCD;
-    }
+    u8 stat_line_masked = gb->stat_line & gb->stat;
+    if (stat_line_masked_prev == 0 && stat_line_masked != 0)
+        gb->if_ |= INT_LCD;
 
     return 1;
 }
@@ -863,16 +855,18 @@ u64 gb_dispatch_div(GameBoy *gb)
 // https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff07--tac-timer-control
 u64 gb_dispatch_tima(GameBoy *gb)
 {
-    if (gb->tac & 0b100)
-        ++gb->tima;
+    if ((gb->tac & TAC_ENABLE) == 0)
+        return 1; // TODO: not have EVENT_TIMA whenever enable = 0
+
+    ++gb->tima;
 
     if (gb->tima == 0) {
         gb->tima = gb->tma;
         gb->if_ |= INT_TIMER;
     }
 
-    u8 clock_select = gb->tac & 0b11;
-    u64 tima_mcycles = clock_select == 0 ? 256 : 4 * clock_select;
+    u8 clock_select = gb->tac & TAC_CLK_SELECT;
+    u64 tima_mcycles = clock_select == 0 ? 256 : 4 << (2 * (clock_select - 1));
     return CPU_MCYCLE * tima_mcycles;
 }
 

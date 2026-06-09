@@ -50,29 +50,18 @@ static inline void sink_deinit(Sink sink)
     sink.vtable->deinit(sink.ptr);
 }
 
-static inline void sink_box_deinit(Sink *sink)
-{
-    sink_deinit(*sink);
-    free(sink->ptr);
-    sink->ptr = nullptr;
-}
+void sink_box_deinit(Sink *sink);
 
-[[gnu::format(printf, 2, 3)]] static inline void
-sink_log(Sink sink, const char format[], ...)
-{
-    va_list args;
-    va_start(args, format);
-    sink_vlog(sink, format, args);
-    va_end(args);
-}
+[[gnu::format(printf, 2, 3)]] void sink_log(Sink sink, const char format[],
+                                            ...);
 
-static void void_sink_vlog_v([[maybe_unused]] void *ptr,
-                             [[maybe_unused]] const char format[],
-                             [[maybe_unused]] va_list args)
+static inline void void_sink_vlog_v([[maybe_unused]] void *ptr,
+                                    [[maybe_unused]] const char format[],
+                                    [[maybe_unused]] va_list args)
 {
 }
 
-static void void_sink_deinit_v([[maybe_unused]] void *ptr)
+static inline void void_sink_deinit_v([[maybe_unused]] void *ptr)
 {
 }
 

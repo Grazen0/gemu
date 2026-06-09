@@ -92,6 +92,11 @@ static void ring_sink_deinit_v(void *sink)
 IMPL_UPCASTS(RingSink, ring_sink, Sink, sink, .vlog = ring_sink_vlog_v,
              .deinit = ring_sink_deinit_v)
 
+static const SinkVTable void_sink_vtable = {
+    .vlog = void_sink_vlog_v,
+    .deinit = void_sink_deinit_v,
+};
+
 const Sink void_sink = {
     .ptr = nullptr,
     .vtable = &void_sink_vtable,

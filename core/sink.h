@@ -40,11 +40,6 @@ static inline void void_sink_deinit_v([[maybe_unused]] void *ptr)
 {
 }
 
-static const SinkVTable void_sink_vtable = {
-    .vlog = void_sink_vlog_v,
-    .deinit = void_sink_deinit_v,
-};
-
 typedef struct {
     char *buf;
     size_t buf_len;

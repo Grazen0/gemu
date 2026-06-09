@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    GameInfo info = get_game_info(rom);
+    CartInfo info = cart_info_from_rom(rom);
     log_info("Cartridge type: $%02X", info.cart_type);
     log_info("RAM size: $%02X", info.ram_size);
     log_info("ROM size: $%02X", info.rom_size);

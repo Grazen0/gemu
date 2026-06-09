@@ -50,21 +50,21 @@ typedef enum : u8 {
     CART_TYPE_BANDAI_TAMA5 = 0xFD,
     CART_TYPE_HUC3 = 0xFE,
     CART_TYPE_HUC1_RAM_BATTERY = 0xFF,
-} CartridgeType;
+} CartType;
 
 typedef struct {
     char title[17];
-    CartridgeType cart_type;
+    CartType cart_type;
     u8 ram_size;
     u8 rom_size;
-} GameInfo;
+} CartInfo;
 
-[[nodiscard]] bool cart_type_has_ram(CartridgeType cart_type);
+[[nodiscard]] bool cart_type_has_ram(CartType cart_type);
 
 [[nodiscard]] size_t rom_banks_from_size_code(u8 rom_size_code);
 
 [[nodiscard]] size_t ram_banks_from_size_code(u8 ram_size_code);
 
-[[nodiscard]] GameInfo get_game_info(const u8 *rom);
+[[nodiscard]] CartInfo cart_info_from_rom(const u8 *rom);
 
 #endif

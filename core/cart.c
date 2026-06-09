@@ -2,7 +2,7 @@
 #include "util.h"
 #include <stddef.h>
 
-static constexpr CartridgeType RAM_CART_TYPES[] = {
+static constexpr CartType RAM_CART_TYPES[] = {
     CART_TYPE_MBC1_RAM,
     CART_TYPE_MBC1_RAM_BATTERY,
     CART_TYPE_MBC2,
@@ -24,7 +24,7 @@ static constexpr CartridgeType RAM_CART_TYPES[] = {
 };
 static constexpr size_t RAM_CART_TYPES_LEN = ARRAY_LEN(RAM_CART_TYPES);
 
-bool cart_type_has_ram(CartridgeType cart_type)
+bool cart_type_has_ram(CartType cart_type)
 {
     for (size_t i = 0; i < RAM_CART_TYPES_LEN; ++i) {
         if (cart_type == RAM_CART_TYPES[i])
@@ -60,9 +60,9 @@ size_t ram_banks_from_size_code(u8 ram_size_code)
     }
 }
 
-GameInfo get_game_info(const u8 *rom)
+CartInfo cart_info_from_rom(const u8 *rom)
 {
-    GameInfo out = {
+    CartInfo out = {
         .title = {},
         .cart_type = rom[ROM_HEADER_CART_TYPE],
         .ram_size = rom[ROM_HEADER_RAM_SIZE],

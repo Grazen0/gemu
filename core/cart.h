@@ -1,5 +1,5 @@
-#ifndef GEMU_DATA_H
-#define GEMU_DATA_H
+#ifndef GEMU_CART_H
+#define GEMU_CART_H
 
 #include "util.h"
 #include <stddef.h>

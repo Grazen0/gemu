@@ -1,6 +1,6 @@
 gemu_core_sources = [
+  'cart.c',
   'cpu.c',
-  'data.c',
   'game_boy.c',
   'log.c',
   'macros.c',

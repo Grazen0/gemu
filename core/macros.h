@@ -18,8 +18,8 @@
         abort();                                                            \
     } while (0)
 
-#define DECLARE_UPCASTS(Derived, derived, Base, base) \
-    Base derived##_as_##base(Derived *derived);       \
+#define DECL_UPCASTS(Derived, derived, Base, base) \
+    Base derived##_as_##base(Derived *derived);    \
     Base derived##_into_##base(Derived base);
 
 #define IMPL_UPCASTS(Derived, derived, Base, base, ...)         \

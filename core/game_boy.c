@@ -117,10 +117,10 @@ static JoypadButtons joypad_btns_init()
     };
 }
 
-GameBoy gb_init(Logger logger, const u8 *boot_rom)
+GameBoy gb_init(Sink sink, const u8 *boot_rom)
 {
     GameBoy gb = {
-        .cpu = cpu_init(logger),
+        .cpu = cpu_init(sink),
         .mapper = mapper_default(),
         .ram = nullptr,
         .vram = nullptr,
@@ -589,33 +589,57 @@ static void gb_service_interrupts(GameBoy *gb, Memory mem)
     }
 }
 
-static u8 gb_read_mem_v(void *ptr, u16 addr)
+typedef struct {
+    GameBoy *gb; // borrowed
+} GameBoyMemory;
+
+static inline GameBoyMemory gb_mem_init(GameBoy *gb)
 {
-    return gb_read_mem(ptr, addr);
+    return (GameBoyMemory){.gb = gb};
 }
 
-static void gb_write_mem_v(void *ptr, u16 addr, u8 value)
+static inline u8 gb_mem_read(GameBoyMemory *gb_mem, u16 addr)
 {
-    gb_write_mem(ptr, addr, value);
+    return gb_read_mem(gb_mem->gb, addr);
 }
+
+static inline void gb_mem_write(GameBoyMemory *gb_mem, u16 addr, u8 value)
+{
+    gb_write_mem(gb_mem->gb, addr, value);
+}
+
+static inline void gb_mem_deinit([[maybe_unused]] GameBoyMemory *gb_mem)
+{
+}
+
+static inline u8 gb_mem_read_v(void *ptr, u16 addr)
+{
+    return gb_mem_read(ptr, addr);
+}
+
+static inline void gb_mem_write_v(void *ptr, u16 addr, u8 value)
+{
+    gb_mem_write(ptr, addr, value);
+}
+
+static inline void gb_mem_deinit_v(void *ptr)
+{
+    gb_mem_deinit(ptr);
+}
+
+IMPL_UPCASTS(GameBoyMemory, gb_mem, Memory, mem, .read = gb_mem_read_v,
+             .write = gb_mem_write_v, .deinit = gb_mem_deinit_v, )
 
 u64 gb_dispatch_cpu_instr(GameBoy *gb)
 {
-    static const MemoryVTable GB_MEMORY_VTABLE = {
-        .read = gb_read_mem_v,
-        .write = gb_write_mem_v,
-    };
-
-    Memory memory = (Memory){
-        .ptr = gb,
-        .vtable = &GB_MEMORY_VTABLE,
-    };
+    GameBoyMemory gb_mem = gb_mem_init(gb);
+    Memory mem = gb_mem_as_mem(&gb_mem);
 
     u64 mcycles_start = gb->cpu.mcycle_cnt;
 
     gb_update_joyp(gb);
-    gb_service_interrupts(gb, memory);
-    cpu_step(&gb->cpu, memory);
+    gb_service_interrupts(gb, mem);
+    cpu_step(&gb->cpu, mem);
 
     u64 mcycles_end = gb->cpu.mcycle_cnt;
     return CPU_MCYCLE * (mcycles_end - mcycles_start);

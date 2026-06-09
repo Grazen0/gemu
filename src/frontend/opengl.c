@@ -78,7 +78,7 @@ static void display(void)
     long double cur_time = frame_start - g_start_time;
     u64 cur_time_clk = (u64)(cur_time * GB_CLK_FREQ_HZ);
 
-    sched_dispatch_until(&g_sched, g_gb, cur_time_clk);
+    sched_dispatch_until(g_sched, g_gb, cur_time_clk);
     build_pixels(g_gb);
     update_texture();
 

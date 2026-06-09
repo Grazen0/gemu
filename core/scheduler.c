@@ -1,6 +1,5 @@
 #include "scheduler.h"
 #include "game_boy.h"
-#include "macros.h"
 #include "util.h"
 #include <assert.h>
 #include <stddef.h>

@@ -1,5 +1,5 @@
 #include "cart.h"
-#include "macros.h"
+#include "util.h"
 #include <stddef.h>
 
 static constexpr CartridgeType RAM_CART_TYPES[] = {

@@ -1,6 +1,5 @@
 #include "cpu.h"
 #include "log.h"
-#include "macros.h"
 #include "util.h"
 #include <assert.h>
 

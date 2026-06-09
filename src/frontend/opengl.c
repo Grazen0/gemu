@@ -1,6 +1,5 @@
 #include "frontend/common.h"
 #include "game_boy.h"
-#include "macros.h"
 #include "scheduler.h"
 #include "util.h"
 #include <GL/freeglut.h>

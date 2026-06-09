@@ -3,9 +3,9 @@ gemu_core_sources = [
   'cpu.c',
   'game_boy.c',
   'log.c',
-  'macros.c',
   'mapper.c',
   'scheduler.c',
+  'sink.c',
   'util.c',
 ]
 

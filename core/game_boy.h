@@ -3,6 +3,7 @@
 
 #include "cpu.h"
 #include "mapper.h"
+#include "sink.h"
 #include <stddef.h>
 
 static constexpr int GB_LCD_WIDTH = 160;

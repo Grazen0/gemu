@@ -1,11 +1,47 @@
 #ifndef GEMU_UTIL_H
 #define GEMU_UTIL_H
 
-#include "macros.h"
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#define BAIL(...)                                                           \
+    do {                                                                    \
+        __VA_OPT__(fprintf(stderr, "panic (%s:%d): ", __FILE__, __LINE__);) \
+        __VA_OPT__(if (0))                                                  \
+        fprintf(stderr, "panic (%s:%d)", __FILE__, __LINE__);               \
+        __VA_OPT__(fprintf(stderr, __VA_ARGS__);)                           \
+        fputc('\n', stderr);                                                \
+        abort();                                                            \
+    } while (0)
+
+#define DECL_UPCASTS(Derived, derived, Base, base) \
+    Base derived##_as_##base(Derived *derived);    \
+    Base derived##_into_##base(Derived base);
+
+#define IMPL_UPCASTS(Derived, derived, Base, base, ...)         \
+    static const Base##VTable derived##_vtable = {__VA_ARGS__}; \
+    Base derived##_as_##base(Derived *derived)                  \
+    {                                                           \
+        return (Base){                                          \
+            .ptr = derived,                                     \
+            .vtable = &derived##_vtable,                        \
+        };                                                      \
+    }                                                           \
+    Base derived##_into_##base(Derived base)                    \
+    {                                                           \
+        Derived *ptr = calloc(1, sizeof(*ptr));                 \
+        assert(ptr != nullptr);                                 \
+        memcpy(ptr, &base, sizeof(*ptr));                       \
+        return (Base){                                          \
+            .ptr = ptr,                                         \
+            .vtable = &derived##_vtable,                        \
+        };                                                      \
+    }
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -29,65 +65,5 @@ static inline void set_bits(u8 *dest, u8 mask, bool value)
     else
         *dest &= ~mask;
 }
-
-typedef struct {
-    void (*vlog)(void *ptr, const char format[], va_list args);
-    void (*deinit)(void *ptr);
-} SinkVTable;
-
-typedef struct {
-    void *ptr;
-    const SinkVTable *vtable;
-} Sink;
-
-static inline void sink_vlog(Sink sink, const char format[], va_list args)
-{
-    sink.vtable->vlog(sink.ptr, format, args);
-}
-
-static inline void sink_deinit(Sink sink)
-{
-    sink.vtable->deinit(sink.ptr);
-}
-
-void sink_box_deinit(Sink *sink);
-
-[[gnu::format(printf, 2, 3)]] void sink_log(Sink sink, const char format[],
-                                            ...);
-
-static inline void void_sink_vlog_v([[maybe_unused]] void *ptr,
-                                    [[maybe_unused]] const char format[],
-                                    [[maybe_unused]] va_list args)
-{
-}
-
-static inline void void_sink_deinit_v([[maybe_unused]] void *ptr)
-{
-}
-
-static const SinkVTable void_sink_vtable = {
-    .vlog = void_sink_vlog_v,
-    .deinit = void_sink_deinit_v,
-};
-
-typedef struct {
-    char *buf;
-    size_t buf_len;
-    size_t max_msg_len;
-    size_t head;
-    size_t tail;
-} RingSink;
-
-RingSink ring_sink_init(size_t buf_size, size_t max_msg_size);
-
-void ring_sink_deinit(RingSink *sink);
-
-void ring_sink_vlog(RingSink *sink, const char format[], va_list args);
-
-void ring_sink_dump(RingSink *sink, int fd);
-
-DECL_UPCASTS(RingSink, ring_sink, Sink, sink)
-
-extern const Sink void_sink;
 
 #endif

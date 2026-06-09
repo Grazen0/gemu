@@ -1,8 +1,8 @@
 #include "frontend/raylib.h"
 #include "frontend/common.h"
 #include "game_boy.h"
-#include "macros.h"
 #include "scheduler.h"
+#include "util.h"
 #include <assert.h>
 #include <raylib.h>
 #include <raymath.h>

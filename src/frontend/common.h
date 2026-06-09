@@ -2,7 +2,6 @@
 #define GEMU_FRONTEND_COMMON_H
 
 #include "game_boy.h"
-#include "macros.h"
 #include "scheduler.h"
 #include "util.h"
 #include <stddef.h>

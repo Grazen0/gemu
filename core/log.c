@@ -1,5 +1,5 @@
 #include "log.h"
-#include "macros.h"
+#include "util.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdarg.h>

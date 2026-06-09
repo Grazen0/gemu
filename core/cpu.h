@@ -1,6 +1,7 @@
 #ifndef GEMU_CPU_H
 #define GEMU_CPU_H
 
+#include "sink.h"
 #include "util.h"
 #include <stdarg.h>
 #include <stddef.h>

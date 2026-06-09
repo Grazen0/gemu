@@ -1,3 +1,4 @@
+#include "data.h"
 #include "frontend/common.h"
 #include "game_boy.h"
 #include "log.h"
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    GameInfo info = gb_cartridge_info(rom);
+    GameInfo info = get_game_info(rom);
     log_info("Cartridge type: $%02X", info.cart_type);
     log_info("RAM size: $%02X", info.ram_size);
     log_info("ROM size: $%02X", info.rom_size);

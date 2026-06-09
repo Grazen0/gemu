@@ -59,3 +59,16 @@ size_t ram_banks_from_size_code(u8 ram_size_code)
             BAIL("invalid RAM size code: $%02X", ram_size_code);
     }
 }
+
+GameInfo get_game_info(const u8 *rom)
+{
+    GameInfo out = {
+        .title = {},
+        .cart_type = rom[ROM_HEADER_CART_TYPE],
+        .ram_size = rom[ROM_HEADER_RAM_SIZE],
+        .rom_size = rom[ROM_HEADER_ROM_SIZE],
+    };
+
+    memcpy(out.title, (char *)&rom[ROM_HEADER_TITLE], sizeof(out.title));
+    return out;
+}

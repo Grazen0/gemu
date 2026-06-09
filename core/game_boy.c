@@ -17,6 +17,57 @@ static constexpr size_t VRAM_SIZE = 0x2000;
 static constexpr size_t HRAM_SIZE = 0x7F;
 static constexpr size_t OAM_SIZE = 0xA0;
 
+typedef enum : u8 {
+    LCDC_ENABLE = 1 << 7,
+    LCDC_WIN_TILE_MAP = 1 << 6,
+    LCDC_WIN_ENABLE = 1 << 5,
+    LCDC_BG_WIN_TILES = 1 << 4,
+    LCDC_BG_TILE_MAP = 1 << 3,
+    LCDC_OBJ_SIZE = 1 << 2,
+    LCDC_OBJ_ENABLE = 1 << 1,
+    LcdControl_ObjBgwEnable = 1 << 0,
+} LcdControl;
+
+typedef enum : u8 {
+    INT_VBLANK = 1 << 0,
+    INT_LCD = 1 << 1,
+    INT_TIMER = 1 << 2,
+    INT_SERIAL = 1 << 3,
+    INT_JOYPAD = 1 << 4,
+} InterruptFlag;
+
+typedef enum : u8 {
+    JOYP_RIGHT_A = 1 << 0,
+    JOPY_LEFT_B = 1 << 1,
+    JOYP_UP_SELECT = 1 << 2,
+    JOYP_DOWN_START = 1 << 3,
+    JOYP_SELECT_DPAD = 1 << 4,
+    JOYP_SELECT_BUTTONS = 1 << 5,
+} Joypad;
+
+typedef enum : u8 {
+    STAT_PPU_MODE = 0b11,
+    STAT_LCY_EQ_LY = 1 << 2,
+    STAT_MODE0_INT = 1 << 3,
+    STAT_MODE1_INT = 1 << 4,
+    STAT_MODE2_INT = 1 << 5,
+    STAT_LYC_INT = 1 << 6,
+} StatSelect;
+
+typedef enum : u8 {
+    OBJ_ATTRS_CGB_PALETTE = 0b111,
+    OBJ_ATTRS_ANK = 1 << 3,
+    OBJ_ATTRS_DMG_PALETTE = 1 << 4,
+    OBJ_ATTRS_FLIP_X = 1 << 5,
+    OBJ_ATTRS_FLIP_Y = 1 << 6,
+    OBJ_ATTRS_PRIORITY = 1 << 7,
+} ObjAttrs;
+
+typedef enum : u8 {
+    TAC_CLK_SELECT = 0b11,
+    TAC_ENABLE = 1 << 2,
+} Tac;
+
 static void gb_update_joyp(GameBoy *gb)
 {
     gb->joyp_prev = gb->joyp;
@@ -216,19 +267,6 @@ void gb_deinit(GameBoy *gb)
     gb->oam = nullptr;
 
     mapper_deinit(&gb->mapper);
-}
-
-GameInfo gb_cartridge_info(const u8 *rom)
-{
-    GameInfo out = {
-        .title = {},
-        .cart_type = rom[ROM_HEADER_CART_TYPE],
-        .ram_size = rom[ROM_HEADER_RAM_SIZE],
-        .rom_size = rom[ROM_HEADER_ROM_SIZE],
-    };
-
-    memcpy(out.title, (char *)&rom[ROM_HEADER_TITLE], sizeof(out.title));
-    return out;
 }
 
 void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)

@@ -265,7 +265,7 @@ void gb_deinit(GameBoy *gb)
     free(gb->oam);
     gb->oam = nullptr;
 
-    mapper_deinit(&gb->mapper);
+    mapper_box_deinit(&gb->mapper);
 }
 
 void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
@@ -284,7 +284,7 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
 
     gb_validate_rom(gb);
 
-    mapper_deinit(&gb->mapper);
+    mapper_box_deinit(&gb->mapper);
     gb->mapper = mapper_from_rom(rom, rom_len);
 
     gb_reset(gb);
@@ -381,7 +381,7 @@ static u8 gb_read_mem_0000_8000(GameBoy *gb, u16 addr)
     }
 
     // 0000-7FFF (from cartridge)
-    return mapper_read(&gb->mapper, gb->rom, gb->rom_len, addr);
+    return mapper_read(gb->mapper, gb->rom, gb->rom_len, addr);
 }
 
 static u8 gb_read_mem_8000_A000(GameBoy *gb, u16 addr)
@@ -393,7 +393,7 @@ static u8 gb_read_mem_8000_A000(GameBoy *gb, u16 addr)
 static u8 gb_read_mem_A000_C000(GameBoy *gb, u16 addr)
 {
     // A000-BFFF (External RAM)
-    return mapper_read(&gb->mapper, gb->rom, gb->rom_len, addr);
+    return mapper_read(gb->mapper, gb->rom, gb->rom_len, addr);
 }
 
 static u8 gb_read_mem_C000_E000(GameBoy *gb, u16 addr)
@@ -540,7 +540,7 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
 static void gb_write_mem_0000_8000(GameBoy *gb, u16 addr, u8 value)
 {
     // 0000-7FFF (from cartridge)
-    mapper_write(&gb->mapper, addr, value);
+    mapper_write(gb->mapper, addr, value);
 }
 
 static void gb_write_mem_8000_A000(GameBoy *gb, u16 addr, u8 value)
@@ -553,7 +553,7 @@ static void gb_write_mem_8000_A000(GameBoy *gb, u16 addr, u8 value)
 static void gb_write_mem_A000_C000(GameBoy *gb, u16 addr, u8 value)
 {
     // A000-BFFF (External RAM)
-    mapper_write(&gb->mapper, addr, value);
+    mapper_write(gb->mapper, addr, value);
 }
 
 static void gb_write_mem_C000_E000(GameBoy *gb, u16 addr, u8 value)
@@ -571,6 +571,7 @@ static void gb_write_mem_E000_10000(GameBoy *gb, u16 addr, u8 value)
         // FE00-FE9F (OAM)
         // TODO: should only be writable during HBlank or VBlank
         gb->oam[addr - 0xFE00] = value;
+        gb->video_dirty = true;
     } else if (addr <= 0xFEFF) {
         // FEA0-FEFF (Not usable)
         log_debug("Tried to write into unusable memory (addr = $%04X, $%02X)",
@@ -687,7 +688,7 @@ u64 gb_dispatch_cpu_instr(GameBoy *gb)
     return CPU_MCYCLE * (mcycles_end - mcycles_start);
 }
 
-static void gb_render_tile(GameBoy *gb, const u8 *tdata, u8 ti, size_t ty,
+static void gb_render_tile(GameBoy *gb, const u8 tdata[], u8 ti, size_t ty,
                            size_t tx)
 {
     ssize_t ti_signed = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? ti : (i8)ti;
@@ -699,23 +700,19 @@ static void gb_render_tile(GameBoy *gb, const u8 *tdata, u8 ti, size_t ty,
         for (size_t col = 0; col < 8; ++col) {
             u8 bit_lo = (byte_1 >> col) & 1;
             u8 bit_hi = (byte_2 >> col) & 1;
-            u8 palette_index = bit_lo | (bit_hi << 1);
+            u8 color_idx = bit_lo | (bit_hi << 1);
+            u8 color = (gb->bgp >> (2 * color_idx)) & 0b11;
 
-            u8 color = (gb->bgp >> (2 * palette_index)) & 0b11;
+            size_t py = (8 * ty) + row;
+            size_t px = (8 * tx) + 7 - col;
 
-            size_t pixel_y = (8 * ty) + row;
-            size_t pixel_x = (8 * tx) + 7 - col;
-
-            assert(pixel_y < GB_BG_HEIGHT);
-            assert(pixel_x < GB_BG_WIDTH);
-
-            if (color != 0)
-                gb->render_buf[pixel_y][pixel_x] = color;
+            if (py < GB_BG_HEIGHT && px < GB_BG_WIDTH && color_idx != 0)
+                gb->render_buf[py][px] = color;
         }
     }
 }
 
-static void gb_render_tiles(GameBoy *gb)
+static void gb_render_bg(GameBoy *gb)
 {
     static constexpr size_t TILES_HORIZONTAL = 32;
     static constexpr size_t TILES_VERTICAL = 32;
@@ -739,7 +736,36 @@ typedef enum : u8 {
     OBJ_PRIORITY_HIGH,
 } ObjPriority;
 
-static void gb_render_obj(GameBoy *gb, const u8 *obj_data, ObjPriority priority)
+static void gb_render_obj_tile(GameBoy *gb, size_t ti, size_t y_pos,
+                               size_t x_pos, u8 attrs)
+{
+    bool flip_x = (attrs & OBJ_ATTRS_FLIP_X) != 0;
+    bool flip_y = (attrs & OBJ_ATTRS_FLIP_Y) != 0;
+    u8 obp = (attrs & OBJ_ATTRS_DMG_PALETTE) != 0 ? gb->obp1 : gb->obp0;
+
+    for (size_t row = 0; row < 8; ++row) {
+        // Objects always use the $8000 method
+        u8 byte_1 = gb->vram[(16 * ti) + (2 * row)];
+        u8 byte_2 = gb->vram[(16 * ti) + (2 * row) + 1];
+
+        for (size_t col = 0; col < 8; ++col) {
+            u8 lo = (byte_1 >> col) & 1;
+            u8 hi = (byte_2 >> col) & 1;
+            u8 color_idx = lo | (hi << 1);
+            u8 color = (obp >> (2 * color_idx)) & 0b11;
+
+            if (color_idx != 0) {
+                size_t py = gb->scy + y_pos + (flip_y ? 7 - row : row);
+                size_t px = gb->scx + x_pos + (flip_x ? col : 7 - col);
+
+                gb->render_buf[py % GB_BG_HEIGHT][px % GB_BG_WIDTH] = color;
+            }
+        }
+    }
+}
+
+static void gb_render_obj(GameBoy *gb, const u8 obj_data[],
+                          ObjPriority priority)
 {
     u8 attrs = obj_data[3];
     ObjPriority obj_priority = (attrs & OBJ_ATTRS_PRIORITY) == 0
@@ -753,28 +779,11 @@ static void gb_render_obj(GameBoy *gb, const u8 *obj_data, ObjPriority priority)
     size_t x_pos = obj_data[1] - 8;
     size_t ti = obj_data[2];
 
-    bool flip_x = (attrs & OBJ_ATTRS_FLIP_X) != 0;
-    bool flip_y = (attrs & OBJ_ATTRS_FLIP_Y) != 0;
-    u8 obp = (attrs & OBJ_ATTRS_DMG_PALETTE) != 0 ? gb->obp1 : gb->obp0;
-
-    for (size_t row = 0; row < 8; ++row) {
-        // Objects always use the $8000 method
-        u8 byte_1 = gb->vram[(16 * ti) + (2 * row)];
-        u8 byte_2 = gb->vram[(16 * ti) + (2 * row) + 1];
-
-        for (size_t col = 0; col < 8; ++col) {
-            u8 lo = (byte_1 >> col) & 1;
-            u8 hi = (byte_2 >> col) & 1;
-            u8 pal_idx = lo | (hi << 1);
-            u8 color = (obp >> (2 * pal_idx)) & 0b11;
-
-            if (color != 0) {
-                size_t py = gb->scy + y_pos + (flip_y ? 7 - row : row);
-                size_t px = gb->scx + x_pos + (flip_x ? col : 7 - col);
-
-                gb->render_buf[py % GB_BG_HEIGHT][px % GB_BG_WIDTH] = color;
-            }
-        }
+    if ((gb->lcdc & LCDC_OBJ_SIZE) == 0) {
+        gb_render_obj_tile(gb, ti, y_pos, x_pos, attrs);
+    } else {
+        gb_render_obj_tile(gb, ti & 0xFE, y_pos, x_pos, attrs);
+        gb_render_obj_tile(gb, ti | 0x01, y_pos + 8, x_pos, attrs);
     }
 }
 
@@ -788,15 +797,39 @@ static void gb_render_objs(GameBoy *gb, ObjPriority priority)
     }
 }
 
+static void gb_render_window(GameBoy *gb)
+{
+    static constexpr size_t TILES_HORIZONTAL = 32;
+    static constexpr size_t TILES_VERTICAL = 32;
+
+    size_t tdata_start = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? 0 : 0x1000;
+    size_t tmap_start = (gb->lcdc & LCDC_WIN_TILE_MAP) != 0 ? 0x1C00 : 0x1800;
+
+    const u8 *tdata = &gb->vram[tdata_start];
+    const u8 *tmap = &gb->vram[tmap_start];
+
+    for (size_t ty = 0; ty < TILES_VERTICAL; ++ty) {
+        for (size_t tx = 0; tx < TILES_HORIZONTAL; ++tx) {
+            u8 ti = tmap[(ty * TILES_HORIZONTAL) + tx];
+            gb_render_tile(gb, tdata, ti, gb->scy + gb->wy + ty,
+                           gb->scx + gb->wx + tx);
+        }
+    }
+}
+
 static void gb_render(GameBoy *gb)
 {
-    memset(gb->render_buf, 0, GB_BG_HEIGHT * sizeof(*gb->render_buf));
+    u8 bgp_0 = gb->bgp & 0b11;
+    memset(gb->render_buf, bgp_0, GB_BG_HEIGHT * sizeof(*gb->render_buf));
 
     if ((gb->lcdc & LCDC_ENABLE) != 0) {
         if ((gb->lcdc & LCDC_OBJ_ENABLE) != 0)
             gb_render_objs(gb, OBJ_PRIORITY_LOW);
 
-        gb_render_tiles(gb);
+        gb_render_bg(gb);
+
+        if ((gb->lcdc & LCDC_WIN_ENABLE) != 0)
+            gb_render_window(gb);
 
         if ((gb->lcdc & LCDC_OBJ_ENABLE) != 0)
             gb_render_objs(gb, OBJ_PRIORITY_HIGH);
@@ -851,31 +884,42 @@ u64 gb_dispatch_pixel(GameBoy *gb)
             gb->scanout_buf[y][x] = gb_scan_pixel(gb, y, x);
     }
 
-    u8 stat_line_masked_prev = gb->stat_line & gb->stat;
     u8 ppu_mode_prev = calc_ppu_mode(gb->ly, gb->lx);
 
     gb->lx = (gb->lx + 1) % GB_DOTS;
-    if (gb->lx == 0)
+    if (gb->lx == 0) {
         gb->ly = (gb->ly + 1) % GB_LINES;
-
-    bool lcy_eq_ly = gb->ly == gb->lcy;
+        if (gb->ly == gb->lcy && (gb->stat & STAT_LYC_INT) != 0)
+            gb->if_ |= INT_LCD;
+    }
 
     u8 ppu_mode = calc_ppu_mode(gb->ly, gb->lx);
+
     gb->stat = (gb->stat & ~STAT_PPU_MODE) | ppu_mode;
+    set_bits(&gb->stat, STAT_LCY_EQ_LY, gb->ly == gb->lcy);
 
-    set_bits(&gb->stat, STAT_LCY_EQ_LY, lcy_eq_ly);
-    set_bits(&gb->stat_line, STAT_LYC_INT, lcy_eq_ly);
-    set_bits(&gb->stat_line, STAT_MODE0_INT, ppu_mode == 0);
-    set_bits(&gb->stat_line, STAT_MODE1_INT, ppu_mode == 1);
-    set_bits(&gb->stat_line, STAT_MODE2_INT, ppu_mode == 2);
+    if (ppu_mode != ppu_mode_prev) {
+        switch (ppu_mode) {
+            case 0:
+                if ((gb->stat & STAT_MODE0_INT) != 0)
+                    gb->if_ |= INT_LCD;
+                break;
+            case 1:
+                gb->if_ |= INT_VBLANK;
 
-    if (ppu_mode_prev != ppu_mode && ppu_mode == 1)
-        gb->if_ |= INT_VBLANK;
-
-    // TEST: need testing
-    u8 stat_line_masked = gb->stat_line & gb->stat;
-    if (stat_line_masked_prev == 0 && stat_line_masked != 0)
-        gb->if_ |= INT_LCD;
+                if ((gb->stat & STAT_MODE1_INT) != 0)
+                    gb->if_ |= INT_LCD;
+                break;
+            case 2:
+                if ((gb->stat & STAT_MODE2_INT) != 0)
+                    gb->if_ |= INT_LCD;
+                break;
+            case 3:
+                break;
+            default:
+                unreachable();
+        }
+    }
 
     return 1;
 }
@@ -912,8 +956,8 @@ u64 gb_dispatch_dma_cp(GameBoy *gb)
 {
     u8 lo = gb->dma_cur_addr & 0xFF;
     gb->oam[lo] = gb_read_mem(gb, gb->dma_cur_addr);
-
     ++gb->dma_cur_addr;
+    gb->video_dirty = true;
 
     if ((gb->dma_cur_addr & 0xFF) == OAM_SIZE)
         return SIZE_MAX; // done

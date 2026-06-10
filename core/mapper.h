@@ -4,7 +4,11 @@
 #include "util.h"
 #include <stddef.h>
 
-typedef struct MapperVTable MapperVTable;
+typedef struct {
+    void (*deinit)(void *ptr);
+    u8 (*read)(void *ptr, const u8 *rom, size_t rom_len, u16 addr);
+    void (*write)(void *ptr, u16 addr, u8 value);
+} MapperVTable;
 
 typedef struct {
     void *ptr;
@@ -15,12 +19,22 @@ Mapper mapper_default();
 
 Mapper mapper_from_rom(const u8 *rom, size_t rom_len);
 
-u8 mapper_read(const Mapper *mapper, const u8 *rom, size_t rom_len, u16 addr);
+void mapper_box_deinit(Mapper *mapper);
 
-void mapper_write(Mapper *mapper, u16 addr, u8 value);
+static inline void mapper_deinit(Mapper mapper)
+{
+    mapper.vtable->deinit(mapper.ptr);
+}
 
-void mapper_deinit(Mapper *mapper);
+static inline u8 mapper_read(Mapper mapper, const u8 *rom, size_t rom_len,
+                             u16 addr)
+{
+    return mapper.vtable->read(mapper.ptr, rom, rom_len, addr);
+}
 
-void mapper_destroy(Mapper *mapper);
+static inline void mapper_write(Mapper mapper, u16 addr, u8 value)
+{
+    mapper.vtable->write(mapper.ptr, addr, value);
+}
 
 #endif

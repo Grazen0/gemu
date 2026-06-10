@@ -63,19 +63,14 @@ void ring_sink_dump(RingSink *sink, int fd)
 {
     size_t cur = sink->head;
 
-    size_t i = 1;
-
     while (cur != sink->tail) {
         char *message = ring_sink_slot(sink, cur);
         size_t len = strnlen(message, sink->max_msg_len);
 
-        printf("%4zu: ", i);
-        fflush(stdout);
         write(fd, message, len);
         write(fd, "\n", 1);
 
         cur = (cur + 1) % sink->buf_len;
-        ++i;
     }
 }
 

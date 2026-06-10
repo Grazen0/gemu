@@ -1108,8 +1108,6 @@ static inline void cpu_instr_set_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
 static inline void cpu_instr_prefix(Cpu *cpu, Memory mem)
 {
     u8 opcode = cpu_read_pc(cpu, mem);
-    sink_log(cpu->sink, "{prefix} $%02X", opcode);
-    sink_log(cpu->sink, "    prefixed (opcode = $%02X)", opcode);
 
     u8 x = opcode >> 6;
     u8 y = (opcode >> 3) & 0b111;

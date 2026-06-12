@@ -1,12 +1,11 @@
 #include "mapper.h"
 #include "cart.h"
-#include "log.h"
 #include "util.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 
-void mapper_box_deinit(Mapper *mapper)
+void mapper_box_deinit(Mapper mapper[static 1])
 {
     mapper->vtable->deinit(mapper->ptr);
     free(mapper->ptr);
@@ -17,8 +16,8 @@ static void no_mbc_deinit_v([[maybe_unused]] void *ptr)
 {
 }
 
-static u8 no_mbc_read_v([[maybe_unused]] void *ptr, const u8 *rom,
-                        size_t rom_len, u16 addr)
+static u8 no_mbc_read_v([[maybe_unused]] void *ptr, size_t rom_len,
+                        const u8 rom[static rom_len], u16 addr)
 {
     if (addr < rom_len)
         return rom[addr];
@@ -67,7 +66,8 @@ static void mbc1_deinit_v(void *ptr)
     [[maybe_unused]] Mbc1Mapper *mapper = ptr;
 }
 
-static u8 mbc1_read_v(void *ptr, const u8 *rom, size_t rom_len, u16 addr)
+static u8 mbc1_read_v(void *ptr, size_t rom_len, const u8 rom[static rom_len],
+                      u16 addr)
 {
     Mbc1Mapper *mapper = ptr;
 
@@ -116,7 +116,7 @@ Mapper mapper_default()
     return no_mbc_mapper;
 }
 
-Mapper mapper_from_rom(const u8 *rom, size_t rom_len)
+Mapper mapper_from_rom(size_t rom_len, const u8 rom[static rom_len])
 {
     if (rom_len < 0x8000)
         BAIL("rom_len must be at least 0x8000 bytes long");

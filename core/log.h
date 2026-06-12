@@ -15,18 +15,18 @@ typedef enum : u8 {
     LOG_LEVEL_COUNT,
 } LogLevel;
 
-[[nodiscard]] bool log_level_from_str(const char *str, LogLevel *out);
+[[nodiscard]] bool log_level_from_str(const char str[static 1], LogLevel out[static 1]);
 
 void logger_set_level(LogLevel log_level);
 
-[[gnu::format(printf, 1, 2)]] void log_trace(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_trace(const char format[static 1], ...);
 
-[[gnu::format(printf, 1, 2)]] void log_debug(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_debug(const char format[static 1], ...);
 
-[[gnu::format(printf, 1, 2)]] void log_info(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_info(const char format[static 1], ...);
 
-[[gnu::format(printf, 1, 2)]] void log_warn(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_warn(const char format[static 1], ...);
 
-[[gnu::format(printf, 1, 2)]] void log_error(const char *format, ...);
+[[gnu::format(printf, 1, 2)]] void log_error(const char format[static 1], ...);
 
 #endif

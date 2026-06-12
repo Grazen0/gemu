@@ -5,14 +5,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-void sink_box_deinit(Sink *sink)
+void sink_box_deinit(Sink sink[static 1])
 {
     sink_deinit(*sink);
     free(sink->ptr);
     sink->ptr = nullptr;
 }
 
-void sink_log(Sink sink, const char format[], ...)
+void sink_log(Sink sink, const char format[static 1], ...)
 {
     va_list args;
     va_start(args, format);
@@ -37,19 +37,19 @@ RingSink ring_sink_init(size_t buf_size, size_t max_msg_size)
     };
 }
 
-void ring_sink_deinit(RingSink *sink)
+void ring_sink_deinit(RingSink sink[static 1])
 {
     free(sink->buf);
     sink->buf = nullptr;
 }
 
-static char *ring_sink_slot(RingSink *sink, size_t idx)
+static char *ring_sink_slot(RingSink sink[static 1], size_t idx)
 {
     assert(idx < sink->buf_len);
     return &sink->buf[idx * sink->max_msg_len];
 }
 
-void ring_sink_vlog(RingSink *sink, const char format[], va_list args)
+void ring_sink_vlog(RingSink sink[static 1], const char format[static 1], va_list args)
 {
     char *message = ring_sink_slot(sink, sink->tail);
     vsnprintf(message, sink->max_msg_len, format, args);
@@ -59,7 +59,7 @@ void ring_sink_vlog(RingSink *sink, const char format[], va_list args)
         sink->head = (sink->head + 1) % sink->buf_len;
 }
 
-void ring_sink_dump(RingSink *sink, int fd)
+void ring_sink_dump(RingSink sink[static 1], int fd)
 {
     size_t cur = sink->head;
 
@@ -74,7 +74,7 @@ void ring_sink_dump(RingSink *sink, int fd)
     }
 }
 
-static void ring_sink_vlog_v(void *sink, const char format[], va_list args)
+static void ring_sink_vlog_v(void *sink, const char format[static 1], va_list args)
 {
     ring_sink_vlog(sink, format, args);
 }

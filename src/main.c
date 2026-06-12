@@ -47,7 +47,7 @@ static Args args_init()
     };
 }
 
-static bool parse_args(int argc, char **argv, Args *out_args)
+static bool parse_args(int argc, char *argv[static 1], Args out_args[static 1])
 {
     *out_args = args_init();
 
@@ -81,7 +81,7 @@ static bool parse_args(int argc, char **argv, Args *out_args)
     return true;
 }
 
-static u8 *load_file(const char filename[], size_t *data_size)
+static u8 *load_file(const char filename[static 1], size_t *data_size)
 {
     FILE *file = fopen(filename, "r");
     if (file == nullptr)
@@ -107,7 +107,7 @@ cleanup:
     return data;
 }
 
-static u8 *load_boot_rom(const char filename[])
+static u8 *load_boot_rom(const char filename[static 1])
 {
 
     size_t boot_rom_len = 0;
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
     signal(SIGBUS, crash_handler);
 
     GameBoy gb = gb_init(ring_sink_as_sink(&ring_sink), boot_rom);
-    gb_load_rom(&gb, rom, rom_len);
+    gb_load_rom(&gb, rom_len, rom);
 
     Scheduler sched = sched_init();
 

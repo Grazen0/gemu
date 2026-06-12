@@ -27,7 +27,7 @@ static long double sdl_get_performance_time()
            SDL_GetPerformanceFrequency();
 }
 
-static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key)
+static bool *map_joypad_btn(JoypadButtons joypad[static 1], SDL_Keycode key)
 {
     switch (key) {
         case SDLK_RETURN:
@@ -51,7 +51,7 @@ static bool *map_joypad_btn(JoypadButtons *joypad, SDL_Keycode key)
     }
 }
 
-static void handle_event(State *state, const SDL_Event *event)
+static void handle_event(State state[static 1], const SDL_Event event[static 1])
 {
     switch (event->type) {
         case SDL_EVENT_QUIT:
@@ -82,8 +82,8 @@ static void handle_event(State *state, const SDL_Event *event)
     }
 }
 
-static void state_update_texture(const GameBoy *gb, SDL_Texture *texture,
-                                 const u32 palette[])
+static void state_update_texture(const GameBoy gb[static 1], SDL_Texture texture[static 1],
+                                 const u32 palette[static 1])
 {
     SDL_Surface *surface = nullptr;
     assert(SDL_LockTextureToSurface(texture, nullptr, &surface));
@@ -107,8 +107,8 @@ static void state_update_texture(const GameBoy *gb, SDL_Texture *texture,
     surface = nullptr;
 }
 
-static void render(const State *state, SDL_Renderer *renderer,
-                   SDL_Texture *texture, const u32 palette[])
+static void render(const State state[static 1], SDL_Renderer renderer[static 1],
+                   SDL_Texture texture[static 1], const u32 palette[static 1])
 {
     FitRect fit =
         fit_rect_to_ratio(0, 0, (float)state->window_width,
@@ -120,7 +120,7 @@ static void render(const State *state, SDL_Renderer *renderer,
     SDL_RenderPresent(renderer);
 }
 
-static State state_init(GameBoy *gb, SDL_Window *window)
+static State state_init(GameBoy gb[static 1], SDL_Window window[static 1])
 {
     int window_width = 0;
     int window_height = 0;
@@ -134,7 +134,7 @@ static State state_init(GameBoy *gb, SDL_Window *window)
     };
 }
 
-static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[])
+static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[static 1])
 
 {
     assert(out_palette != nullptr);
@@ -146,8 +146,8 @@ static void build_rgb_palette(SDL_PixelFormat format, u32 out_palette[])
     }
 }
 
-static void run_frame_loop(State *state, Scheduler *sched,
-                           SDL_Renderer *renderer, SDL_Texture *texture)
+static void run_frame_loop(State state[static 1], Scheduler sched[static 1],
+                           SDL_Renderer renderer[static 1], SDL_Texture texture[static 1])
 {
     u32 palette[PALETTE_RGB_LEN] = {};
     build_rgb_palette(texture->format, palette);
@@ -175,7 +175,7 @@ static void run_frame_loop(State *state, Scheduler *sched,
     }
 }
 
-static int run(GameBoy *gb, Scheduler *sched)
+static int run(GameBoy gb[static 1], Scheduler sched[static 1])
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         log_error("Could not read initialize video: %s", SDL_GetError());

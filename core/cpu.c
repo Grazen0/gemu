@@ -106,7 +106,7 @@ Cpu cpu_init(Sink sink)
     };
 }
 
-static bool cpu_read_cc(const Cpu *cpu, CpuTableCc cc)
+static bool cpu_read_cc(const Cpu cpu[static 1], CpuTableCc cc)
 {
     switch (cc) {
         case CC_NZ:
@@ -122,7 +122,7 @@ static bool cpu_read_cc(const Cpu *cpu, CpuTableCc cc)
     unreachable();
 }
 
-static u16 cpu_read_rp(const Cpu *cpu, CpuTableRp rp)
+static u16 cpu_read_rp(const Cpu cpu[static 1], CpuTableRp rp)
 {
     switch (rp) {
         case RP_BC:
@@ -138,7 +138,7 @@ static u16 cpu_read_rp(const Cpu *cpu, CpuTableRp rp)
     unreachable();
 }
 
-static void cpu_write_rp(Cpu *cpu, CpuTableRp rp, u16 value)
+static void cpu_write_rp(Cpu cpu[static 1], CpuTableRp rp, u16 value)
 {
     switch (rp) {
         case RP_BC:
@@ -161,7 +161,7 @@ static void cpu_write_rp(Cpu *cpu, CpuTableRp rp, u16 value)
     unreachable();
 }
 
-static u16 cpu_read_rp2(const Cpu *cpu, CpuTableRp rp)
+static u16 cpu_read_rp2(const Cpu cpu[static 1], CpuTableRp rp)
 {
     switch (rp) {
         case RP2_BC:
@@ -177,7 +177,7 @@ static u16 cpu_read_rp2(const Cpu *cpu, CpuTableRp rp)
     unreachable();
 }
 
-void cpu_write_rp2(Cpu *cpu, CpuTableRp rp, u16 value)
+void cpu_write_rp2(Cpu cpu[static 1], CpuTableRp rp, u16 value)
 {
     switch (rp) {
         case RP2_BC:
@@ -201,60 +201,60 @@ void cpu_write_rp2(Cpu *cpu, CpuTableRp rp, u16 value)
     unreachable();
 }
 
-static u8 cpu_read_mem(Cpu *cpu, Memory mem, u16 addr)
+static u8 cpu_read_mem(Cpu cpu[static 1], Memory mem, u16 addr)
 {
     cpu->mcycle_cnt++;
     return mem_read(mem, addr);
 }
 
-static u16 cpu_read_mem_u16(Cpu *cpu, Memory mem, u16 addr)
+static u16 cpu_read_mem_u16(Cpu cpu[static 1], Memory mem, u16 addr)
 {
     u8 lo = cpu_read_mem(cpu, mem, addr);
     u8 hi = cpu_read_mem(cpu, mem, addr + 1);
     return concat_u16(hi, lo);
 }
 
-static void cpu_write_mem(Cpu *cpu, Memory mem, u16 addr, u8 value)
+static void cpu_write_mem(Cpu cpu[static 1], Memory mem, u16 addr, u8 value)
 {
     cpu->mcycle_cnt++;
     mem_write(mem, addr, value);
 }
 
-static void cpu_write_mem_u16(Cpu *cpu, Memory mem, u16 addr, u16 value)
+static void cpu_write_mem_u16(Cpu cpu[static 1], Memory mem, u16 addr, u16 value)
 {
     cpu_write_mem(cpu, mem, addr, value & 0xFF);
     cpu_write_mem(cpu, mem, addr + 1, value >> 8);
 }
 
-static u8 cpu_read_pc(Cpu *cpu, Memory mem)
+static u8 cpu_read_pc(Cpu cpu[static 1], Memory mem)
 {
     u8 value = cpu_read_mem(cpu, mem, cpu->pc);
     cpu->pc++;
     return value;
 }
 
-static u16 cpu_read_pc_u16(Cpu *cpu, Memory mem)
+static u16 cpu_read_pc_u16(Cpu cpu[static 1], Memory mem)
 {
     u16 value = cpu_read_mem_u16(cpu, mem, cpu->pc);
     cpu->pc += 2;
     return value;
 }
 
-static void cpu_stack_push_u16(Cpu *cpu, Memory mem, u16 value)
+static void cpu_stack_push_u16(Cpu cpu[static 1], Memory mem, u16 value)
 {
     cpu->sp -= 2;
     cpu_write_mem_u16(cpu, mem, cpu->sp, value);
     cpu->mcycle_cnt++;
 }
 
-static u16 cpu_stack_pop_u16(Cpu *cpu, Memory mem)
+static u16 cpu_stack_pop_u16(Cpu cpu[static 1], Memory mem)
 {
     u16 value = cpu_read_mem_u16(cpu, mem, cpu->sp);
     cpu->sp += 2;
     return value;
 }
 
-static u8 cpu_read_r(Cpu *cpu, Memory mem, CpuTableR r)
+static u8 cpu_read_r(Cpu cpu[static 1], Memory mem, CpuTableR r)
 {
     switch (r) {
         case R_B:
@@ -280,7 +280,7 @@ static u8 cpu_read_r(Cpu *cpu, Memory mem, CpuTableR r)
     unreachable();
 }
 
-static void cpu_write_r(Cpu *cpu, Memory mem, CpuTableR r, u8 value)
+static void cpu_write_r(Cpu cpu[static 1], Memory mem, CpuTableR r, u8 value)
 {
     switch (r) {
         case R_B:
@@ -314,7 +314,7 @@ static void cpu_write_r(Cpu *cpu, Memory mem, CpuTableR r, u8 value)
     unreachable();
 }
 
-static inline void cpu_instr_add_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_add_u8(Cpu cpu[static 1], u8 rhs)
 {
     u8 prev_a = cpu->a;
     cpu->a += rhs;
@@ -325,7 +325,7 @@ static inline void cpu_instr_add_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_Z, cpu->a == 0);
 }
 
-static inline void cpu_instr_adc_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_adc_u8(Cpu cpu[static 1], u8 rhs)
 {
     u8 prev_a = cpu->a;
     u8 carry = (cpu->f & CPU_FLAG_C) != 0;
@@ -338,7 +338,7 @@ static inline void cpu_instr_adc_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, result > 0xFF);
 }
 
-static inline void cpu_instr_sub_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_sub_u8(Cpu cpu[static 1], u8 rhs)
 {
     u8 prev_a = cpu->a;
     cpu->a -= rhs;
@@ -349,7 +349,7 @@ static inline void cpu_instr_sub_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, rhs > prev_a);
 }
 
-static inline void cpu_instr_sbc_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_sbc_u8(Cpu cpu[static 1], u8 rhs)
 {
     u8 prev_a = cpu->a;
     u8 borrow = (cpu->f & CPU_FLAG_C) != 0;
@@ -361,7 +361,7 @@ static inline void cpu_instr_sbc_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, prev_a < (u16)rhs + borrow);
 }
 
-static inline void cpu_instr_and_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_and_u8(Cpu cpu[static 1], u8 rhs)
 {
     cpu->a &= rhs;
     set_bits(&cpu->f, CPU_FLAG_Z, cpu->a == 0);
@@ -370,7 +370,7 @@ static inline void cpu_instr_and_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, false);
 }
 
-static inline void cpu_instr_xor_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_xor_u8(Cpu cpu[static 1], u8 rhs)
 {
     cpu->a ^= rhs;
     set_bits(&cpu->f, CPU_FLAG_Z, cpu->a == 0);
@@ -379,7 +379,7 @@ static inline void cpu_instr_xor_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, false);
 }
 
-static inline void cpu_instr_or_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_or_u8(Cpu cpu[static 1], u8 rhs)
 {
     cpu->a |= rhs;
     set_bits(&cpu->f, CPU_FLAG_Z, cpu->a == 0);
@@ -388,7 +388,7 @@ static inline void cpu_instr_or_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, false);
 }
 
-static inline void cpu_instr_cp_u8(Cpu *cpu, u8 rhs)
+static inline void cpu_instr_cp_u8(Cpu cpu[static 1], u8 rhs)
 {
     set_bits(&cpu->f, CPU_FLAG_Z, cpu->a == rhs);
     set_bits(&cpu->f, CPU_FLAG_N, true);
@@ -396,7 +396,7 @@ static inline void cpu_instr_cp_u8(Cpu *cpu, u8 rhs)
     set_bits(&cpu->f, CPU_FLAG_C, cpu->a < rhs);
 }
 
-static inline void cpu_instr_alu(Cpu *cpu, CpuTableAlu alu, u8 rhs)
+static inline void cpu_instr_alu(Cpu cpu[static 1], CpuTableAlu alu, u8 rhs)
 {
     // clang-format off
     switch (alu) {
@@ -413,12 +413,12 @@ static inline void cpu_instr_alu(Cpu *cpu, CpuTableAlu alu, u8 rhs)
     // clang-format on
 }
 
-static inline void cpu_instr_nop(const Cpu *cpu)
+static inline void cpu_instr_nop(const Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   nop", cpu->start_pc);
 }
 
-static inline void cpu_instr_ld_n16_sp(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_n16_sp(Cpu cpu[static 1], Memory mem)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   ld [$%04X], SP", cpu->start_pc, addr);
@@ -426,7 +426,7 @@ static inline void cpu_instr_ld_n16_sp(Cpu *cpu, Memory mem)
     cpu_write_mem_u16(cpu, mem, addr, cpu->sp);
 }
 
-static inline void cpu_instr_stop(Cpu *cpu)
+static inline void cpu_instr_stop(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   stop", cpu->start_pc);
     cpu->mode = CPU_MODE_STOPPED;
@@ -434,7 +434,7 @@ static inline void cpu_instr_stop(Cpu *cpu)
     log_warn("TODO: implement STOP instruction properly");
 }
 
-static inline void cpu_instr_jr_e8(Cpu *cpu, Memory mem)
+static inline void cpu_instr_jr_e8(Cpu cpu[static 1], Memory mem)
 {
     i8 offset = (i8)cpu_read_pc(cpu, mem);
     sink_log(cpu->sink, "%04X   jr %i", cpu->start_pc, offset);
@@ -443,7 +443,7 @@ static inline void cpu_instr_jr_e8(Cpu *cpu, Memory mem)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_jr_cc_e8(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_jr_cc_e8(Cpu cpu[static 1], Memory mem, u8 y)
 {
     u8 cc = y - 4;
     i8 offset = (i8)cpu_read_pc(cpu, mem);
@@ -455,7 +455,7 @@ static inline void cpu_instr_jr_cc_e8(Cpu *cpu, Memory mem, u8 y)
     }
 }
 
-static inline void cpu_instr_ld_r16_n16(Cpu *cpu, Memory mem, u8 p)
+static inline void cpu_instr_ld_r16_n16(Cpu cpu[static 1], Memory mem, u8 p)
 {
     u16 value = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   ld %s, $%04X", cpu->start_pc, NAME_RP[p],
@@ -464,7 +464,7 @@ static inline void cpu_instr_ld_r16_n16(Cpu *cpu, Memory mem, u8 p)
     cpu_write_rp(cpu, p, value);
 }
 
-static inline void cpu_instr_add_hl_r16(Cpu *cpu, u8 p)
+static inline void cpu_instr_add_hl_r16(Cpu cpu[static 1], u8 p)
 {
     sink_log(cpu->sink, "%04X   add hl, %s", cpu->start_pc, NAME_RP[p]);
 
@@ -480,7 +480,7 @@ static inline void cpu_instr_add_hl_r16(Cpu *cpu, u8 p)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_ld_bc_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_bc_a(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld [bc], a", cpu->start_pc);
 
@@ -488,7 +488,7 @@ static inline void cpu_instr_ld_bc_a(Cpu *cpu, Memory mem)
     cpu_write_mem(cpu, mem, bc, cpu->a);
 }
 
-static inline void cpu_instr_ld_de_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_de_a(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld [de], a", cpu->start_pc);
 
@@ -496,7 +496,7 @@ static inline void cpu_instr_ld_de_a(Cpu *cpu, Memory mem)
     cpu_write_mem(cpu, mem, de, cpu->a);
 }
 
-static inline void cpu_instr_ld_hli_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_hli_a(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld [hl+], a", cpu->start_pc);
 
@@ -505,7 +505,7 @@ static inline void cpu_instr_ld_hli_a(Cpu *cpu, Memory mem)
     cpu_write_rp(cpu, RP_HL, hl + 1);
 }
 
-static inline void cpu_instr_ld_hld_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_hld_a(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld [hl-], a", cpu->start_pc);
 
@@ -514,14 +514,14 @@ static inline void cpu_instr_ld_hld_a(Cpu *cpu, Memory mem)
     cpu_write_rp(cpu, RP_HL, hl - 1);
 }
 
-static inline void cpu_instr_ld_a_bc(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_a_bc(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld a, [bc]", cpu->start_pc);
     u16 bc = cpu_read_rp(cpu, RP_BC);
     cpu->a = cpu_read_mem(cpu, mem, bc);
 }
 
-static inline void cpu_instr_ld_a_de(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_a_de(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld a, [de]", cpu->start_pc);
 
@@ -529,7 +529,7 @@ static inline void cpu_instr_ld_a_de(Cpu *cpu, Memory mem)
     cpu->a = cpu_read_mem(cpu, mem, de);
 }
 
-static inline void cpu_instr_ld_a_hli(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_a_hli(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld a, [hl+]", cpu->start_pc);
 
@@ -538,7 +538,7 @@ static inline void cpu_instr_ld_a_hli(Cpu *cpu, Memory mem)
     cpu_write_rp(cpu, RP_HL, hl + 1);
 }
 
-static inline void cpu_instr_ld_a_hld(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_a_hld(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ld a, [hl-]", cpu->start_pc);
 
@@ -547,7 +547,7 @@ static inline void cpu_instr_ld_a_hld(Cpu *cpu, Memory mem)
     cpu_write_rp(cpu, RP_HL, hl - 1);
 }
 
-static inline void cpu_instr_inc_r16(Cpu *cpu, u8 p)
+static inline void cpu_instr_inc_r16(Cpu cpu[static 1], u8 p)
 {
     sink_log(cpu->sink, "%04X   inc %s", cpu->start_pc, NAME_RP[p]);
 
@@ -556,7 +556,7 @@ static inline void cpu_instr_inc_r16(Cpu *cpu, u8 p)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_dec_r16(Cpu *cpu, u8 p)
+static inline void cpu_instr_dec_r16(Cpu cpu[static 1], u8 p)
 {
     sink_log(cpu->sink, "%04X   dec %s", cpu->start_pc, NAME_RP[p]);
 
@@ -565,7 +565,7 @@ static inline void cpu_instr_dec_r16(Cpu *cpu, u8 p)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_inc_r8(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_inc_r8(Cpu cpu[static 1], Memory mem, u8 y)
 {
     sink_log(cpu->sink, "%04X   inc %s", cpu->start_pc, NAME_R[y]);
 
@@ -578,7 +578,7 @@ static inline void cpu_instr_inc_r8(Cpu *cpu, Memory mem, u8 y)
     set_bits(&cpu->f, CPU_FLAG_H, (new_value & 0xF) == 0);
 }
 
-static inline void cpu_instr_dec_r8(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_dec_r8(Cpu cpu[static 1], Memory mem, u8 y)
 {
     sink_log(cpu->sink, "%04X   dec %s", cpu->start_pc, NAME_R[y]);
 
@@ -591,7 +591,7 @@ static inline void cpu_instr_dec_r8(Cpu *cpu, Memory mem, u8 y)
     set_bits(&cpu->f, CPU_FLAG_H, (new_value & 0xF) == 0xF);
 }
 
-static inline void cpu_instr_ld_r8_n(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_ld_r8_n(Cpu cpu[static 1], Memory mem, u8 y)
 {
     u8 value = cpu_read_pc(cpu, mem);
     sink_log(cpu->sink, "%04X   ld %s, $%02X", cpu->start_pc, NAME_R[y], value);
@@ -599,7 +599,7 @@ static inline void cpu_instr_ld_r8_n(Cpu *cpu, Memory mem, u8 y)
     cpu_write_r(cpu, mem, y, value);
 }
 
-static inline void cpu_instr_rlca(Cpu *cpu)
+static inline void cpu_instr_rlca(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   rlca", cpu->start_pc);
 
@@ -612,7 +612,7 @@ static inline void cpu_instr_rlca(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_C, bit_7);
 }
 
-static inline void cpu_instr_rrca(Cpu *cpu)
+static inline void cpu_instr_rrca(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   rrca", cpu->start_pc);
 
@@ -625,7 +625,7 @@ static inline void cpu_instr_rrca(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_C, bit_0);
 }
 
-static inline void cpu_instr_rla(Cpu *cpu)
+static inline void cpu_instr_rla(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   rla", cpu->start_pc);
 
@@ -639,7 +639,7 @@ static inline void cpu_instr_rla(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_C, new_carry);
 }
 
-static inline void cpu_instr_rra(Cpu *cpu)
+static inline void cpu_instr_rra(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   rra", cpu->start_pc);
 
@@ -653,7 +653,7 @@ static inline void cpu_instr_rra(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_C, new_carry);
 }
 
-static inline void cpu_instr_daa(Cpu *cpu)
+static inline void cpu_instr_daa(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   daa", cpu->start_pc);
 
@@ -686,7 +686,7 @@ static inline void cpu_instr_daa(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_Z, cpu->a == 0);
 }
 
-static inline void cpu_instr_cpl(Cpu *cpu)
+static inline void cpu_instr_cpl(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   cpl", cpu->start_pc);
 
@@ -695,7 +695,7 @@ static inline void cpu_instr_cpl(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_H, true);
 }
 
-static inline void cpu_instr_scf(Cpu *cpu)
+static inline void cpu_instr_scf(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   scf", cpu->start_pc);
 
@@ -704,7 +704,7 @@ static inline void cpu_instr_scf(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_C, true);
 }
 
-static inline void cpu_instr_ccf(Cpu *cpu)
+static inline void cpu_instr_ccf(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   ccf", cpu->start_pc);
 
@@ -713,7 +713,7 @@ static inline void cpu_instr_ccf(Cpu *cpu)
     set_bits(&cpu->f, CPU_FLAG_C, !(cpu->f & CPU_FLAG_C));
 }
 
-static inline void cpu_instr_halt(Cpu *cpu)
+static inline void cpu_instr_halt(Cpu cpu[static 1])
 {
     if (!cpu->ime)
         BAIL("TODO: implement HALT bug");
@@ -722,7 +722,7 @@ static inline void cpu_instr_halt(Cpu *cpu)
     cpu->mode = CPU_MODE_HALTED;
 }
 
-static inline void cpu_instr_ld_r8_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
+static inline void cpu_instr_ld_r8_r8(Cpu cpu[static 1], Memory mem, u8 y, u8 z)
 {
     u8 value = cpu_read_r(cpu, mem, z);
     sink_log(cpu->sink, "%04X   ld %s, %s", cpu->start_pc, NAME_R[y],
@@ -731,7 +731,7 @@ static inline void cpu_instr_ld_r8_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
     cpu_write_r(cpu, mem, y, value);
 }
 
-static inline void cpu_instr_alu_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
+static inline void cpu_instr_alu_r8(Cpu cpu[static 1], Memory mem, u8 y, u8 z)
 {
 
     sink_log(cpu->sink, "%04X   %s a, %s", cpu->start_pc, NAME_ALU[y],
@@ -741,7 +741,7 @@ static inline void cpu_instr_alu_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
     cpu_instr_alu(cpu, y, rhs);
 }
 
-static inline void cpu_instr_ldh_n16_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ldh_n16_a(Cpu cpu[static 1], Memory mem)
 {
     u8 offset = cpu_read_pc(cpu, mem);
     sink_log(cpu->sink, "%04X   ldh [$%02X], a", cpu->start_pc, offset);
@@ -750,7 +750,7 @@ static inline void cpu_instr_ldh_n16_a(Cpu *cpu, Memory mem)
     cpu_write_mem(cpu, mem, addr, cpu->a);
 }
 
-static inline void cpu_instr_add_sp_e8(Cpu *cpu, Memory mem)
+static inline void cpu_instr_add_sp_e8(Cpu cpu[static 1], Memory mem)
 {
     u8 offset_u8 = (i8)cpu_read_pc(cpu, mem);
     i8 offset = (i8)offset_u8;
@@ -765,7 +765,7 @@ static inline void cpu_instr_add_sp_e8(Cpu *cpu, Memory mem)
     cpu->mcycle_cnt += 2;
 }
 
-static inline void cpu_instr_ldh_a_n16(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ldh_a_n16(Cpu cpu[static 1], Memory mem)
 {
     u8 offset = cpu_read_pc(cpu, mem);
     sink_log(cpu->sink, "%04X   ldh a, [$%02X]", cpu->start_pc, offset);
@@ -774,7 +774,7 @@ static inline void cpu_instr_ldh_a_n16(Cpu *cpu, Memory mem)
     cpu->a = cpu_read_mem(cpu, mem, addr);
 }
 
-static inline void cpu_instr_ld_hl_sp_plus_e8(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_hl_sp_plus_e8(Cpu cpu[static 1], Memory mem)
 {
     u8 offset_u8 = (i8)cpu_read_pc(cpu, mem);
     i8 offset = (i8)offset_u8;
@@ -789,7 +789,7 @@ static inline void cpu_instr_ld_hl_sp_plus_e8(Cpu *cpu, Memory mem)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_ret_cc(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_ret_cc(Cpu cpu[static 1], Memory mem, u8 y)
 {
     sink_log(cpu->sink, "%04X   ret %s", cpu->start_pc, NAME_CC[y]);
 
@@ -800,7 +800,7 @@ static inline void cpu_instr_ret_cc(Cpu *cpu, Memory mem, u8 y)
     }
 }
 
-static inline void cpu_instr_pop_r16(Cpu *cpu, Memory mem, u8 p)
+static inline void cpu_instr_pop_r16(Cpu cpu[static 1], Memory mem, u8 p)
 {
     sink_log(cpu->sink, "%04X   pop %s", cpu->start_pc, NAME_RP2[p]);
 
@@ -808,7 +808,7 @@ static inline void cpu_instr_pop_r16(Cpu *cpu, Memory mem, u8 p)
     cpu_write_rp2(cpu, p, value);
 }
 
-static inline void cpu_instr_ret(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ret(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ret", cpu->start_pc);
 
@@ -816,7 +816,7 @@ static inline void cpu_instr_ret(Cpu *cpu, Memory mem)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_reti(Cpu *cpu, Memory mem)
+static inline void cpu_instr_reti(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   reti", cpu->start_pc);
 
@@ -825,14 +825,14 @@ static inline void cpu_instr_reti(Cpu *cpu, Memory mem)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_jp_hl(Cpu *cpu)
+static inline void cpu_instr_jp_hl(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   jp hl", cpu->start_pc);
 
     cpu->pc = cpu_read_rp(cpu, RP_HL);
 }
 
-static inline void cpu_instr_ld_sp_hl(Cpu *cpu)
+static inline void cpu_instr_ld_sp_hl(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   ld sp, hl", cpu->start_pc);
 
@@ -840,7 +840,7 @@ static inline void cpu_instr_ld_sp_hl(Cpu *cpu)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_ldh_c_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ldh_c_a(Cpu cpu[static 1], Memory mem)
 {
     sink_log(cpu->sink, "%04X   ldh [c], a", cpu->start_pc);
 
@@ -848,7 +848,7 @@ static inline void cpu_instr_ldh_c_a(Cpu *cpu, Memory mem)
     cpu_write_mem(cpu, mem, addr, cpu->a);
 }
 
-static inline void cpu_instr_ld_a16_a(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_a16_a(Cpu cpu[static 1], Memory mem)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   ld [$%04X], a", cpu->start_pc, addr);
@@ -856,7 +856,7 @@ static inline void cpu_instr_ld_a16_a(Cpu *cpu, Memory mem)
     cpu_write_mem(cpu, mem, addr, cpu->a);
 }
 
-static inline void cpu_instr_ldh_a_c(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ldh_a_c(Cpu cpu[static 1], Memory mem)
 {
     u16 addr = 0xFF00 + cpu->c;
     sink_log(cpu->sink, "%04X   ld a, [c]", cpu->start_pc);
@@ -864,7 +864,7 @@ static inline void cpu_instr_ldh_a_c(Cpu *cpu, Memory mem)
     cpu->a = cpu_read_mem(cpu, mem, addr);
 }
 
-static inline void cpu_instr_ld_a_a16(Cpu *cpu, Memory mem)
+static inline void cpu_instr_ld_a_a16(Cpu cpu[static 1], Memory mem)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   ld a, [$%04X]", cpu->start_pc, addr);
@@ -872,7 +872,7 @@ static inline void cpu_instr_ld_a_a16(Cpu *cpu, Memory mem)
     cpu->a = cpu_read_mem(cpu, mem, addr);
 }
 
-static inline void cpu_instr_jp_cc_a16(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_jp_cc_a16(Cpu cpu[static 1], Memory mem, u8 y)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   jp %s, $%04X", cpu->start_pc, NAME_CC[y], addr);
@@ -883,7 +883,7 @@ static inline void cpu_instr_jp_cc_a16(Cpu *cpu, Memory mem, u8 y)
     }
 }
 
-static inline void cpu_instr_jp_a16(Cpu *cpu, Memory mem)
+static inline void cpu_instr_jp_a16(Cpu cpu[static 1], Memory mem)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   jp $%04X", cpu->pc - 3, addr);
@@ -892,7 +892,7 @@ static inline void cpu_instr_jp_a16(Cpu *cpu, Memory mem)
     cpu->mcycle_cnt++;
 }
 
-static inline void cpu_instr_di(Cpu *cpu)
+static inline void cpu_instr_di(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   di", cpu->start_pc);
 
@@ -900,14 +900,14 @@ static inline void cpu_instr_di(Cpu *cpu)
     cpu->queued_ime = false;
 }
 
-static inline void cpu_instr_ei(Cpu *cpu)
+static inline void cpu_instr_ei(Cpu cpu[static 1])
 {
     sink_log(cpu->sink, "%04X   ei", cpu->start_pc);
 
     cpu->queued_ime = true;
 }
 
-static inline void cpu_instr_call_cc_n16(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_call_cc_n16(Cpu cpu[static 1], Memory mem, u8 y)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   call %s, $%04X", cpu->start_pc, NAME_CC[y],
@@ -919,7 +919,7 @@ static inline void cpu_instr_call_cc_n16(Cpu *cpu, Memory mem, u8 y)
     }
 }
 
-static inline void cpu_instr_push_r16(Cpu *cpu, Memory mem, u8 p)
+static inline void cpu_instr_push_r16(Cpu cpu[static 1], Memory mem, u8 p)
 {
     sink_log(cpu->sink, "%04X   push %s", cpu->start_pc, NAME_RP2[p]);
 
@@ -927,7 +927,7 @@ static inline void cpu_instr_push_r16(Cpu *cpu, Memory mem, u8 p)
     cpu_stack_push_u16(cpu, mem, value);
 }
 
-static inline void cpu_instr_call_n16(Cpu *cpu, Memory mem)
+static inline void cpu_instr_call_n16(Cpu cpu[static 1], Memory mem)
 {
     u16 addr = cpu_read_pc_u16(cpu, mem);
     sink_log(cpu->sink, "%04X   call $%04X (sp = %04X)", cpu->start_pc, addr,
@@ -937,7 +937,7 @@ static inline void cpu_instr_call_n16(Cpu *cpu, Memory mem)
     cpu->pc = addr;
 }
 
-static inline void cpu_instr_alu_a_a8(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_alu_a_a8(Cpu cpu[static 1], Memory mem, u8 y)
 {
     u8 rhs = cpu_read_pc(cpu, mem);
     sink_log(cpu->sink, "%04X   %s a, $%02X", cpu->start_pc, NAME_ALU[y], rhs);
@@ -945,7 +945,7 @@ static inline void cpu_instr_alu_a_a8(Cpu *cpu, Memory mem, u8 y)
     cpu_instr_alu(cpu, y, rhs);
 }
 
-static inline void cpu_instr_rst_vec(Cpu *cpu, Memory mem, u8 y)
+static inline void cpu_instr_rst_vec(Cpu cpu[static 1], Memory mem, u8 y)
 {
     sink_log(cpu->sink, "%04X   rst $%02X", cpu->start_pc, y * 8);
 
@@ -953,7 +953,7 @@ static inline void cpu_instr_rst_vec(Cpu *cpu, Memory mem, u8 y)
     cpu->pc = y << 3;
 }
 
-static inline void cpu_instr_rlc_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_rlc_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   rlc %s", cpu->start_pc, NAME_R[z]);
 
@@ -968,7 +968,7 @@ static inline void cpu_instr_rlc_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, bit_7);
 }
 
-static inline void cpu_instr_rrc_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_rrc_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   rrc %s", cpu->start_pc, NAME_R[z]);
 
@@ -983,7 +983,7 @@ static inline void cpu_instr_rrc_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, bit_0);
 }
 
-static inline void cpu_instr_rl_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_rl_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   rl %s", cpu->start_pc, NAME_R[z]);
 
@@ -1000,7 +1000,7 @@ static inline void cpu_instr_rl_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, new_carry);
 }
 
-static inline void cpu_instr_rr_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_rr_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   rr %s", cpu->start_pc, NAME_R[z]);
 
@@ -1017,7 +1017,7 @@ static inline void cpu_instr_rr_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, new_carry);
 }
 
-static inline void cpu_instr_sla_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_sla_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   sla %s", cpu->start_pc, NAME_R[z]);
 
@@ -1032,7 +1032,7 @@ static inline void cpu_instr_sla_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, bit_7);
 }
 
-static inline void cpu_instr_sra_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_sra_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   sra %s", cpu->start_pc, NAME_R[z]);
 
@@ -1048,7 +1048,7 @@ static inline void cpu_instr_sra_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, bit_0);
 }
 
-static inline void cpu_instr_swap_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_swap_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   swap %s", cpu->start_pc, NAME_R[z]);
 
@@ -1064,7 +1064,7 @@ static inline void cpu_instr_swap_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, false);
 }
 
-static inline void cpu_instr_srl_r8(Cpu *cpu, Memory mem, u8 z)
+static inline void cpu_instr_srl_r8(Cpu cpu[static 1], Memory mem, u8 z)
 {
     sink_log(cpu->sink, "%04X   srl %s", cpu->start_pc, NAME_R[z]);
 
@@ -1079,7 +1079,7 @@ static inline void cpu_instr_srl_r8(Cpu *cpu, Memory mem, u8 z)
     set_bits(&cpu->f, CPU_FLAG_C, bit_0);
 }
 
-static inline void cpu_instr_bit_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
+static inline void cpu_instr_bit_u3_r8(Cpu cpu[static 1], Memory mem, u8 y, u8 z)
 {
     sink_log(cpu->sink, "%04X   bit %d,%s", cpu->start_pc, y, NAME_R[z]);
 
@@ -1089,7 +1089,7 @@ static inline void cpu_instr_bit_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
     set_bits(&cpu->f, CPU_FLAG_H, true);
 }
 
-static inline void cpu_instr_res_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
+static inline void cpu_instr_res_u3_r8(Cpu cpu[static 1], Memory mem, u8 y, u8 z)
 {
     sink_log(cpu->sink, "%04X   res %d,%s", cpu->start_pc, y, NAME_R[z]);
 
@@ -1097,7 +1097,7 @@ static inline void cpu_instr_res_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
     cpu_write_r(cpu, mem, z, value & ~(1 << y));
 }
 
-static inline void cpu_instr_set_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
+static inline void cpu_instr_set_u3_r8(Cpu cpu[static 1], Memory mem, u8 y, u8 z)
 {
     sink_log(cpu->sink, "%04X   set %d,%s", cpu->start_pc, y, NAME_R[z]);
 
@@ -1105,7 +1105,7 @@ static inline void cpu_instr_set_u3_r8(Cpu *cpu, Memory mem, u8 y, u8 z)
     cpu_write_r(cpu, mem, z, value | (1 << y));
 }
 
-static inline void cpu_instr_prefix(Cpu *cpu, Memory mem)
+static inline void cpu_instr_prefix(Cpu cpu[static 1], Memory mem)
 {
     u8 opcode = cpu_read_pc(cpu, mem);
 
@@ -1136,7 +1136,7 @@ static inline void cpu_instr_prefix(Cpu *cpu, Memory mem)
     // clang-format on
 }
 
-void cpu_execute(Cpu *cpu, Memory mem, u8 opcode)
+void cpu_execute(Cpu cpu[static 1], Memory mem, u8 opcode)
 {
     // Credit:
     // https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html
@@ -1308,7 +1308,7 @@ void cpu_execute(Cpu *cpu, Memory mem, u8 opcode)
     }
 }
 
-void cpu_step(Cpu *cpu, Memory mem)
+void cpu_step(Cpu cpu[static 1], Memory mem)
 {
     if (cpu->mode != CPU_MODE_RUNNING) {
         ++cpu->mcycle_cnt; // Makes the frontend work lmao
@@ -1325,7 +1325,7 @@ void cpu_step(Cpu *cpu, Memory mem)
     cpu_execute(cpu, mem, opcode);
 }
 
-bool cpu_interrupt(Cpu *cpu, Memory mem, u8 handler_location)
+bool cpu_interrupt(Cpu cpu[static 1], Memory mem, u8 handler_location)
 {
     if (!cpu->ime)
         return false;

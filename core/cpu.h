@@ -57,8 +57,8 @@ typedef struct {
 
 [[nodiscard]] Cpu cpu_init(Sink sink);
 
-void cpu_step(Cpu *cpu, Memory mem);
+void cpu_step(Cpu cpu[static 1], Memory mem);
 
-bool cpu_interrupt(Cpu *cpu, Memory mem, u8 handler_location);
+bool cpu_interrupt(Cpu cpu[static 1], Memory mem, u8 handler_location);
 
 #endif

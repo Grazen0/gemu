@@ -49,12 +49,12 @@ static void queue_deinit(EventQueue *queue)
     *queue = queue_init();
 }
 
-[[nodiscard]] static bool queue_is_empty(const EventQueue *queue)
+[[nodiscard]] static bool queue_is_empty(const EventQueue queue[static 1])
 {
     return queue->len == 0;
 }
 
-static void queue_grow(EventQueue *queue)
+static void queue_grow(EventQueue queue[static 1])
 {
     static size_t INIT_CAPACITY = 32;
 
@@ -69,7 +69,7 @@ static void queue_grow(EventQueue *queue)
     queue->capacity = new_capacity;
 }
 
-static void queue_bubble_down(EventQueue *queue, size_t idx)
+static void queue_bubble_down(EventQueue queue[static 1], size_t idx)
 {
     assert(idx < queue->len);
 
@@ -97,7 +97,7 @@ static void queue_bubble_down(EventQueue *queue, size_t idx)
     queue->items[idx] = event;
 }
 
-static void queue_bubble_up(EventQueue *queue, size_t idx)
+static void queue_bubble_up(EventQueue queue[static 1], size_t idx)
 {
     assert(idx < queue->len);
 
@@ -130,7 +130,7 @@ static void queue_add(EventQueue *queue, u64 time, EventKind kind)
     queue_bubble_up(queue, queue->len - 1);
 }
 
-static const Event *queue_peek(const EventQueue *queue)
+static const Event *queue_peek(const EventQueue queue[static 1])
 {
     if (queue_is_empty(queue))
         return nullptr;
@@ -138,7 +138,7 @@ static const Event *queue_peek(const EventQueue *queue)
     return &queue->items[0];
 }
 
-static Event queue_remove(EventQueue *queue)
+static Event queue_remove(EventQueue queue[static 1])
 {
     assert(queue->len > 0);
 
@@ -172,7 +172,7 @@ void sched_deinit(Scheduler *sched)
     queue_deinit(&sched->queue);
 }
 
-u64 sched_cur_time(const Scheduler *sched)
+u64 sched_cur_time(const Scheduler sched[static 1])
 {
     const Event *next_event = queue_peek(&sched->queue);
     assert(next_event != nullptr);
@@ -180,7 +180,7 @@ u64 sched_cur_time(const Scheduler *sched)
     return next_event->time;
 }
 
-void sched_dispatch(Scheduler *sched, GameBoy *gb)
+void sched_dispatch(Scheduler sched[static 1], GameBoy gb[static 1])
 {
     static u64 (*const DISPATCHERS[])(GameBoy *) = {
         [EVENT_CPU_INSTR] = gb_dispatch_cpu_instr,
@@ -215,7 +215,7 @@ void sched_dispatch(Scheduler *sched, GameBoy *gb)
     }
 }
 
-void sched_dispatch_until(Scheduler *sched, GameBoy *gb, u64 until)
+void sched_dispatch_until(Scheduler sched[static 1], GameBoy gb[static 1], u64 until)
 {
     while (sched_cur_time(sched) < until)
         sched_dispatch(sched, gb);

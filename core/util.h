@@ -20,12 +20,12 @@
     } while (0)
 
 #define DECL_UPCASTS(Derived, derived, Base, base) \
-    Base derived##_as_##base(Derived *derived);    \
+    Base derived##_as_##base(Derived derived[static 1]); \
     Base derived##_into_##base(Derived base);
 
 #define IMPL_UPCASTS(Derived, derived, Base, base, ...)         \
     static const Base##VTable derived##_vtable = {__VA_ARGS__}; \
-    Base derived##_as_##base(Derived *derived)                  \
+    Base derived##_as_##base(Derived derived[static 1])         \
     {                                                           \
         return (Base){                                          \
             .ptr = derived,                                     \
@@ -58,7 +58,7 @@ typedef int64_t i64;
     return ((u16)hi << 8) | (u16)lo;
 }
 
-static inline void set_bits(u8 *dest, u8 mask, bool value)
+static inline void set_bits(u8 dest[static 1], u8 mask, bool value)
 {
     if (value)
         *dest |= mask;

@@ -21,10 +21,10 @@ typedef struct {
 
 void sched_deinit(Scheduler *sched);
 
-[[nodiscard]] u64 sched_cur_time(const Scheduler *sched);
+[[nodiscard]] u64 sched_cur_time(const Scheduler sched[static 1]);
 
-void sched_dispatch(Scheduler *sched, GameBoy *gb);
+void sched_dispatch(Scheduler sched[static 1], GameBoy gb[static 1]);
 
-void sched_dispatch_until(Scheduler *sched, GameBoy *gb, u64 until);
+void sched_dispatch_until(Scheduler sched[static 1], GameBoy gb[static 1], u64 until);
 
 #endif

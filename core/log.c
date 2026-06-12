@@ -30,7 +30,7 @@ static const char *log_level_label(LogLevel level)
     return LABELS[level];
 }
 
-static void log_ctx_vlog(LoggerContext *ctx, LogLevel level, const char *format,
+static void log_ctx_vlog(LoggerContext ctx[static 1], LogLevel level, const char format[static 1],
                          va_list args)
 {
     if (level > ctx->level)
@@ -44,7 +44,7 @@ static void log_ctx_vlog(LoggerContext *ctx, LogLevel level, const char *format,
     fputc('\n', stream);
 }
 
-bool log_level_from_str(const char *str, LogLevel *out)
+bool log_level_from_str(const char str[static 1], LogLevel out[static 1])
 {
     static const struct {
         const char *name;
@@ -73,7 +73,7 @@ static LoggerContext global_ctx = {
     .level = LOG_LEVEL_INFO,
 };
 
-static void vlog(LogLevel level, const char *format, va_list args)
+static void vlog(LogLevel level, const char format[static 1], va_list args)
 {
     log_ctx_vlog(&global_ctx, level, format, args);
 }
@@ -83,7 +83,7 @@ void logger_set_level(LogLevel level)
     global_ctx.level = level;
 }
 
-void log_trace(const char *format, ...)
+void log_trace(const char format[static 1], ...)
 {
     va_list args;
     va_start(args, format);
@@ -91,7 +91,7 @@ void log_trace(const char *format, ...)
     va_end(args);
 }
 
-void log_debug(const char *format, ...)
+void log_debug(const char format[static 1], ...)
 {
     va_list args;
     va_start(args, format);
@@ -99,7 +99,7 @@ void log_debug(const char *format, ...)
     va_end(args);
 }
 
-void log_info(const char *format, ...)
+void log_info(const char format[static 1], ...)
 {
     va_list args;
     va_start(args, format);
@@ -107,7 +107,7 @@ void log_info(const char *format, ...)
     va_end(args);
 }
 
-void log_warn(const char *format, ...)
+void log_warn(const char format[static 1], ...)
 {
     va_list args;
     va_start(args, format);
@@ -115,7 +115,7 @@ void log_warn(const char *format, ...)
     va_end(args);
 }
 
-void log_error(const char *format, ...)
+void log_error(const char format[static 1], ...)
 {
     va_list args;
     va_start(args, format);

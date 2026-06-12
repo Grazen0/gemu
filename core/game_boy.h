@@ -5,6 +5,7 @@
 #include "mapper.h"
 #include "sink.h"
 #include <stddef.h>
+#include <stdio.h>
 
 static constexpr int GB_LCD_WIDTH = 160;
 static constexpr int GB_LCD_HEIGHT = 144;
@@ -73,24 +74,28 @@ typedef enum {
     GB_CLK_SLAVE,
 } GbClockMode;
 
-[[nodiscard]] GameBoy gb_init(Sink sink, const u8 *boot_rom);
+[[nodiscard]] GameBoy gb_init(Sink sink,
+                              const u8 *boot_rom);
 
-void gb_deinit(GameBoy *gb);
+void gb_deinit(GameBoy gb[static 1]);
 
-void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len);
+void gb_load_rom(GameBoy gb[static 1], size_t rom_len,
+                 const u8 rom[static rom_len]);
 
-GbClockMode gb_serial_clk_mode(const GameBoy *gb);
+GbClockMode gb_serial_clk_mode(const GameBoy gb[static 1]);
 
-u64 gb_dispatch_cpu_instr(GameBoy *gb);
+u64 gb_dispatch_cpu_instr(GameBoy gb[static 1]);
 
-u64 gb_dispatch_pixel(GameBoy *gb);
+u64 gb_dispatch_pixel(GameBoy gb[static 1]);
 
-u64 gb_dispatch_div(GameBoy *gb);
+u64 gb_dispatch_div(GameBoy gb[static 1]);
 
-u64 gb_dispatch_tima(GameBoy *gb);
+u64 gb_dispatch_tima(GameBoy gb[static 1]);
 
-u64 gb_dispatch_dma_cp(GameBoy *gb);
+u64 gb_dispatch_dma_cp(GameBoy gb[static 1]);
 
-u64 gb_dispatch_serial_cycle(GameBoy *gb);
+u64 gb_dispatch_serial_cycle(GameBoy gb[static 1]);
+
+void gb_write_save(const GameBoy gb[static 1], FILE *stream);
 
 #endif

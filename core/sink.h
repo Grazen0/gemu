@@ -15,7 +15,7 @@ typedef struct {
     const SinkVTable *vtable;
 } Sink;
 
-static inline void sink_vlog(Sink sink, const char format[], va_list args)
+static inline void sink_vlog(Sink sink, const char format[static 1], va_list args)
 {
     sink.vtable->vlog(sink.ptr, format, args);
 }
@@ -25,9 +25,9 @@ static inline void sink_deinit(Sink sink)
     sink.vtable->deinit(sink.ptr);
 }
 
-void sink_box_deinit(Sink *sink);
+void sink_box_deinit(Sink sink[static 1]);
 
-[[gnu::format(printf, 2, 3)]] void sink_log(Sink sink, const char format[],
+[[gnu::format(printf, 2, 3)]] void sink_log(Sink sink, const char format[static 1],
                                             ...);
 
 static inline void void_sink_vlog_v([[maybe_unused]] void *ptr,
@@ -50,11 +50,11 @@ typedef struct {
 
 RingSink ring_sink_init(size_t buf_size, size_t max_msg_size);
 
-void ring_sink_deinit(RingSink *sink);
+void ring_sink_deinit(RingSink sink[static 1]);
 
-void ring_sink_vlog(RingSink *sink, const char format[], va_list args);
+void ring_sink_vlog(RingSink sink[static 1], const char format[static 1], va_list args);
 
-void ring_sink_dump(RingSink *sink, int fd);
+void ring_sink_dump(RingSink sink[static 1], int fd);
 
 DECL_UPCASTS(RingSink, ring_sink, Sink, sink)
 

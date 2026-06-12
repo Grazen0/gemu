@@ -6,7 +6,7 @@
 
 typedef struct {
     void (*deinit)(void *ptr);
-    u8 (*read)(void *ptr, const u8 *rom, size_t rom_len, u16 addr);
+    u8 (*read)(void *ptr, size_t rom_len, const u8 rom[static rom_len], u16 addr);
     void (*write)(void *ptr, u16 addr, u8 value);
 } MapperVTable;
 
@@ -17,19 +17,19 @@ typedef struct {
 
 Mapper mapper_default();
 
-Mapper mapper_from_rom(const u8 *rom, size_t rom_len);
+Mapper mapper_from_rom(size_t rom_len, const u8 rom[static rom_len]);
 
-void mapper_box_deinit(Mapper *mapper);
+void mapper_box_deinit(Mapper mapper[static 1]);
 
 static inline void mapper_deinit(Mapper mapper)
 {
     mapper.vtable->deinit(mapper.ptr);
 }
 
-static inline u8 mapper_read(Mapper mapper, const u8 *rom, size_t rom_len,
-                             u16 addr)
+static inline u8 mapper_read(Mapper mapper, size_t rom_len,
+                             const u8 rom[static rom_len], u16 addr)
 {
-    return mapper.vtable->read(mapper.ptr, rom, rom_len, addr);
+    return mapper.vtable->read(mapper.ptr, rom_len, rom, addr);
 }
 
 static inline void mapper_write(Mapper mapper, u16 addr, u8 value)

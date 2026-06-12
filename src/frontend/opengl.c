@@ -27,7 +27,7 @@ static bool running = true;
     ((u32)PALETTE_RGB[i][0] | ((u32)PALETTE_RGB[i][1] << 8) | \
      ((u32)PALETTE_RGB[i][2] << 16) | 0xFF000000)
 
-static void build_pixels(const GameBoy *gb)
+static void build_pixels(const GameBoy gb[static 1])
 {
 
     static const u32 PALETTE[] = {
@@ -109,7 +109,7 @@ static void display(void)
     glutPostRedisplay();
 }
 
-static bool *map_key_down(JoypadButtons *btns, unsigned char key)
+static bool *map_key_down(JoypadButtons btns[static 1], unsigned char key)
 {
     switch (key) {
         case 13:
@@ -149,7 +149,7 @@ static void key_up(unsigned char key, [[maybe_unused]] int x,
         *btn = false;
 }
 
-static bool *map_special_key(JoypadButtons *btns, int key)
+static bool *map_special_key(JoypadButtons btns[static 1], int key)
 {
     switch (key) {
         case GLUT_KEY_UP:
@@ -194,7 +194,7 @@ static void init_gl(void)
                  GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 }
 
-static int run(GameBoy *gb, Scheduler *sched)
+static int run(GameBoy gb[static 1], Scheduler sched[static 1])
 {
     g_gb = gb;
     pixels = calloc((size_t)GB_LCD_WIDTH * GB_LCD_HEIGHT, sizeof(*pixels));

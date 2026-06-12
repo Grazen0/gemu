@@ -10,7 +10,7 @@
 
 #define TO_COLOR(rgb) {(rgb)[0], (rgb)[1], (rgb)[2], 255}
 
-static void update_pixels(const GameBoy *gb, Texture texture, Color *pixels)
+static void update_pixels(const GameBoy gb[static 1], Texture texture, Color pixels[static 1])
 {
     static const Color PALETTE[] = {
         TO_COLOR(PALETTE_RGB[0]),
@@ -28,7 +28,7 @@ static void update_pixels(const GameBoy *gb, Texture texture, Color *pixels)
     }
 }
 
-static void draw(GameBoy *gb, Texture texture, Color *pixels)
+static void draw(GameBoy gb[static 1], Texture texture, Color pixels[static 1])
 {
     update_pixels(gb, texture, pixels);
     UpdateTexture(texture, pixels);
@@ -47,7 +47,7 @@ static void draw(GameBoy *gb, Texture texture, Color *pixels)
     EndDrawing();
 }
 
-static int run(GameBoy *gb, Scheduler *sched)
+static int run(GameBoy gb[static 1], Scheduler sched[static 1])
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, "gemu");

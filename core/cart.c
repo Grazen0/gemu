@@ -60,7 +60,7 @@ size_t ram_banks_from_size_code(u8 ram_size_code)
     }
 }
 
-CartInfo cart_info_from_rom(const u8 *rom)
+CartInfo cart_info_from_rom(const u8 rom[static 1])
 {
     CartInfo out = {
         .title = {},

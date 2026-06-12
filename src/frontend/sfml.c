@@ -15,7 +15,7 @@
 #define RGBA_ALLOC_SIZE 4
 #define TO_COLOR(rgb) {(rgb)[0], (rgb)[1], (rgb)[2], 255}
 
-static void update_pixels(const GameBoy *gb, sfColor pixel_buf[])
+static void update_pixels(const GameBoy gb[static 1], sfColor pixel_buf[static 1])
 {
     static const sfColor PALETTE[] = {
         TO_COLOR(PALETTE_RGB[0]),
@@ -34,7 +34,7 @@ static void update_pixels(const GameBoy *gb, sfColor pixel_buf[])
     }
 }
 
-static void update_screen(sfSprite *spr, sfRenderWindow *wnd, sfView *view)
+static void update_screen(sfSprite spr[static 1], sfRenderWindow wnd[static 1], sfView view[static 1])
 {
     sfVector2u size = sfRenderWindow_getSize(wnd);
 
@@ -57,7 +57,7 @@ static void update_screen(sfSprite *spr, sfRenderWindow *wnd, sfView *view)
     sfRenderWindow_display(wnd);
 }
 
-static bool *map_joypad_btn(JoypadButtons *joypad, sfKeyCode key)
+static bool *map_joypad_btn(JoypadButtons joypad[static 1], sfKeyCode key)
 {
     switch (key) {
         case sfKeyEnter:
@@ -81,8 +81,8 @@ static bool *map_joypad_btn(JoypadButtons *joypad, sfKeyCode key)
     }
 }
 
-static void handle_event(sfEvent *event, GameBoy *gb, sfRenderWindow *window,
-                         bool *quit)
+static void handle_event(sfEvent event[static 1], GameBoy gb[static 1], sfRenderWindow window[static 1],
+                         bool quit[static 1])
 {
 
     if (event->type == sfEvtClosed) {
@@ -99,7 +99,7 @@ static void handle_event(sfEvent *event, GameBoy *gb, sfRenderWindow *window,
     }
 }
 
-static int run(GameBoy *gb, Scheduler *sched)
+static int run(GameBoy gb[static 1], Scheduler sched[static 1])
 {
     sfVideoMode vid_mode = {
         {WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT},

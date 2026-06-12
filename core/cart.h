@@ -65,6 +65,6 @@ typedef struct {
 
 [[nodiscard]] size_t ram_banks_from_size_code(u8 ram_size_code);
 
-[[nodiscard]] CartInfo cart_info_from_rom(const u8 *rom);
+[[nodiscard]] CartInfo cart_info_from_rom(const u8 rom[static 1]);
 
 #endif

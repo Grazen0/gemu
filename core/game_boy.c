@@ -67,6 +67,12 @@ typedef enum : u8 {
     TAC_ENABLE = 1 << 2,
 } Tac;
 
+typedef enum : u8 {
+    SC_CLK_SELECT = 1 << 0,
+    SC_CLK_SPEED = 1 << 1,
+    SC_TRANSFER_ENABLE = 1 << 7,
+} Sc;
+
 static void gb_update_joyp(GameBoy *gb)
 {
     gb->joyp_prev = gb->joyp;
@@ -183,7 +189,6 @@ GameBoy gb_init(Sink sink, const u8 *boot_rom)
         .rom = nullptr,
         .rom_len = 0,
         .dma_cur_addr = 0,
-        .boot_rom_enable = true,
         .lcdc = 0,
         .stat = 0,
         .ly = 0,
@@ -198,7 +203,7 @@ GameBoy gb_init(Sink sink, const u8 *boot_rom)
         .obp1 = 0,
         .ie = 0,
         .if_ = 0,
-        .sb = 0,
+        .sb = 0xFF,
         .sc = 0,
         .div = 0,
         .tima = 0,
@@ -207,7 +212,10 @@ GameBoy gb_init(Sink sink, const u8 *boot_rom)
         .joyp = 0x0F,
         .joyp_prev = 0x0F,
         .stat_line = 0,
-        .dma_pending = false,
+        .start_dma_transfer = false,
+        .start_serial_transfer = false,
+        .serial_cur_bit = 0,
+        .boot_rom_enable = true,
     };
 
     gb.ram = calloc(RAM_SIZE, sizeof(*gb.ram));
@@ -293,15 +301,19 @@ void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len)
         gb_mock_boot(gb);
 }
 
+GbClockMode gb_serial_clk_mode(const GameBoy *gb)
+{
+    return (gb->sc & SC_CLK_SELECT) == 0 ? GB_CLK_SLAVE : GB_CLK_MASTER;
+}
+
 // NOLINTNEXTLINE
-u8 gb_read_io(GameBoy *gb, u16 addr)
+static u8 gb_read_io(GameBoy *gb, u16 addr)
 {
     if (addr == 0xFF00) // FF00 (joypad input)
         return gb->joyp;
 
-    // TODO: implement serial transfer
     if (addr == 0xFF01) // FF01 (serial transfer data)
-        return 0xFF;
+        return gb->sb;
 
     if (addr == 0xFF02) // FF02 (serial transfer control)
         return gb->sc;
@@ -323,11 +335,13 @@ u8 gb_read_io(GameBoy *gb, u16 addr)
     if (addr == 0xFF0F) // FF0F (interrupts)
         return gb->if_;
 
-    if (addr >= 0xFF10 && addr <= 0xFF26) // FF10-FF26 (audio)
-        BAIL("I/O audio read ($%04X)", addr);
+    if (addr >= 0xFF10 && addr <= 0xFF26) { // FF10-FF26 (audio)
+        log_warn("I/O audio read (addr = $%04X)", addr);
+        return 0xFF;
+    }
 
     if (addr >= 0xFF30 && addr <= 0xFF3F) // FF30-FF3F (wave pattern)
-        BAIL("I/O wave pattern read ($%04X)", addr);
+        BAIL("I/O wave pattern read (addr = $%04X)", addr);
 
     if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
@@ -344,7 +358,9 @@ u8 gb_read_io(GameBoy *gb, u16 addr)
             case 0xFF47: return gb->bgp;
             case 0xFF48: return gb->obp0;
             case 0xFF49: return gb->obp1;
-            default: BAIL("Unexpected I/O LCD read (addr = $%04X)", addr);
+            default:
+                log_warn("Unexpected I/O LCD read (addr = $%04X)", addr);
+                return 0xFF;
         }
         // clang-format on
     }
@@ -441,15 +457,8 @@ static u8 gb_read_mem(GameBoy *gb, u16 addr)
     return HANDLERS[nib](gb, addr);
 }
 
-u16 gb_read_mem_u16(GameBoy *gb, u16 addr)
-{
-    u8 lo = gb_read_mem(gb, addr);
-    u8 hi = gb_read_mem(gb, addr + 1);
-    return concat_u16(hi, lo);
-}
-
 // NOLINTNEXTLINE
-void gb_write_io(GameBoy *gb, u16 addr, u8 value)
+static void gb_write_io(GameBoy *gb, u16 addr, u8 value)
 {
     if (addr == 0xFF00) {
         // FF00 (joypad input)
@@ -460,8 +469,16 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
         gb->sb = value;
     } else if (addr == 0xFF02) {
         // FF02 (serial transfer control)
-        // TODO: implement properly
         gb->sc = value;
+
+        if ((gb->sc & SC_CLK_SPEED) != 0)
+            log_warn("Attempting to use unimplemented high speed serial clock");
+
+        if ((gb->sc & SC_TRANSFER_ENABLE) != 0) {
+            gb->start_serial_transfer = true;
+            gb->serial_cur_bit = 0;
+        }
+
     } else if (addr >= 0xFF04 && addr <= 0xFF07) {
         // FF04-FF07 (timer and divider)
         // clang-format off
@@ -484,10 +501,10 @@ void gb_write_io(GameBoy *gb, u16 addr, u8 value)
         // TODO: I/O wave pattern write
     } else if (addr == 0xFF46) {
         // FF46 (OAM DMA source address and start)
-        assert(!gb->dma_pending);
+        assert(!gb->start_dma_transfer);
 
         gb->dma_cur_addr = (u16)value << 8;
-        gb->dma_pending = true;
+        gb->start_dma_transfer = true;
     } else if (addr >= 0xFF40 && addr <= 0xFF4B) {
         // FF40-FF4B (LCD)
         // clang-format off
@@ -688,8 +705,8 @@ u64 gb_dispatch_cpu_instr(GameBoy *gb)
     return CPU_MCYCLE * (mcycles_end - mcycles_start);
 }
 
-static void gb_render_tile(GameBoy *gb, const u8 tdata[], u8 ti, size_t ty,
-                           size_t tx)
+static void gb_render_tile(GameBoy *gb, const u8 tdata[], u8 ti, size_t y,
+                           size_t x)
 {
     ssize_t ti_signed = (gb->lcdc & LCDC_BG_WIN_TILES) != 0 ? ti : (i8)ti;
 
@@ -703,8 +720,8 @@ static void gb_render_tile(GameBoy *gb, const u8 tdata[], u8 ti, size_t ty,
             u8 color_idx = bit_lo | (bit_hi << 1);
             u8 color = (gb->bgp >> (2 * color_idx)) & 0b11;
 
-            size_t py = (8 * ty) + row;
-            size_t px = (8 * tx) + 7 - col;
+            size_t py = y + row;
+            size_t px = x + 7 - col;
 
             if (py < GB_BG_HEIGHT && px < GB_BG_WIDTH && color_idx != 0)
                 gb->render_buf[py][px] = color;
@@ -726,7 +743,7 @@ static void gb_render_bg(GameBoy *gb)
     for (size_t ty = 0; ty < TILES_VERTICAL; ++ty) {
         for (size_t tx = 0; tx < TILES_HORIZONTAL; ++tx) {
             u8 ti = tmap[(ty * TILES_HORIZONTAL) + tx];
-            gb_render_tile(gb, tdata, ti, ty, tx);
+            gb_render_tile(gb, tdata, ti, 8 * ty, 8 * tx);
         }
     }
 }
@@ -811,8 +828,8 @@ static void gb_render_window(GameBoy *gb)
     for (size_t ty = 0; ty < TILES_VERTICAL; ++ty) {
         for (size_t tx = 0; tx < TILES_HORIZONTAL; ++tx) {
             u8 ti = tmap[(ty * TILES_HORIZONTAL) + tx];
-            gb_render_tile(gb, tdata, ti, gb->scy + gb->wy + ty,
-                           gb->scx + gb->wx + tx);
+            gb_render_tile(gb, tdata, ti, gb->scy + gb->wy + (8 * ty),
+                           gb->scx + gb->wx - 7 + (8 * tx));
         }
     }
 }
@@ -963,4 +980,20 @@ u64 gb_dispatch_dma_cp(GameBoy *gb)
         return SIZE_MAX; // done
 
     return 4;
+}
+
+u64 gb_dispatch_serial_cycle(GameBoy *gb)
+{
+    gb->sb = (gb->sb << 1) | 1;
+
+    gb->serial_cur_bit++;
+    assert(gb->serial_cur_bit <= 8);
+
+    if (gb->serial_cur_bit == 8) {
+        gb->sc &= ~SC_TRANSFER_ENABLE;
+        gb->if_ |= INT_SERIAL;
+        return SIZE_MAX;
+    }
+
+    return 512;
 }

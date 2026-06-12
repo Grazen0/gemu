@@ -62,15 +62,24 @@ typedef struct {
     u8 joyp_prev;
     u8 stat_line;
     bool video_dirty;
-    bool dma_pending;
+    bool start_dma_transfer;
+    bool start_serial_transfer;
+    u8 serial_cur_bit;
     bool boot_rom_enable;
 } GameBoy;
+
+typedef enum {
+    GB_CLK_MASTER,
+    GB_CLK_SLAVE,
+} GbClockMode;
 
 [[nodiscard]] GameBoy gb_init(Sink sink, const u8 *boot_rom);
 
 void gb_deinit(GameBoy *gb);
 
 void gb_load_rom(GameBoy *gb, const u8 *rom, size_t rom_len);
+
+GbClockMode gb_serial_clk_mode(const GameBoy *gb);
 
 u64 gb_dispatch_cpu_instr(GameBoy *gb);
 
@@ -81,5 +90,7 @@ u64 gb_dispatch_div(GameBoy *gb);
 u64 gb_dispatch_tima(GameBoy *gb);
 
 u64 gb_dispatch_dma_cp(GameBoy *gb);
+
+u64 gb_dispatch_serial_cycle(GameBoy *gb);
 
 #endif

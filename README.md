@@ -62,7 +62,7 @@ Note that you can choose the frontend (`sdl3`, `raylib`, `opengl`, or `sfml`) wi
   - [x] VBlank
   - [x] STAT
   - [x] Timer
-  - [ ] Serial
+  - [x] Serial
   - [ ] Joypad
 - [ ] Serial transfer
 - [ ] Audio

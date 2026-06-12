@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "game_boy.h"
+#include "log.h"
 #include "util.h"
 #include <assert.h>
 #include <stddef.h>
@@ -12,6 +13,7 @@ typedef enum : u8 {
     EVENT_DIV,
     EVENT_TIMA,
     EVENT_DMA_CP,
+    EVENT_SERIAL_CYCLE,
 
     EVENT_COUNT,
 } EventKind;
@@ -20,6 +22,14 @@ struct Event {
     u64 time;
     EventKind kind;
 };
+
+static bool event_lt(Event e1, Event e2)
+{
+    if (e1.time != e2.time)
+        return e1.time < e2.time;
+
+    return e1.kind < e2.kind;
+}
 
 static EventQueue queue_init()
 {
@@ -74,10 +84,10 @@ static void queue_bubble_down(EventQueue *queue, size_t idx)
 
         size_t best = l;
 
-        if (r < queue->len && queue->items[r].time < queue->items[l].time)
+        if (r < queue->len && event_lt(queue->items[r], queue->items[l]))
             best = r;
 
-        if (event.time <= queue->items[best].time)
+        if (!event_lt(queue->items[best], event))
             break;
 
         queue->items[idx] = queue->items[best];
@@ -96,7 +106,7 @@ static void queue_bubble_up(EventQueue *queue, size_t idx)
     while (idx > 0) {
         size_t par = (idx - 1) / 2;
 
-        if (queue->items[par].time <= event.time)
+        if (!event_lt(event, queue->items[par]))
             break;
 
         queue->items[idx] = queue->items[par];
@@ -178,6 +188,7 @@ void sched_dispatch(Scheduler *sched, GameBoy *gb)
         [EVENT_DIV] = gb_dispatch_div,
         [EVENT_TIMA] = gb_dispatch_tima,
         [EVENT_DMA_CP] = gb_dispatch_dma_cp,
+        [EVENT_SERIAL_CYCLE] = gb_dispatch_serial_cycle,
     };
     static_assert(ARRAY_LEN(DISPATCHERS) == EVENT_COUNT);
 
@@ -187,9 +198,20 @@ void sched_dispatch(Scheduler *sched, GameBoy *gb)
     if (elapsed_cycles != SIZE_MAX)
         queue_add(&sched->queue, event.time + elapsed_cycles, event.kind);
 
-    if (gb->dma_pending) {
+    if (gb->start_dma_transfer) {
         queue_add(&sched->queue, event.time + elapsed_cycles, EVENT_DMA_CP);
-        gb->dma_pending = false;
+        gb->start_dma_transfer = false;
+    }
+
+    if (gb->start_serial_transfer) {
+        // attempts to transfer in slave mode should not be accounted for so
+        // that the game can detect that there isn't a game boy attached to
+        // this one
+        if (gb_serial_clk_mode(gb) == GB_CLK_MASTER) {
+            queue_add(&sched->queue, event.time + elapsed_cycles,
+                      EVENT_SERIAL_CYCLE);
+        }
+        gb->start_serial_transfer = false;
     }
 }
 
